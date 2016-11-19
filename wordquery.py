@@ -55,6 +55,7 @@ def select_dict():
 def okbtn_pressed():
     mw.myWidget.close()
     set_path()
+    pre_index_dict()
 
 
 def set_path():
@@ -64,6 +65,11 @@ def set_path():
     #     dictpath += '\\'
     with open(savepath, 'wb') as f:
         f.write(dictpath.encode('utf-8'))
+
+
+def pre_index_dict():
+    mw.progress.start()
+    mw.progress.finish()
 
 
 def read_path():
@@ -175,21 +181,26 @@ def query_mdict(self):
         # showInfo(dictpath)
         builder = IndexBuilder(dictpath)
         result_text = builder.mdx_lookup(word)
-        # showInfo(str(result_text))
-        # collins stars
-        mstars = re.search(
-            '<span class="C1_word_header_star">(.*?)</span>', result_text[0])
-        if mstars:
-            note.fields[7] = mstars.groups()[0]
-        # collins explanations
-
-        def adapt_to_tempalate(text):
-            return text.replace('class="C1_', 'class="')
-        mexplains = re.search('(<div class="tab_content".*</div>)',
-                              result_text[0], re.DOTALL)
-        if mexplains:
-            note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
-            # showInfo(mexplains.groups()[0])
+        if 'href="O8C.css"' in result_text[0]:
+            note.fields[9] = result_text[0]
+        elif 'href="ODE.css"' in result_text[0]:
+            note.fields[10] = result_text[0]
+        elif 'href="MacmillanEnEn.css"' in result_text[0]:
+            note.fields[11] = result_text[0]
+        else:
+            # collins stars
+            mstars = re.search(
+                '<span class="C1_word_header_star">(.*?)</span>', result_text[0])
+            if mstars:
+                note.fields[7] = mstars.groups()[0]
+            # collins explanations
+            adapt_to_tempalate = lambda text: text.replace(
+                'class="C1_', 'class="')
+            mexplains = re.search('(<div class="tab_content".*</div>)',
+                                  result_text[0], re.DOTALL)
+            if mexplains:
+                note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
+                # showInfo(mexplains.groups()[0])
     except AssertionError as e:
         # no valid mdict file found.
         pass
