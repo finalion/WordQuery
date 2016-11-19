@@ -19,6 +19,7 @@ import urllib2
 from StringIO import StringIO
 from mdict.mdict_query import IndexBuilder
 
+index_builder = None
 dictpath = ''
 savepath = os.path.join(sys.path[0], 'dictpath')
 # showInfo(sys.path[0])
@@ -55,21 +56,14 @@ def select_dict():
 def okbtn_pressed():
     mw.myWidget.close()
     set_path()
-    pre_index_dict()
+    index_mdx()
 
 
 def set_path():
     global dictpath
     dictpath = mw.myPathedit.text()
-    # if not dictpath.endswith('\\'):
-    #     dictpath += '\\'
     with open(savepath, 'wb') as f:
         f.write(dictpath.encode('utf-8'))
-
-
-def pre_index_dict():
-    mw.progress.start()
-    mw.progress.finish()
 
 
 def read_path():
@@ -78,9 +72,30 @@ def read_path():
         with open(savepath, 'rb') as f:
             path = f.read().strip()
             return path
+        return ""
     except:
         showInfo("not exist")
         return ""
+
+
+class MdxIndexer(QThread):
+
+    def __init__(self):
+        QThread.__init__(self)
+
+    def run(self):
+        global index_builder
+        index_builder = IndexBuilder(dictpath)
+
+
+def index_mdx():
+    mw.progress.start(immediate=True, label="Index building...")
+    index_thread = MdxIndexer()
+    index_thread.start()
+    while not index_thread.isFinished():
+        mw.app.processEvents()
+        index_thread.wait(100)
+    mw.progress.finish()
 
 
 def set_options():
@@ -109,7 +124,6 @@ def query_word():
         # showInfo("Query %s" % word)
         mw.myWebView.load(
             QUrl('http://dict.baidu.com/s?wd=%s&ptype=english' % word))
-    pass
 
 
 def show_query_window():
@@ -126,7 +140,6 @@ def show_query_window():
 
     widget.setLayout(layout)
     widget.show()
-    pass
 #################################################################
 
 # custom add ui
@@ -177,10 +190,9 @@ def query_mdict(self):
     # note = self.addNote(note)
     word = note.fields[0]      # choose the first field as the word
     try:
-        # dictpath = read_path()
-        # showInfo(dictpath)
-        builder = IndexBuilder(dictpath)
-        result_text = builder.mdx_lookup(word)
+        if not index_builder:
+            index_mdx()
+        result_text = index_builder.mdx_lookup(word)
         if 'href="O8C.css"' in result_text[0]:
             note.fields[9] = result_text[0]
         elif 'href="ODE.css"' in result_text[0]:
