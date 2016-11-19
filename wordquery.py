@@ -48,7 +48,7 @@ Toolbar._centerLinks = _my_center_links
 def select_dict():
     global dictpath
     dictpath = QFileDialog.getOpenFileName(
-        caption="select dictionary", directory=sys.path[0], filter="mdx Files(*.mdx)")
+        caption="select dictionary", directory=os.path.dirname(dictpath), filter="mdx Files(*.mdx)")
     if dictpath:
         mw.myPathedit.setText(dictpath)
 
@@ -192,24 +192,38 @@ def query_mdict(self):
     try:
         if not index_builder:
             index_mdx()
-        result_text = index_builder.mdx_lookup(word)
-        if 'href="O8C.css"' in result_text[0]:
-            note.fields[9] = result_text[0]
-        elif 'href="ODE.css"' in result_text[0]:
-            note.fields[10] = result_text[0]
-        elif 'href="MacmillanEnEn.css"' in result_text[0]:
-            note.fields[11] = result_text[0]
+        result = index_builder.mdx_lookup(word)
+        if not result:
+            return
+        result_text = result[0]
+        if 'href="O8C.css"' in result_text:
+            note.fields[9] = result_text
+        elif 'href="ODE.css"' in result_text:
+            note.fields[10] = result_text
+        elif 'href="MacmillanEnEn.css"' in result_text:
+            # result_text = re.sub(
+            #     '<a href=".*?>(.*?)</a>', r'\1', result_text)
+            # result_text = re.sub(
+            #     '<p class="example">(.*?)</p>', r'\1', result_text)
+            # result_text = re.sub(
+            #     '<span class="example">(.*?)</span>', r'\1', result_text)
+            note.fields[11] = result_text
+        elif 'href="LDOCE6.css"' in result_text:
+            note.fields[12] = result_text.replace(
+                '<img src="img/spkr_r.png">', '').replace(
+                '<img src="img/spkr_b.png">', '').replace(
+                '<img src="img/spkr_g.png">', '')
         else:
             # collins stars
             mstars = re.search(
-                '<span class="C1_word_header_star">(.*?)</span>', result_text[0])
+                '<span class="C1_word_header_star">(.*?)</span>', result_text)
             if mstars:
                 note.fields[7] = mstars.groups()[0]
             # collins explanations
             adapt_to_tempalate = lambda text: text.replace(
                 'class="C1_', 'class="')
             mexplains = re.search('(<div class="tab_content".*</div>)',
-                                  result_text[0], re.DOTALL)
+                                  result_text, re.DOTALL)
             if mexplains:
                 note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
                 # showInfo(mexplains.groups()[0])
