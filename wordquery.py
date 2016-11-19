@@ -20,7 +20,7 @@ from StringIO import StringIO
 from mdict.mdict_query import IndexBuilder
 
 dictpath = ''
-savepath = sys.path[0] + '\\dictpath'
+savepath = os.path.join(sys.path[0], 'dictpath')
 # showInfo(sys.path[0])
 # showInfo(savepath)
 # custom Toolbar
@@ -47,7 +47,7 @@ Toolbar._centerLinks = _my_center_links
 def select_dict():
     global dictpath
     dictpath = QFileDialog.getOpenFileName(
-        caption="select dictionary", directory=os.getcwd(), filter="mdx Files(*.mdx)")
+        caption="select dictionary", directory=sys.path[0], filter="mdx Files(*.mdx)")
     if dictpath:
         mw.myPathedit.setText(dictpath)
 
@@ -63,7 +63,7 @@ def set_path():
     # if not dictpath.endswith('\\'):
     #     dictpath += '\\'
     with open(savepath, 'wb') as f:
-        f.write(dictpath)
+        f.write(dictpath.encode('utf-8'))
 
 
 def read_path():
