@@ -1,27 +1,31 @@
 # import the main window object (mw) from aqt
-import aqt
-from aqt import mw
-from aqt.toolbar import Toolbar
-# import the "show info" tool from utils.py
-from aqt.utils import showInfo, shortcut
-# import all of the Qt GUI library
-from aqt.qt import *
-from anki.importing import TextImporter
-from anki.hooks import addHook, wrap, runHook
-from aqt.addcards import AddCards
 # We're going to add a menu item below. First we want to create a function to
 # be called when the menu item is activated.
 import os
-import sys
 import re
-import xml.etree.ElementTree
+import sys
 import urllib2
+import xml.etree.ElementTree
 from StringIO import StringIO
+
+import aqt
+from anki.hooks import addHook, runHook, wrap
+from anki.importing import TextImporter
+from aqt import mw
+from aqt.addcards import AddCards
+from aqt.qt import *
+from aqt.toolbar import Toolbar
+# import the "show info" tool from utils.py
+from aqt.utils import shortcut, showInfo
 from mdict.mdict_query import IndexBuilder
 
+
+default_server = 'http://127.0.0.1:8000'
 index_builder = None
 dictpath = ''
-savepath = os.path.join(sys.path[0], 'dictpath')
+savepath = os.path.join(sys.path[0], 'config')
+serveraddr = default_server
+use_local, use_server = False, False
 # showInfo(sys.path[0])
 # showInfo(savepath)
 # custom Toolbar
@@ -50,32 +54,39 @@ def select_dict():
     dictpath = QFileDialog.getOpenFileName(
         caption="select dictionary", directory=os.path.dirname(dictpath), filter="mdx Files(*.mdx)")
     if dictpath:
-        mw.myPathedit.setText(dictpath)
+        mw.myEditLocalPath.setText(dictpath)
 
 
 def okbtn_pressed():
     mw.myWidget.close()
-    set_path()
+    set_parameters()
     index_mdx()
 
 
-def set_path():
-    global dictpath
-    dictpath = mw.myPathedit.text()
+def set_parameters():
+    global dictpath, serveraddr, use_local, use_server
+    dictpath = mw.myEditLocalPath.text()
+    serveraddr = mw.myEditServerAddr.text()
+    use_local = mw.myCheckLocal.isChecked()
+    use_server = mw.myCheckServer.isChecked()
     with open(savepath, 'wb') as f:
-        f.write(dictpath.encode('utf-8'))
+        f.write('%d|%s|%d|%s'.encode('utf-8') %
+                (use_local, dictpath, use_server, serveraddr))
 
 
-def read_path():
+def read_parameters():
     # showInfo(savepath)
+    # with open(savepath, 'rb') as f:
+    #     uls, path, uss, addr = f.read().strip().split('|')
+    #     showInfo('%s,%s,%s,%s' % (uls, path, uss, addr))
+    #     return bool(int(uls)), path, bool(int(uss)), addr
     try:
         with open(savepath, 'rb') as f:
-            path = f.read().strip()
-            return path
-        return ""
+            uls, path, uss, addr = f.read().strip().split('|')
+            return bool(int(uls)), path, bool(int(uss)), addr
     except:
-        showInfo("not exist")
-        return ""
+        # showInfo("not exist")
+        return False, "", False, default_server
 
 
 class MdxIndexer(QThread):
@@ -98,21 +109,46 @@ def index_mdx():
     mw.progress.finish()
 
 
+def onCheckLocalStageChanged():
+    global use_local
+    use_local = mw.myCheckLocal.isChecked()
+    if use_local:
+        select_dict()
+
+
+def onCheckServerStageChanged():
+    global use_server
+    use_server = mw.myCheckServer.isChecked()
+
+
 def set_options():
     mw.myWidget = widget = QWidget()
     layout = QGridLayout()
-    mw.myPathedit = path_edit = QLineEdit()
+
+    mw.myCheckLocal = check_local = QCheckBox("Use Local Dict")
+    check_local.setChecked(use_local)
+    check_local.stateChanged.connect(onCheckLocalStageChanged)
+    mw.myEditLocalPath = path_edit = QLineEdit()
     path_edit.setText(dictpath)
-    mw.seldict_button = seldict_button = QPushButton("Select")
-    seldict_button.clicked.connect(select_dict)
+
+    mw.myCheckServer = check_server = QCheckBox("Use MDX Server")
+    check_server.setChecked(use_server)
+    check_local.stateChanged.connect(onCheckServerStageChanged)
+    mw.myEditServerAddr = server_edit = QLineEdit()
+    server_edit.setText(serveraddr)
+
     ok_button = QPushButton("OK")
     ok_button.clicked.connect(okbtn_pressed)
-    layout.addWidget(QLabel("Set dictionary path: "))
-    layout.addWidget(path_edit)
-    layout.addWidget(seldict_button)
-    layout.addWidget(ok_button)
+    # layout.addWidget(QLabel("Set dictionary path: "))
+    layout.addWidget(check_local, 0, 0)
+    layout.addWidget(path_edit, 0, 1)
+    layout.addWidget(check_server, 1, 0)
+    layout.addWidget(server_edit, 1, 1)
+    layout.addWidget(ok_button, 2, 0)
     widget.setLayout(layout)
     widget.show()
+
+
 #######################################################
 
 # "Query" Link in main window
@@ -171,7 +207,7 @@ def query_youdao(self):
     # note = self.addNote(note)
     word = note.fields[0]      # choose the first field as the word
     result = urllib2.urlopen(
-        "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word).read()
+        "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
     file = StringIO(result)
     doc = xml.etree.ElementTree.parse(file)
     # fetch symbols
@@ -187,51 +223,65 @@ def query_youdao(self):
 def query_mdict(self):
     self.editor.saveAddModeVars()
     note = self.editor.note
-    # note = self.addNote(note)
     word = note.fields[0]      # choose the first field as the word
-    try:
-        if not index_builder:
-            index_mdx()
-        result = index_builder.mdx_lookup(word)
-        if not result:
-            return
-        result_text = result[0]
-        if 'href="O8C.css"' in result_text:
-            note.fields[9] = result_text
-        elif 'href="ODE.css"' in result_text:
-            note.fields[10] = result_text
-        elif 'href="MacmillanEnEn.css"' in result_text:
-            # result_text = re.sub(
-            #     '<a href=".*?>(.*?)</a>', r'\1', result_text)
-            # result_text = re.sub(
-            #     '<p class="example">(.*?)</p>', r'\1', result_text)
-            # result_text = re.sub(
-            #     '<span class="example">(.*?)</span>', r'\1', result_text)
-            note.fields[11] = result_text
-        elif 'href="LDOCE6.css"' in result_text:
-            note.fields[12] = result_text.replace(
-                '<img src="img/spkr_r.png">', '').replace(
-                '<img src="img/spkr_b.png">', '').replace(
-                '<img src="img/spkr_g.png">', '')
-        else:
-            # collins stars
-            mstars = re.search(
-                '<span class="C1_word_header_star">(.*?)</span>', result_text)
-            if mstars:
-                note.fields[7] = mstars.groups()[0]
-            # collins explanations
-            adapt_to_tempalate = lambda text: text.replace(
-                'class="C1_', 'class="')
-            mexplains = re.search('(<div class="tab_content".*</div>)',
-                                  result_text, re.DOTALL)
-            if mexplains:
-                note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
-                # showInfo(mexplains.groups()[0])
-    except AssertionError as e:
-        # no valid mdict file found.
-        pass
+    result = None
+    if use_local:
+        try:
+            if not index_builder:
+                index_mdx()
+            result = index_builder.mdx_lookup(word)
+            if result:
+                update_field(result[0], note)
+        except AssertionError as e:
+            # no valid mdict file found.
+            pass
+    if use_server:
+        try:
+            req = urllib2.urlopen(
+                serveraddr + r'/' + word)
+            result2 = req.read()
+            if result2:
+                update_field(result2, note)
+        except:
+            # server error
+            pass
 
-dictpath = read_path()
+
+def update_field(result_text, note):
+    if 'href="O8C.css"' in result_text:
+        note.fields[9] = result_text
+    elif 'href="ODE.css"' in result_text:
+        note.fields[10] = result_text
+    elif 'href="MacmillanEnEn.css"' in result_text:
+        # result_text = re.sub(
+        #     '<a href=".*?>(.*?)</a>', r'\1', result_text)
+        # result_text = re.sub(
+        #     '<p class="example">(.*?)</p>', r'\1', result_text)
+        # result_text = re.sub(
+        #     '<span class="example">(.*?)</span>', r'\1', result_text)
+        note.fields[11] = result_text
+    elif 'href="LDOCE6.css"' in result_text:
+        note.fields[12] = result_text.replace(
+            '<img src="img/spkr_r.png">', '').replace(
+            '<img src="img/spkr_b.png">', '').replace(
+            '<img src="img/spkr_g.png">', '')
+    else:
+        # collins stars
+        mstars = re.search(
+            '<span class="C1_word_header_star">(.*?)</span>', result_text)
+        if mstars:
+            note.fields[7] = mstars.groups()[0]
+        # collins explanations
+        adapt_to_tempalate = lambda text: text.replace(
+            'class="C1_', 'class="')
+        mexplains = re.search('(<div class="tab_content".*</div>)',
+                              result_text, re.DOTALL)
+        if mexplains:
+            note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
+            # showInfo(mexplains.groups()[0])
+
+
+use_local, dictpath, use_server, serveraddr = read_parameters()
 # showInfo(dictpath)
 AddCards.query = query
 AddCards.query_youdao = query_youdao
