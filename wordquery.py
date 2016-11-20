@@ -65,13 +65,13 @@ def okbtn_pressed():
 
 def set_parameters():
     global dictpath, serveraddr, use_local, use_server
-    dictpath = mw.myEditLocalPath.text()
-    serveraddr = mw.myEditServerAddr.text()
+    dictpath = unicode(mw.myEditLocalPath.text())
+    serveraddr = unicode(mw.myEditServerAddr.text())
     use_local = mw.myCheckLocal.isChecked()
     use_server = mw.myCheckServer.isChecked()
     with open(savepath, 'wb') as f:
-        f.write('%d|%s|%d|%s'.encode('utf-8') %
-                (use_local, dictpath, use_server, serveraddr))
+        p = '%d|%s|%d|%s' % (use_local, dictpath, use_server, serveraddr)
+        f.write(p.encode('utf-8'))
 
 
 def read_parameters():
@@ -217,10 +217,10 @@ def query_youdao(self):
     try:
         note.fields[1] = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
         # fetch explanations
-        note.fields[2] = '<br>'.join([node.text for node in doc.findall(
+        note.fields[3] = '<br>'.join([node.text for node in doc.findall(
             ".//custom-translation/translation/content")])
     except:
-        showInfo("Template Error!")
+        showInfo("Template Error, online!")
 
 
 def query_mdict(self):
@@ -250,41 +250,46 @@ def query_mdict(self):
             pass
 
 
+def convert_media_path(html):
+    """
+    convert the media path to actual path in anki's collection media folder.'
+    """
+    lst = list()
+    mcss = re.findall('href="(\S+?\.css)"', html)
+    lst.extend(list(set(mcss)))
+    mjs = re.findall('src="([\w\./]\S+?\.js)"', html)
+    lst.extend(list(set(mjs)))
+    msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
+    lst.extend(list(set(msrc)))
+    # print lst
+    newlist = ['_' + each.split('/')[-1] for each in lst]
+    # print newlist
+    for each in zip(lst, newlist):
+        html = html.replace(each[0], each[1])
+    return html
+
+
 def update_field(result_text, note):
     if len(note.fields) < 15:
-        showInfo("Template Error!")
+        showInfo("Template Error, Mdx!")
         return
-    if 'href="O8C.css"' in result_text:
+    result_text = convert_media_path(result_text)
+    if 'href="_collinsEC.css"' in result_text:
+        note.fields[8] = result_text
+    elif 'href="_CollinsEN.css"' in result_text:
         note.fields[9] = result_text
-    elif 'href="ODE.css"' in result_text:
+    if 'href="_O8C.css"' in result_text:
         note.fields[10] = result_text
-    elif 'href="MacmillanEnEn.css"' in result_text:
-        # result_text = re.sub(
-        #     '<a href=".*?>(.*?)</a>', r'\1', result_text)
-        # result_text = re.sub(
-        #     '<p class="example">(.*?)</p>', r'\1', result_text)
-        # result_text = re.sub(
-        #     '<span class="example">(.*?)</span>', r'\1', result_text)
+    elif 'href="_ODE.css"' in result_text:  # ok
         note.fields[11] = result_text
-    elif 'href="LDOCE6.css"' in result_text:
-        note.fields[12] = result_text.replace(
-            '<img src="img/spkr_r.png">', '').replace(
-            '<img src="img/spkr_b.png">', '').replace(
-            '<img src="img/spkr_g.png">', '')
+    elif 'href="_MacmillanEnEn.css"' in result_text:  # ok
+        note.fields[12] = result_text
+    elif 'href="_LDOCE6.css"' in result_text:  # ok
+        note.fields[13] = result_text
+    elif 'href="_MWU.css"' in result_text:  # ok
+        note.fields[14] = result_text
     else:
-        # collins stars
-        mstars = re.search(
-            '<span class="C1_word_header_star">(.*?)</span>', result_text)
-        if mstars:
-            note.fields[7] = mstars.groups()[0]
-        # collins explanations
-        adapt_to_tempalate = lambda text: text.replace(
-            'class="C1_', 'class="')
-        mexplains = re.search('(<div class="tab_content".*</div>)',
-                              result_text, re.DOTALL)
-        if mexplains:
-            note.fields[8] = adapt_to_tempalate(mexplains.groups()[0])
-            # showInfo(mexplains.groups()[0])
+        pass
 
 
 use_local, dictpath, use_server, serveraddr = read_parameters()
