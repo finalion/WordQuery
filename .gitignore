@@ -92,3 +92,5 @@ ENV/
 *.zip
 *.mdx
 *.mdd
+*.html
+test.py
