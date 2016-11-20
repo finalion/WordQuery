@@ -214,10 +214,13 @@ def query_youdao(self):
     symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
         ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
     # showInfo(','.join([symbol, uk_symbol, us_symbol]))
-    note.fields[1] = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
-    # fetch explanations
-    note.fields[2] = '<br>'.join([node.text for node in doc.findall(
-        ".//custom-translation/translation/content")])
+    try:
+        note.fields[1] = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
+        # fetch explanations
+        note.fields[2] = '<br>'.join([node.text for node in doc.findall(
+            ".//custom-translation/translation/content")])
+    except:
+        showInfo("Template Error!")
 
 
 def query_mdict(self):
@@ -248,6 +251,9 @@ def query_mdict(self):
 
 
 def update_field(result_text, note):
+    if len(note.fields) < 15:
+        showInfo("Template Error!")
+        return
     if 'href="O8C.css"' in result_text:
         note.fields[9] = result_text
     elif 'href="ODE.css"' in result_text:
