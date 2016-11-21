@@ -1,3 +1,5 @@
+#-*- coding:utf-8 -*-
+
 # import the main window object (mw) from aqt
 # We're going to add a menu item below. First we want to create a function to
 # be called when the menu item is activated.
@@ -18,8 +20,9 @@ from aqt.modelchooser import ModelChooser
 from aqt.studydeck import StudyDeck
 from aqt.toolbar import Toolbar
 from aqt.utils import shortcut, showInfo
-import trackback
+# import trackback
 from mdict.mdict_query import IndexBuilder
+# from Queue import Queue
 
 
 default_server = 'http://127.0.0.1:8000'
@@ -269,7 +272,7 @@ def convert_media_path(html):
     # print newlist
     for each in zip(lst, newlist):
         html = html.replace(each[0], each[1])
-    return html
+    return unicode(html)
 
 
 def update_field(result_text, note):
@@ -310,8 +313,73 @@ action.triggered.connect(set_options)
 mw.form.menuTools.addAction(action)
 
 
+from collections import defaultdict
+
 deck_name = u"test"
 note_type_name = u"MultiDicts"
+
+expsdict = defaultdict(str)
+
+
+def query_youdao(word):
+    d = defaultdict(str)
+    result = urllib2.urlopen(
+        "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
+    doc = xml.etree.ElementTree.parse(StringIO(result))
+    symbol, uk_symbol, us_symbol = unicode(doc.findtext(".//phonetic-symbol")), unicode(doc.findtext(
+        ".//uk-phonetic-symbol")), unicode(doc.findtext(".//us-phonetic-symbol"))
+    d[u'英美音标'] = unicode(u'UK [%s] US [%s]' % (uk_symbol, us_symbol))
+    d[u'简要中文释义'] = unicode('<br>'.join([node.text for node in doc.findall(
+        ".//custom-translation/translation/content")]))
+    return d
+
+
+def query_mdict(word):
+    d = defaultdict(str)
+    result = None
+    if use_local:
+        try:
+            if not index_builder:
+                index_mdx()
+            result = index_builder.mdx_lookup(word)
+            if result:
+                d = update_field(result[0])
+        except AssertionError as e:
+            # no valid mdict file found.
+            pass
+    if use_server:
+        try:
+            req = urllib2.urlopen(
+                serveraddr + r'/' + word)
+            result2 = req.read()
+            if result2:
+                d.update(update_field(result2))
+        except:
+            # server error
+            pass
+    return d
+
+def update_field(result_text):
+    d = defaultdict(str)
+    result_text = convert_media_path(result_text)
+    if 'href="_collinsEC.css"' in result_text:
+        d[u'柯林斯中文解释'] = result_text
+    elif 'href="_CollinsEN.css"' in result_text:
+        d[u'柯林斯英文解释'] = result_text
+    if 'href="_O8C.css"' in result_text:
+        d[u'牛津高阶解释'] = result_text
+    elif 'href="_ODE.css"' in result_text:  # ok
+        d[u'牛津英语解释'] = result_text
+    elif 'href="_MacmillanEnEn.css"' in result_text:  # ok
+        d[u'麦克米伦解释'] = result_text
+    elif 'href="_LDOCE6.css"' in result_text:  # ok
+        d[u'朗文当代解释'] = result_text
+    elif 'href="_MWU.css"' in result_text:  # ok
+        d[u'韦氏大学解释'] = result_text
+    else:
+        pass
+    return d
+
 
 
 def select():
@@ -359,7 +427,7 @@ def run_import(filepath, model, deck):
     if did != ti.model['did']:
         ti.model['did'] = did
         mw.col.models.save(ti.model)
-    # mw.col.decks.select(did)
+    mw.col.decks.select(did)
     mw.progress.start(immediate=True)
     try:
         ti.run()
@@ -374,7 +442,8 @@ def run_import(filepath, model, deck):
         elif "invalidTempFolder" in err:
             msg += mw.errorHandler.tempFolderMsg()
         else:
-            msg += str(traceback.format_exc(), "ascii", "replace")
+            # msg += str(traceback.format_exc(), "ascii", "replace")
+            pass
         showText(msg)
         return
     finally:
@@ -386,46 +455,79 @@ def run_import(filepath, model, deck):
     mw.reset()
 
 
-def select_deck2():
-    # select deck. Reuse deck if already exists, else add a desk with
-    # deck_name.
-    did = mw.col.decks.id("test")
-    mw.col.decks.select(did)
-    # set note type for deck
-    m = mw.col.models.byName("MultiDicts")
-    deck = mw.col.decks.get(did)
-    # m['did'] = deck['id']
-    mw.col.decks.save(deck)
-    run_import()
-
-
 def batch_import():
     filepath = QFileDialog.getOpenFileName(
         caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
     model, deck = select()
     run_import(filepath, model, deck)
-    # filepath = QFileDialog.getOpenFileName(
-    #     caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
-    # if filepath:
-    #     try:
-    #         ti = TextImporter(mw.col, filepath)
-    #         # showInfo(autopath+"dicts.csv")
-    #         ti.allowHTML = True
-    #         # ti.delimiter = ','
-    #         ti.initMapping()
-    #         ti.run()
-    #     except IOError as e:
-    #         # showInfo(str(e))
-    #         pass
-    #     except:
-    #         # unknowFormat
-    #         # showInfo("This addon got an error!")
-    #         pass
-    # pass
 
-# create a new menu item, "test"
+
+def batch_import2():
+    filepath = QFileDialog.getOpenFileName(
+        caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
+    model, deck = select()
+    if mw.col.conf.get("addToCur", True):
+        did = mw.col.conf['curDeck']
+        if mw.col.decks.isDyn(did):
+            did = 1
+    else:
+        did = model['did']
+
+    if did != model['did']:
+        model['did'] = did
+        mw.col.models.save(model)
+    mw.col.decks.select(did)
+
+    queue = list()
+    # query
+    query_thread = BatchQueryer(filepath, queue)
+    query_thread.start()
+    mw.progress.start(immediate=True, label="Batch Querying and Adding...")
+    while not query_thread.isFinished():
+        mw.app.processEvents()
+        query_thread.wait(100)
+    mw.progress.finish()
+
+    with open('t.txt','wb') as fff:
+        for data in queue:
+            fff.write(','.join(data.values())+'\n')
+    # insert
+    for data in queue:
+        f = mw.col.newNote()
+        for key in data:
+            f[key] = data[key]
+        mw.col.addNote(f)
+    mw.reset()
+
+
+class BatchQueryer(QThread):
+
+    def __init__(self, filepath, queue):
+        QThread.__init__(self)
+        self.filepath = filepath
+        self.queue = queue
+
+    def run(self):
+        with open(self.filepath, 'rb') as f:
+            for i,line in enumerate(f):
+                d = defaultdict(str)
+                l = [each.strip() for each in line.split('\t')]
+                word, sentence = l if len(l) == 2 else (l[0], "")
+                m = re.search('\((.*?)\)', word)
+                if m:
+                    word = m.groups()[0]
+                # d1 = query_youdao(word)
+                d2 = query_mdict(word)
+                d[u'英语单词'] = unicode(word)
+                d[u'英语例句'] = unicode(sentence)
+                # d.update(d1)
+                d.update(d2)
+                self.queue.append(d)
+                
+
+
 action = QAction("Import", mw)
 # set it to call testFunction when it's clicked
-action.triggered.connect(batch_import)
+action.triggered.connect(batch_import2)
 # and add it to the tools menu
 mw.form.menuTools.addAction(action)
