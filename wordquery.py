@@ -9,14 +9,16 @@ import xml.etree.ElementTree
 from StringIO import StringIO
 
 import aqt
+from aqt import mw
+from aqt.qt import *
 from anki.hooks import addHook, runHook, wrap
 from anki.importing import TextImporter
-from aqt import mw
 from aqt.addcards import AddCards
-from aqt.qt import *
+from aqt.modelchooser import ModelChooser
+from aqt.studydeck import StudyDeck
 from aqt.toolbar import Toolbar
-# import the "show info" tool from utils.py
 from aqt.utils import shortcut, showInfo
+import trackback
 from mdict.mdict_query import IndexBuilder
 
 
@@ -304,5 +306,126 @@ AddCards.setupButtons = wrap(AddCards.setupButtons, my_setupButtons, "before")
 action = QAction("Word Query", mw)
 # set it to call testFunction when it's clicked
 action.triggered.connect(set_options)
+# and add it to the tools menu
+mw.form.menuTools.addAction(action)
+
+
+deck_name = u"test"
+note_type_name = u"MultiDicts"
+
+
+def select():
+    # select deck. Reuse deck if already exists, else add a desk with
+    # deck_name.
+    widget = QWidget()
+    # prompt dialog to choose deck
+    ret = StudyDeck(
+        mw, current=None, accept=_("Choose"),
+        title=_("Choose Deck"), help="addingnotes",
+        cancel=False, parent=widget, geomKey="selectDeck")
+
+    did = mw.col.decks.id(ret.name)
+    mw.col.decks.select(did)
+    if not ret.name:
+        return None, None
+    deck = mw.col.decks.byName(ret.name)
+
+    def nameFunc():
+        return sorted(mw.col.models.allNames())
+    ret = StudyDeck(
+        mw, names=nameFunc, accept=_("Choose"), title=_("Choose Note Type"),
+        help="_notes", parent=widget,
+        cancel=True, geomKey="selectModel")
+    if not ret.name:
+        return None, None
+    model = mw.col.models.byName(ret.name)
+    # deck['mid'] = model['id']
+    # mw.col.decks.save(deck)
+    return model, deck
+
+
+def run_import(filepath, model, deck):
+    ti = TextImporter(mw.col, filepath)
+    ti.model = model
+    ti.initMapping()
+    # self.showMapping()
+    if mw.col.conf.get("addToCur", True):
+        did = mw.col.conf['curDeck']
+        if mw.col.decks.isDyn(did):
+            did = 1
+    else:
+        did = ti.model['did']
+
+    if did != ti.model['did']:
+        ti.model['did'] = did
+        mw.col.models.save(ti.model)
+    # mw.col.decks.select(did)
+    mw.progress.start(immediate=True)
+    try:
+        ti.run()
+    except UnicodeDecodeError:
+        showUnicodeWarning()
+        return
+    except Exception as e:
+        msg = _("Import failed.\n")
+        err = repr(str(e))
+        if "1-character string" in err:
+            msg += err
+        elif "invalidTempFolder" in err:
+            msg += mw.errorHandler.tempFolderMsg()
+        else:
+            msg += str(traceback.format_exc(), "ascii", "replace")
+        showText(msg)
+        return
+    finally:
+        mw.progress.finish()
+    txt = _("Importing complete.") + "\n"
+    if ti.log:
+        txt += "\n".join(ti.log)
+    # showText(txt)
+    mw.reset()
+
+
+def select_deck2():
+    # select deck. Reuse deck if already exists, else add a desk with
+    # deck_name.
+    did = mw.col.decks.id("test")
+    mw.col.decks.select(did)
+    # set note type for deck
+    m = mw.col.models.byName("MultiDicts")
+    deck = mw.col.decks.get(did)
+    # m['did'] = deck['id']
+    mw.col.decks.save(deck)
+    run_import()
+
+
+def batch_import():
+    filepath = QFileDialog.getOpenFileName(
+        caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
+    model, deck = select()
+    run_import(filepath, model, deck)
+    # filepath = QFileDialog.getOpenFileName(
+    #     caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
+    # if filepath:
+    #     try:
+    #         ti = TextImporter(mw.col, filepath)
+    #         # showInfo(autopath+"dicts.csv")
+    #         ti.allowHTML = True
+    #         # ti.delimiter = ','
+    #         ti.initMapping()
+    #         ti.run()
+    #     except IOError as e:
+    #         # showInfo(str(e))
+    #         pass
+    #     except:
+    #         # unknowFormat
+    #         # showInfo("This addon got an error!")
+    #         pass
+    # pass
+
+# create a new menu item, "test"
+action = QAction("Import", mw)
+# set it to call testFunction when it's clicked
+action.triggered.connect(batch_import)
 # and add it to the tools menu
 mw.form.menuTools.addAction(action)
