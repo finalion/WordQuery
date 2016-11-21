@@ -359,6 +359,7 @@ def query_mdict(word):
             pass
     return d
 
+
 def update_field(result_text):
     d = defaultdict(str)
     result_text = convert_media_path(result_text)
@@ -381,7 +382,6 @@ def update_field(result_text):
     return d
 
 
-
 def select():
     # select deck. Reuse deck if already exists, else add a desk with
     # deck_name.
@@ -391,7 +391,6 @@ def select():
         mw, current=None, accept=_("Choose"),
         title=_("Choose Deck"), help="addingnotes",
         cancel=False, parent=widget, geomKey="selectDeck")
-
     did = mw.col.decks.id(ret.name)
     mw.col.decks.select(did)
     if not ret.name:
@@ -412,60 +411,14 @@ def select():
     return model, deck
 
 
-def run_import(filepath, model, deck):
-    ti = TextImporter(mw.col, filepath)
-    ti.model = model
-    ti.initMapping()
-    # self.showMapping()
-    if mw.col.conf.get("addToCur", True):
-        did = mw.col.conf['curDeck']
-        if mw.col.decks.isDyn(did):
-            did = 1
-    else:
-        did = ti.model['did']
-
-    if did != ti.model['did']:
-        ti.model['did'] = did
-        mw.col.models.save(ti.model)
-    mw.col.decks.select(did)
-    mw.progress.start(immediate=True)
-    try:
-        ti.run()
-    except UnicodeDecodeError:
-        showUnicodeWarning()
-        return
-    except Exception as e:
-        msg = _("Import failed.\n")
-        err = repr(str(e))
-        if "1-character string" in err:
-            msg += err
-        elif "invalidTempFolder" in err:
-            msg += mw.errorHandler.tempFolderMsg()
-        else:
-            # msg += str(traceback.format_exc(), "ascii", "replace")
-            pass
-        showText(msg)
-        return
-    finally:
-        mw.progress.finish()
-    txt = _("Importing complete.") + "\n"
-    if ti.log:
-        txt += "\n".join(ti.log)
-    # showText(txt)
-    mw.reset()
-
-
-def batch_import():
-    filepath = QFileDialog.getOpenFileName(
-        caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
-    model, deck = select()
-    run_import(filepath, model, deck)
-
-
 def batch_import2():
     filepath = QFileDialog.getOpenFileName(
         caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
+    if not filepath:
+        return
     model, deck = select()
+    if not model:
+        return
     if mw.col.conf.get("addToCur", True):
         did = mw.col.conf['curDeck']
         if mw.col.decks.isDyn(did):
@@ -488,9 +441,9 @@ def batch_import2():
         query_thread.wait(100)
     mw.progress.finish()
 
-    with open('t.txt','wb') as fff:
+    with open('t.txt', 'wb') as fff:
         for data in queue:
-            fff.write(','.join(data.values())+'\n')
+            fff.write(','.join(data.values()) + '\n')
     # insert
     for data in queue:
         f = mw.col.newNote()
@@ -509,7 +462,7 @@ class BatchQueryer(QThread):
 
     def run(self):
         with open(self.filepath, 'rb') as f:
-            for i,line in enumerate(f):
+            for i, line in enumerate(f):
                 d = defaultdict(str)
                 l = [each.strip() for each in line.split('\t')]
                 word, sentence = l if len(l) == 2 else (l[0], "")
@@ -523,11 +476,14 @@ class BatchQueryer(QThread):
                 # d.update(d1)
                 d.update(d2)
                 self.queue.append(d)
-                
 
 
-action = QAction("Import", mw)
+action = QAction("Batch Import...", mw)
 # set it to call testFunction when it's clicked
 action.triggered.connect(batch_import2)
 # and add it to the tools menu
-mw.form.menuTools.addAction(action)
+# mw.form.menuTools.addAction(action)
+actionSep = QAction("", mw)
+actionSep.setSeparator(True)
+mw.form.menuCol.insertAction(mw.form.actionExit, actionSep)
+mw.form.menuCol.insertAction(actionSep, action)
