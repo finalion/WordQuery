@@ -9,7 +9,7 @@ import sys
 import urllib2
 import xml.etree.ElementTree
 from StringIO import StringIO
-
+import json
 import aqt
 from aqt import mw
 from aqt.qt import *
@@ -26,6 +26,7 @@ from mdict.mdict_query import IndexBuilder
 
 
 enable_youdao = 0
+
 default_server = 'http://127.0.0.1:8000'
 index_builder = None
 dictpath = ''
@@ -33,6 +34,16 @@ savepath = os.path.join(sys.path[0], 'config')
 serveraddr = default_server
 use_local, use_server = False, False
 
+rules = list()
+with open(os.path.join(sys.path[0],'rules.json'),'rb') as f:
+    rules = json.load(f)["fields"]
+
+def find_rule(**kwargs):
+    for rule in rules:
+        # print rule.items(), kwargs.items()
+        for arg in kwargs.items():
+            if arg in rule.items():
+                return rule
 
 def _my_center_links(self):
     '''
@@ -181,7 +192,6 @@ def _show_query_window():
     widget.show()
 #################################################################
 
-# custom add ui
 
 
 def my_setupButtons(self):
@@ -274,22 +284,10 @@ def update_field(result_text, note):
         showInfo("Template Error, Mdx!")
         return
     result_text = convert_media_path(result_text)
-    if 'href="_collinsEC.css"' in result_text:
-        note.fields[8] = result_text
-    elif 'href="_CollinsEN.css"' in result_text:
-        note.fields[9] = result_text
-    if 'href="_O8C.css"' in result_text:
-        note.fields[10] = result_text
-    elif 'href="_ODE.css"' in result_text:  # ok
-        note.fields[11] = result_text
-    elif 'href="_MacmillanEnEn.css"' in result_text:  # ok
-        note.fields[12] = result_text
-    elif 'href="_LDOCE6.css"' in result_text:  # ok
-        note.fields[13] = result_text
-    elif 'href="_MWU.css"' in result_text:  # ok
-        note.fields[14] = result_text
-    else:
-        pass
+    for rule in rules:
+        feature = rule["feature"]
+        if feature and feature in result_text:
+            note.fields[rule["pos"]]=result_text
 
 
 use_local, dictpath, use_server, serveraddr = read_parameters()
@@ -356,22 +354,10 @@ def query_mdict2(word):
 def update_field2(result_text):
     d = defaultdict(str)
     result_text = convert_media_path(result_text)
-    if 'href="_collinsEC.css"' in result_text:
-        d[u'柯林斯中文解释'] = result_text
-    elif 'href="_CollinsEN.css"' in result_text:
-        d[u'柯林斯英文解释'] = result_text
-    if 'href="_O8C.css"' in result_text:
-        d[u'牛津高阶解释'] = result_text
-    elif 'href="_ODE.css"' in result_text:  # ok
-        d[u'牛津英语解释'] = result_text
-    elif 'href="_MacmillanEnEn.css"' in result_text:  # ok
-        d[u'麦克米伦解释'] = result_text
-    elif 'href="_LDOCE6.css"' in result_text:  # ok
-        d[u'朗文当代解释'] = result_text
-    elif 'href="_MWU.css"' in result_text:  # ok
-        d[u'韦氏大学解释'] = result_text
-    else:
-        pass
+    for rule in rules:
+        feature = rule["feature"]
+        if feature and feature in result_text:
+            d[rule["name"]] =result_text
     return d
 
 
