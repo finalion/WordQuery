@@ -25,6 +25,7 @@ from mdict.mdict_query import IndexBuilder
 # from Queue import Queue
 
 
+enable_youdao = 0
 default_server = 'http://127.0.0.1:8000'
 index_builder = None
 dictpath = ''
@@ -47,8 +48,6 @@ def _my_center_links(self):
     # showInfo("custorm links")
     return self._linkHTML(links)
 Toolbar._centerLinks = _my_center_links
-
-# build set dialog and process the dict path
 
 
 def select_dict():
@@ -140,7 +139,7 @@ def set_options():
     check_local.stateChanged.connect(onCheckServerStageChanged)
     mw.myEditServerAddr = server_edit = QLineEdit()
     server_edit.setText(serveraddr)
-
+    # online_check = QCheckBox("Enable Simple")
     ok_button = QPushButton("OK")
     ok_button.clicked.connect(okbtn_pressed)
     # layout.addWidget(QLabel("Set dictionary path: "))
@@ -464,16 +463,17 @@ class BatchQueryer(QThread):
                 d = defaultdict(str)
                 l = [each.strip() for each in line.split('\t')]
                 word, sentence = l if len(l) == 2 else (l[0], "")
-                m = re.search('\((.*?)\)', word)
-                if m:
-                    word = m.groups()[0]
-                # d1 = query_youdao2(word)
-                d2 = query_mdict2(word)
-                d[u'英语单词'] = unicode(word)
-                d[u'英语例句'] = unicode(sentence)
-                # d.update(d1)
-                d.update(d2)
-                self.queue.append(d)
+                if word:
+                    m = re.search('\((.*?)\)', word)
+                    if m:
+                        word = m.groups()[0]
+                    d[u'英语单词'] = unicode(word)
+                    d[u'英语例句'] = unicode(sentence)
+                    if enable_youdao == 1:
+                        showInfo("enable youdao")
+                        d.update(query_youdao2(word))
+                    d.update(query_mdict2(word))
+                    self.queue.append(d)
 
 
 action = QAction("Batch Import...", mw)
