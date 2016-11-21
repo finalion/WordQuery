@@ -60,7 +60,8 @@ def select_dict():
 def okbtn_pressed():
     mw.myWidget.close()
     set_parameters()
-    index_mdx()
+    if use_local:
+        index_mdx()
 
 
 def set_parameters():
