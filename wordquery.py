@@ -31,9 +31,6 @@ dictpath = ''
 savepath = os.path.join(sys.path[0], 'config')
 serveraddr = default_server
 use_local, use_server = False, False
-# showInfo(sys.path[0])
-# showInfo(savepath)
-# custom Toolbar
 
 
 def _my_center_links(self):
@@ -46,7 +43,7 @@ def _my_center_links(self):
             ["browse", _("Browse"), _("Shortcut key: %s") % "B"],
             ["query", _("Query"), _("Shortcut key: %s") % "Q"],
     ]
-    self.link_handlers["query"] = show_query_window  # self._queryLinkHandler
+    self.link_handlers["query"] = _show_query_window  # self._queryLinkHandler
     # showInfo("custorm links")
     return self._linkHTML(links)
 Toolbar._centerLinks = _my_center_links
@@ -59,6 +56,7 @@ def select_dict():
     dictpath = QFileDialog.getOpenFileName(
         caption="select dictionary", directory=os.path.dirname(dictpath), filter="mdx Files(*.mdx)")
     if dictpath:
+        dictpath = unicode(dictpath)
         mw.myEditLocalPath.setText(dictpath)
 
 
@@ -81,18 +79,14 @@ def set_parameters():
 
 
 def read_parameters():
-    # showInfo(savepath)
-    # with open(savepath, 'rb') as f:
-    #     uls, path, uss, addr = f.read().strip().split('|')
-    #     showInfo('%s,%s,%s,%s' % (uls, path, uss, addr))
-    #     return bool(int(uls)), path, bool(int(uss)), addr
-    try:
-        with open(savepath, 'rb') as f:
-            uls, path, uss, addr = f.read().strip().split('|')
-            return bool(int(uls)), path, bool(int(uss)), addr
-    except:
-        # showInfo("not exist")
-        return False, "", False, default_server
+    # try:
+    with open(savepath, 'rb') as f:
+        uls, path, uss, addr = f.read().strip().split('|')
+        # showInfo(','.join([path, addr]))
+        return bool(int(uls)), path.decode('utf-8'), bool(int(uss)), addr.decode('utf-8')
+    # except:
+    #     # showInfo("not exist")
+    #     return False, "", False, default_server
 
 
 class MdxIndexer(QThread):
@@ -115,6 +109,9 @@ def index_mdx():
     mw.progress.finish()
 
 
+# AnkiQt.setupAddons = wrap(AnkiQt.setupAddons, index_mdx, "after")
+
+
 def onCheckLocalStageChanged():
     global use_local
     use_local = mw.myCheckLocal.isChecked()
@@ -131,6 +128,7 @@ def set_options():
     mw.myWidget = widget = QWidget()
     layout = QGridLayout()
 
+    # showInfo('%d,%s,%d,%s' % (use_local, dictpath, use_server, serveraddr))
     mw.myCheckLocal = check_local = QCheckBox("Use Local Dict")
     check_local.setChecked(use_local)
     check_local.stateChanged.connect(onCheckLocalStageChanged)
@@ -160,7 +158,7 @@ def set_options():
 # "Query" Link in main window
 
 
-def query_word():
+def _query_link():
     word = mw.myWordEdit.text().strip()
     if word:
         # showInfo("Query %s" % word)
@@ -168,12 +166,12 @@ def query_word():
             QUrl('http://dict.baidu.com/s?wd=%s&ptype=english' % word))
 
 
-def show_query_window():
+def _show_query_window():
     mw.myWidget = widget = QWidget()
     layout = QGridLayout()
     mw.myWordEdit = word_edit = QLineEdit()
     ok_button = QPushButton("OK")
-    ok_button.clicked.connect(query_word)
+    ok_button.clicked.connect(_query_link)
     mw.myWebView = result_view = QWebView()
     layout.addWidget(QLabel("Word to query: "))
     layout.addWidget(word_edit)
@@ -194,8 +192,6 @@ def my_setupButtons(self):
     self.queryButton.clicked.connect(self.query)
     self.queryButton.setShortcut(QKeySequence("Ctrl+Q"))
     self.queryButton.setToolTip(shortcut(_("Query (shortcut: ctrl+q)")))
-    # fa = str(self.form.fieldsArea.childAt(QPoint(0, 0)).text())
-    # showInfo(fa)
 
 
 def query(self):
@@ -210,7 +206,6 @@ def query(self):
 def query_youdao(self):
     self.editor.saveAddModeVars()
     note = self.editor.note
-    # note = self.addNote(note)
     word = note.fields[0]      # choose the first field as the word
     result = urllib2.urlopen(
         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
@@ -304,7 +299,6 @@ AddCards.query = query
 AddCards.query_youdao = query_youdao
 AddCards.query_mdict = query_mdict
 AddCards.setupButtons = wrap(AddCards.setupButtons, my_setupButtons, "before")
-
 # create a new menu item, "test"
 action = QAction("Word Query", mw)
 # set it to call testFunction when it's clicked
@@ -321,7 +315,7 @@ note_type_name = u"MultiDicts"
 expsdict = defaultdict(str)
 
 
-def query_youdao(word):
+def query_youdao2(word):
     d = defaultdict(str)
     result = urllib2.urlopen(
         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
@@ -334,7 +328,7 @@ def query_youdao(word):
     return d
 
 
-def query_mdict(word):
+def query_mdict2(word):
     d = defaultdict(str)
     result = None
     if use_local:
@@ -343,7 +337,7 @@ def query_mdict(word):
                 index_mdx()
             result = index_builder.mdx_lookup(word)
             if result:
-                d = update_field(result[0])
+                d = update_field2(result[0])
         except AssertionError as e:
             # no valid mdict file found.
             pass
@@ -353,14 +347,14 @@ def query_mdict(word):
                 serveraddr + r'/' + word)
             result2 = req.read()
             if result2:
-                d.update(update_field(result2))
+                d.update(update_field2(result2))
         except:
             # server error
             pass
     return d
 
 
-def update_field(result_text):
+def update_field2(result_text):
     d = defaultdict(str)
     result_text = convert_media_path(result_text)
     if 'href="_collinsEC.css"' in result_text:
@@ -412,6 +406,10 @@ def select():
 
 
 def batch_import2():
+    """
+    Use addNote method to add the note one by one, but it can't check if the card exists now.
+    """
+    # index_mdx()
     filepath = QFileDialog.getOpenFileName(
         caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
     if not filepath:
@@ -430,7 +428,7 @@ def batch_import2():
         model['did'] = did
         mw.col.models.save(model)
     mw.col.decks.select(did)
-
+    index_mdx()
     queue = list()
     # query
     query_thread = BatchQueryer(filepath, queue)
@@ -469,8 +467,8 @@ class BatchQueryer(QThread):
                 m = re.search('\((.*?)\)', word)
                 if m:
                     word = m.groups()[0]
-                # d1 = query_youdao(word)
-                d2 = query_mdict(word)
+                # d1 = query_youdao2(word)
+                d2 = query_mdict2(word)
                 d[u'英语单词'] = unicode(word)
                 d[u'英语例句'] = unicode(sentence)
                 # d.update(d1)
