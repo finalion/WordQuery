@@ -1,11 +1,12 @@
 #-*- coding:utf-8 -*-
 
-# import the main window object (mw) from aqt
-# We're going to add a menu item below. First we want to create a function to
-# be called when the menu item is activated.
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 import os
 import re
-import sys
 import urllib2
 import xml.etree.ElementTree
 from StringIO import StringIO
@@ -31,12 +32,15 @@ default_server = 'http://127.0.0.1:8000'
 index_builder = None
 dictpath = ''
 savepath = os.path.join(sys.path[0], 'config')
+# showInfo(','.join(sys.path))
+
 serveraddr = default_server
 use_local, use_server = False, False
 
 rules = list()
-with open(os.path.join(sys.path[0],'rules.json'),'rb') as f:
+with open(os.path.join(sys.path[0], 'rules.json'), 'rb') as f:
     rules = json.load(f)["fields"]
+
 
 def find_rule(**kwargs):
     for rule in rules:
@@ -44,6 +48,7 @@ def find_rule(**kwargs):
         for arg in kwargs.items():
             if arg in rule.items():
                 return rule
+
 
 def _my_center_links(self):
     '''
@@ -107,6 +112,7 @@ class MdxIndexer(QThread):
     def run(self):
         global index_builder
         index_builder = IndexBuilder(dictpath)
+        save_media_files(index_builder, '*.css', '.js')
 
 
 def index_mdx():
@@ -193,7 +199,6 @@ def _show_query_window():
 #################################################################
 
 
-
 def my_setupButtons(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
@@ -208,14 +213,13 @@ def query(self):
         field = ''
     self.query_youdao()
     self.query_mdict()
-    self.editor.currentField = 0
-    self.editor.loadNote()
+    self.editor.setNote(self.editor.note, focus=True)
 
 
 def query_youdao(self):
-    self.editor.saveAddModeVars()
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
+    # showInfo('youdoa:%s'%word)
     result = urllib2.urlopen(
         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
     file = StringIO(result)
@@ -234,20 +238,19 @@ def query_youdao(self):
 
 
 def query_mdict(self):
-    self.editor.saveAddModeVars()
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
     result = None
     if use_local:
-        try:
-            if not index_builder:
-                index_mdx()
-            result = index_builder.mdx_lookup(word)
-            if result:
-                update_field(result[0], note)
-        except AssertionError as e:
-            # no valid mdict file found.
-            pass
+        # try:
+        if not index_builder:
+            index_mdx()
+        result = index_builder.mdx_lookup(word)
+        if result:
+            update_field(result[0], note)
+        # except AssertionError as e:
+        #     # no valid mdict file found.
+        #     pass
     if use_server:
         try:
             req = urllib2.urlopen(
@@ -260,6 +263,25 @@ def query_mdict(self):
             pass
 
 
+def save_media_files(ib, *args, **kwargs):
+    """
+    only get the necessary static files
+    ** kwargs: data = list
+    """
+    lst = [] 
+    wild = list(args) + ['*'+each for each in kwargs.get('data',[])]
+    for each in wild:
+       lst.extend( ib.get_mdd_keys(each))
+    # showInfo('lst'+', '.join(lst))
+    media_dir = mw.col.media.dir()
+    for each in lst:
+        bytes_list = ib.mdd_lookup(each)
+        if bytes_list:
+            savepath = os.path.join(media_dir, '_'+os.path.basename(each))
+            if not os.path.exists(savepath): 
+                with open(savepath, 'wb') as f:
+                    f.write(bytes_list[0])
+
 def convert_media_path(html):
     """
     convert the media path to actual path in anki's collection media folder.'
@@ -271,6 +293,7 @@ def convert_media_path(html):
     lst.extend(list(set(mjs)))
     msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
     lst.extend(list(set(msrc)))
+    save_media_files(index_builder, data = list(set(msrc)))
     # print lst
     newlist = ['_' + each.split('/')[-1] for each in lst]
     # print newlist
@@ -278,7 +301,7 @@ def convert_media_path(html):
         html = html.replace(each[0], each[1])
     return unicode(html)
 
-
+    
 def update_field(result_text, note):
     if len(note.fields) < 15:
         showInfo("Template Error, Mdx!")
@@ -287,7 +310,7 @@ def update_field(result_text, note):
     for rule in rules:
         feature = rule["feature"]
         if feature and feature in result_text:
-            note.fields[rule["pos"]]=result_text
+            note.fields[rule["pos"]] = result_text
 
 
 use_local, dictpath, use_server, serveraddr = read_parameters()
@@ -357,7 +380,7 @@ def update_field2(result_text):
     for rule in rules:
         feature = rule["feature"]
         if feature and feature in result_text:
-            d[rule["name"]] =result_text
+            d[rule["name"]] = result_text
     return d
 
 
