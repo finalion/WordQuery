@@ -1,11 +1,12 @@
 #-*- coding:utf-8 -*-
 
-# import the main window object (mw) from aqt
-# We're going to add a menu item below. First we want to create a function to
-# be called when the menu item is activated.
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
+
 import os
 import re
-import sys
 import urllib2
 import xml.etree.ElementTree
 from StringIO import StringIO
@@ -35,8 +36,9 @@ serveraddr = default_server
 use_local, use_server = False, False
 
 rules = list()
-with open(os.path.join(sys.path[0],'rules.json'),'rb') as f:
+with open(os.path.join(sys.path[0], 'rules.json'), 'rb') as f:
     rules = json.load(f)["fields"]
+
 
 def find_rule(**kwargs):
     for rule in rules:
@@ -44,6 +46,7 @@ def find_rule(**kwargs):
         for arg in kwargs.items():
             if arg in rule.items():
                 return rule
+
 
 def _my_center_links(self):
     '''
@@ -193,7 +196,6 @@ def _show_query_window():
 #################################################################
 
 
-
 def my_setupButtons(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
@@ -209,13 +211,13 @@ def query(self):
     self.query_youdao()
     self.query_mdict()
     self.editor.currentField = 0
-    self.editor.loadNote()
+    self.editor.setNote(self.editor.note, focus=True)
 
 
 def query_youdao(self):
-    self.editor.saveAddModeVars()
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
+    # showInfo('youdoa:%s'%word)
     result = urllib2.urlopen(
         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
     file = StringIO(result)
@@ -234,7 +236,6 @@ def query_youdao(self):
 
 
 def query_mdict(self):
-    self.editor.saveAddModeVars()
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
     result = None
@@ -287,7 +288,7 @@ def update_field(result_text, note):
     for rule in rules:
         feature = rule["feature"]
         if feature and feature in result_text:
-            note.fields[rule["pos"]]=result_text
+            note.fields[rule["pos"]] = result_text
 
 
 use_local, dictpath, use_server, serveraddr = read_parameters()
@@ -357,7 +358,7 @@ def update_field2(result_text):
     for rule in rules:
         feature = rule["feature"]
         if feature and feature in result_text:
-            d[rule["name"]] =result_text
+            d[rule["name"]] = result_text
     return d
 
 
