@@ -237,8 +237,7 @@ def my_setupButtons(self):
 def query(self):
     for field in self.editor.note.fields:
         field = ''
-    self.query_youdao()
-    self.query_mdict()
+
     # self.query_youdao()
     for i, each in enumerate(paras):
         if each['checked'] and each['dict_path'].strip():
