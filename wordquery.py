@@ -20,7 +20,7 @@ from aqt.addcards import AddCards
 from aqt.modelchooser import ModelChooser
 from aqt.studydeck import StudyDeck
 from aqt.toolbar import Toolbar
-from aqt.utils import shortcut, showInfo
+from aqt.utils import shortcut, showInfo, showText
 # import trackback
 from mdict.mdict_query import IndexBuilder
 import cPickle
@@ -34,6 +34,7 @@ default_server = 'http://127.0.0.1:8000'
 index_builders = defaultdict(int)
 savepath = os.path.join(sys.path[0], 'config')
 # showInfo(','.join(sys.path))
+
 
 def read_parameters():
     try:
@@ -75,8 +76,8 @@ class MdxIndexer(QThread):
         index_builder = IndexBuilder(dict_path)
         errors, styles = save_media_files(index_builder, '*.css', '.js')
         if '*.css' in errors:
-        # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
-            showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中"%(dict_path))
+            # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
+            showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" % (dict_path))
         return index_builder
 
 
@@ -180,9 +181,9 @@ def add_dict_layout(i, **kwargs):
     mw.signal_mapper_sel.setMapping(choose_btn, i)
     mw.signal_mapper_chk.setMapping(dict_check, i)
     layout.addWidget(dict_check)
-    layout.addWidget(choose_btn)
     layout.addWidget(field_label)
     layout.addWidget(path_edit)
+    layout.addWidget(choose_btn)
     mw.myDictsLayout.addLayout(layout)
     mw.myWidget.setLayout(mw.myMainLayout)
 
@@ -192,8 +193,13 @@ def set_options():
     paras = read_parameters()
     mw.myWidget = widget = QWidget()
     mw.myMainLayout = main_layout = QVBoxLayout()
-    models_layout = QHBoxLayout()    
-    mw.myDictsLayout = dicts_layout = QVBoxLayout()
+    models_layout = QHBoxLayout()
+    mw.myScrollArea = scroll_area = QScrollArea()
+    mw.myDictsWidget = dicts_widget = QWidget()
+    mw.myDictsLayout = dicts_layout = QVBoxLayout(scroll_area)
+    dicts_widget.setLayout(dicts_layout)
+    scroll_area.setWidget(dicts_widget)
+    scroll_area.setWidgetResizable(True)
     mw.signal_mapper_sel = QSignalMapper(mw.myWidget)
     mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
     # mw.myModelNameLabel = QLabel(u"笔记类型")
@@ -207,7 +213,8 @@ def set_options():
     ok_button = QPushButton("OK")
     ok_button.clicked.connect(btn_ok_pressed)
     main_layout.addLayout(models_layout)
-    main_layout.addLayout(dicts_layout)
+    main_layout.addWidget(scroll_area)
+    # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
     mw.signal_mapper_sel.mapped.connect(select_dict)
     mw.signal_mapper_chk.mapped.connect(chkbox_state_changed)
@@ -272,7 +279,8 @@ def query_mdict(self, ix, **kwargs):
         result = index_builders[ix].mdx_lookup(word)
         # showInfo(result[0])
         if result:
-            self.update_dict_field(ix, result[0], index_builders[ix])
+            # showInfo('ssssssss  %s' % result[0])
+            self.update_dict_field(ix, str(result[0]), index_builders[ix])
     else:
         req = urllib2.urlopen(serveraddr + r'/' + word)
         self.update_dict_field(ix, req.read())
@@ -306,7 +314,8 @@ def save_media_files(ib, *args, **kwargs):
     """
     lst = []
     errors = []
-    wild = list(args) + ['*' + os.path.basename(each) for each in kwargs.get('data', [])]
+    wild = list(args) + ['*' + os.path.basename(each)
+                         for each in kwargs.get('data', [])]
     for each in wild:
         keys = ib.get_mdd_keys(each)
         if not keys:
@@ -328,7 +337,7 @@ def save_media_files(ib, *args, **kwargs):
                         f.write(bytes_list[0])
         except sqlite3.OperationalError as e:
             showInfo(str(e))
-    showInfo(str(styles))
+    # showInfo(str(styles))
     return errors, styles
 
 
@@ -336,6 +345,7 @@ def convert_media_path(ib, html):
     """
     convert the media path to actual path in anki's collection media folder.'
     """
+    showInfo('%s %s' % (type(html), str(html)))
     lst = list()
     mcss = re.findall('href="(\S+?\.css)"', html)
     lst.extend(list(set(mcss)))
@@ -343,23 +353,25 @@ def convert_media_path(ib, html):
     lst.extend(list(set(mjs)))
     msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
     lst.extend(list(set(msrc)))
-    errors, styles = save_media_files(ib, data=list(set(msrc)))
+    errors, styles = save_media_files(ib, data=list(set(lst)))
+    # showInfo(str(styles))
     # showInfo(str(list(set(msrc))))
     # print lst
     newlist = ['_' + each.split('/')[-1] for each in lst]
     # print newlist
     for each in zip(lst, newlist):
         html = html.replace(each[0], each[1])
-    html = '<br>'.join(["<style>@import url('_%s');</style>" % style for style in styles if style.endswith('.css')])+html
-    if '.css' in styles:
-        showInfo(html)
-    html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' % style for style in styles if style.endswith('.js')])
+    html = '<br>'.join(["<style>@import url('_%s');</style>" %
+                        style for style in styles if style.endswith('.css')]) + html
+    html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
+                         style for style in styles if style.endswith('.js')])
+    showInfo(str(html))
     # showInfo(html)
     return unicode(html)
 
-    
 
 def update_dict_field(self, idx, text, ib=0):
+    # showInfo('before: %d %d, %s' % (idx, len(text), text))
     note = self.editor.note
     # old_items = note.items()
     # item = list(note.items())[idx]
@@ -399,6 +411,7 @@ def query_youdao2(word):
         ".//custom-translation/translation/content")]))
     return d
 
+
 def query_mdict2(word, ix, **kwargs):
     dict_path, fld_name = kwargs.get(
         'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
@@ -416,9 +429,9 @@ def query_mdict2(word, ix, **kwargs):
     # showInfo(str(d))
 
 
-
 def update_dict_field2(idx, text, ib=0):
     return convert_media_path(ib, text) if ib else text
+
 
 def select():
     # select deck. Reuse deck if already exists, else add a desk with
@@ -487,10 +500,10 @@ def batch_import2():
     for i, data in enumerate(queue):
         f = mw.col.newNote()
         for ix, text in data.items():
-            if ix=='word':
-                name = paras[0]['fld_name']    
+            if ix == 'word':
+                name = paras[0]['fld_name']
             else:
-                name = paras[ix]['fld_name']    
+                name = paras[ix]['fld_name']
                 # showInfo("text: %s"%text)
             f[name] = text
         mw.col.addNote(f)
@@ -515,11 +528,11 @@ class BatchQueryer(QThread):
                     if m:
                         word = m.groups()[0]
                     d['word'] = word
-                    for i,each in enumerate(paras):
+                    for i, each in enumerate(paras):
                         # if enable_youdao == 1:
                         #     showInfo("enable youdao")
                         if each['checked'] and each['dict_path'].strip():
-                            d[i] = query_mdict2(word,i,**each)
+                            d[i] = query_mdict2(word, i, **each)
                     self.queue.append(d)
 
 
