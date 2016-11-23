@@ -23,13 +23,15 @@ from aqt.toolbar import Toolbar
 from aqt.utils import shortcut, showInfo
 # import trackback
 from mdict.mdict_query import IndexBuilder
+import cPickle
 # from Queue import Queue
+from collections import defaultdict
 
 
 enable_youdao = 0
 
 default_server = 'http://127.0.0.1:8000'
-index_builder = None
+index_builders = defaultdict(int)
 dictpath = ''
 savepath = os.path.join(sys.path[0], 'config')
 # showInfo(','.join(sys.path))
@@ -50,74 +52,53 @@ def find_rule(**kwargs):
                 return rule
 
 
-def _my_center_links(self):
-    '''
-    todo: use wrap
-    '''
-    links = [
-            ["decks", _("Decks"), _("Shortcut key: %s") % "D"],
-            ["add", _("Add"), _("Shortcut key: %s") % "A"],
-            ["browse", _("Browse"), _("Shortcut key: %s") % "B"],
-            ["query", _("Query"), _("Shortcut key: %s") % "Q"],
-    ]
-    self.link_handlers["query"] = _show_query_window  # self._queryLinkHandler
-    # showInfo("custorm links")
-    return self._linkHTML(links)
-Toolbar._centerLinks = _my_center_links
-
-
-def select_dict():
-    global dictpath
-    dictpath = QFileDialog.getOpenFileName(
-        caption="select dictionary", directory=os.path.dirname(dictpath), filter="mdx Files(*.mdx)")
-    if dictpath:
-        dictpath = unicode(dictpath)
-        mw.myEditLocalPath.setText(dictpath)
-
-
-def okbtn_pressed():
-    mw.myWidget.close()
-    set_parameters()
-    if use_local:
-        index_mdx()
+def read_parameters():
+    try:
+        with open(savepath, 'rb') as f:
+            return cPickle.load(f)
+        # showInfo(str(paras))
+    except:
+        # showInfo("config file error")
+        return None
 
 
 def set_parameters():
-    global dictpath, serveraddr, use_local, use_server
-    dictpath = unicode(mw.myEditLocalPath.text())
-    serveraddr = unicode(mw.myEditServerAddr.text())
-    use_local = mw.myCheckLocal.isChecked()
-    use_server = mw.myCheckServer.isChecked()
+    global paras
+    cbs, les, lbs = mw.myWidget.findChildren(
+        QCheckBox), mw.myWidget.findChildren(QLineEdit), mw.myWidget.findChildren(QLabel)
+    paras = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_name": lb.text()}
+             for (cb, le, lb) in zip(cbs, les, lbs)]
+    # showInfo(str(paras))
     with open(savepath, 'wb') as f:
-        p = '%d|%s|%d|%s' % (use_local, dictpath, use_server, serveraddr)
-        f.write(p.encode('utf-8'))
-
-
-def read_parameters():
-    # try:
-    with open(savepath, 'rb') as f:
-        uls, path, uss, addr = f.read().strip().split('|')
-        # showInfo(','.join([path, addr]))
-        return bool(int(uls)), path.decode('utf-8'), bool(int(uss)), addr.decode('utf-8')
-    # except:
-    #     # showInfo("not exist")
-    #     return False, "", False, default_server
+        cPickle.dump(paras, f)
 
 
 class MdxIndexer(QThread):
 
-    def __init__(self):
+    def __init__(self, ix):
         QThread.__init__(self)
+        self.ix = ix
 
     def run(self):
-        global index_builder
-        index_builder = IndexBuilder(dictpath)
-        save_media_files(index_builder, '*.css', '.js')
+        if self.ix == -1:
+            for i, each in enumerate(paras):
+                if each['checked'] and each["dict_path"]:
+                    index_builders[i] = self.work(each["dict_path"])
+        else:
+            index_builders[self.ix] = self.work(paras[self.ix]["dict_path"])
+
+    def work(self, dict_path):
+        index_builder = IndexBuilder(dict_path)
+        errors = save_media_files(index_builder, '*.css', '.js')
+        if '*.css' in errors:
+        # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
+            showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中"%(dict_path))
+        return index_builder
 
 
-def index_mdx():
+def index_mdx(ix=-1):
     mw.progress.start(immediate=True, label="Index building...")
-    index_thread = MdxIndexer()
+    index_thread = MdxIndexer(ix)
     index_thread.start()
     while not index_thread.isFinished():
         mw.app.processEvents()
@@ -125,78 +106,124 @@ def index_mdx():
     mw.progress.finish()
 
 
-# AnkiQt.setupAddons = wrap(AnkiQt.setupAddons, index_mdx, "after")
+def btn_ok_pressed():
+    mw.myWidget.close()
+    set_parameters()
+    index_mdx(-1)
 
 
-def onCheckLocalStageChanged():
-    global use_local
-    use_local = mw.myCheckLocal.isChecked()
-    if use_local:
-        select_dict()
+def btn_models_pressed():
+    model = show_models()
+    if model:
+        build_layout(model)
 
 
-def onCheckServerStageChanged():
-    global use_server
-    use_server = mw.myCheckServer.isChecked()
+def select_dict(fld_number):
+    path = QFileDialog.getOpenFileName(
+        caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
+    if path:
+        path = unicode(path)
+        path_edits = mw.myWidget.findChildren(QLineEdit)
+        path_edits[fld_number].setText(path)
+
+
+def chkbox_state_changed(fld_number):
+    dict_checks = mw.myWidget.findChildren(QCheckBox)
+    line_edits = mw.myWidget.findChildren(QLineEdit)
+    line_edits[fld_number].setReadOnly(
+        dict_checks[fld_number].checkState() == 0)
+
+
+def clear_layout(layout):
+    if layout is not None:
+        while layout.count():
+            item = layout.takeAt(0)
+            widget = item.widget()
+            if widget is not None:
+                widget.deleteLater()
+            else:
+                clear_layout(item.layout())
+
+
+def build_layout(model=None):
+    clear_layout(mw.myDictsLayout)
+    if model:
+        for i, fld in enumerate(model['flds']):
+            add_dict_layout(i, fld_name=fld['name'])
+    else:
+        # build from config
+        for i, each in enumerate(paras):
+            add_dict_layout(i, **each)
+    mw.myWidget.setLayout(mw.myMainLayout)
+
+
+def show_models():
+    ret = StudyDeck(
+        mw, names=lambda: sorted(mw.col.models.allNames()), accept=_("Choose"), title=_("Choose Note Type"),
+        help="_notes", parent=mw.myWidget,
+        cancel=True, geomKey="selectModel")
+    if ret.name:
+        model = mw.col.models.byName(ret.name)
+        return model
+
+
+def add_dict_layout(i, **kwargs):
+    """
+    kwargs:
+    checked  dict_path  fld_name 
+    """
+    checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
+        'dict_path', ''), kwargs.get('fld_name', '')
+    layout = QHBoxLayout()
+    dict_check = QCheckBox(u"使用字典")
+    dict_check.setChecked(checked)
+    path_edit = QLineEdit(dict_path)
+    path_edit.setReadOnly(not checked)
+    objname = "fld%d" % i
+    path_edit.setObjectName(objname)
+    # important! only myWidget can find the children!!!!
+    # when use some joined string, it can not find too !!!
+    # ss = mw.myWidget.findChildren(QLineEdit, objname)
+    # if ss:
+    #     showInfo("found %d" % i)
+    field_label = QLabel(fld_name)
+    choose_btn = QPushButton(u"选择")
+    mw.myWidget.connect(choose_btn, SIGNAL("clicked()"),
+                        mw.signal_mapper_sel, SLOT("map()"))
+    mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
+                        mw.signal_mapper_chk, SLOT("map()"))
+    mw.signal_mapper_sel.setMapping(choose_btn, i)
+    mw.signal_mapper_chk.setMapping(dict_check, i)
+    layout.addWidget(dict_check)
+    layout.addWidget(field_label)
+    layout.addWidget(path_edit)
+    layout.addWidget(choose_btn)
+    mw.myDictsLayout.addLayout(layout)
+    mw.myWidget.setLayout(mw.myMainLayout)
 
 
 def set_options():
+    global paras
+    paras = read_parameters()
     mw.myWidget = widget = QWidget()
-    layout = QGridLayout()
-
-    # showInfo('%d,%s,%d,%s' % (use_local, dictpath, use_server, serveraddr))
-    mw.myCheckLocal = check_local = QCheckBox("Use Local Dict")
-    check_local.setChecked(use_local)
-    check_local.stateChanged.connect(onCheckLocalStageChanged)
-    mw.myEditLocalPath = path_edit = QLineEdit()
-    path_edit.setText(dictpath)
-
-    mw.myCheckServer = check_server = QCheckBox("Use MDX Server")
-    check_server.setChecked(use_server)
-    check_local.stateChanged.connect(onCheckServerStageChanged)
-    mw.myEditServerAddr = server_edit = QLineEdit()
-    server_edit.setText(serveraddr)
-    # online_check = QCheckBox("Enable Simple")
+    mw.myMainLayout = main_layout = QVBoxLayout()
+    mw.myDictsLayout = dicts_layout = QVBoxLayout()
+    mw.signal_mapper_sel = QSignalMapper(mw.myWidget)
+    mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
+    models_button = QPushButton("Choose Note Type")
+    models_button.clicked.connect(btn_models_pressed)
+    # build fields -- dicts layout
+    if paras:
+        build_layout()
     ok_button = QPushButton("OK")
-    ok_button.clicked.connect(okbtn_pressed)
-    # layout.addWidget(QLabel("Set dictionary path: "))
-    layout.addWidget(check_local, 0, 0)
-    layout.addWidget(path_edit, 0, 1)
-    layout.addWidget(check_server, 1, 0)
-    layout.addWidget(server_edit, 1, 1)
-    layout.addWidget(ok_button, 2, 0)
-    widget.setLayout(layout)
+    ok_button.clicked.connect(btn_ok_pressed)
+    main_layout.addWidget(models_button)
+    main_layout.addLayout(dicts_layout)
+    main_layout.addWidget(ok_button)
+    mw.signal_mapper_sel.mapped.connect(select_dict)
+    mw.signal_mapper_chk.mapped.connect(chkbox_state_changed)
+    widget.setLayout(main_layout)
     widget.show()
-
-
-#######################################################
-
-# "Query" Link in main window
-
-
-def _query_link():
-    word = mw.myWordEdit.text().strip()
-    if word:
-        # showInfo("Query %s" % word)
-        mw.myWebView.load(
-            QUrl('http://dict.baidu.com/s?wd=%s&ptype=english' % word))
-
-
-def _show_query_window():
-    mw.myWidget = widget = QWidget()
-    layout = QGridLayout()
-    mw.myWordEdit = word_edit = QLineEdit()
-    ok_button = QPushButton("OK")
-    ok_button.clicked.connect(_query_link)
-    mw.myWebView = result_view = QWebView()
-    layout.addWidget(QLabel("Word to query: "))
-    layout.addWidget(word_edit)
-    layout.addWidget(ok_button)
-    layout.addWidget(result_view)
-
-    widget.setLayout(layout)
-    widget.show()
-#################################################################
 
 
 def my_setupButtons(self):
@@ -211,8 +238,11 @@ def my_setupButtons(self):
 def query(self):
     for field in self.editor.note.fields:
         field = ''
-    self.query_youdao()
-    self.query_mdict()
+    # self.query_youdao()
+    for i, each in enumerate(paras):
+        self.query_mdict(
+            i, **each) if each['checked'] and each['dict_path'].strip() else 0
+
     self.editor.setNote(self.editor.note, focus=True)
 
 
@@ -237,30 +267,47 @@ def query_youdao(self):
         showInfo("Template Error, online!")
 
 
-def query_mdict(self):
+def query_mdict(self, ix, **kwargs):
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
     result = None
+    dict_path, fld_name = kwargs.get(
+        'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
+    use_server = dict_path.startswith("http://")
+    use_local = not use_server
     if use_local:
-        # try:
-        if not index_builder:
-            index_mdx()
-        result = index_builder.mdx_lookup(word)
+        # showInfo("  fill: %d   query: %s " % (ix, dict_path))
+        if not index_builders[ix]:
+            index_mdx(ix)
+        # index_mdx() if not index_builder else 0
+        result = index_builders[ix].mdx_lookup(word)
+        # showInfo(result[0])
         if result:
-            update_field(result[0], note)
-        # except AssertionError as e:
-        #     # no valid mdict file found.
-        #     pass
-    if use_server:
-        try:
-            req = urllib2.urlopen(
-                serveraddr + r'/' + word)
-            result2 = req.read()
-            if result2:
-                update_field(result2, note)
-        except:
-            # server error
-            pass
+            self.update_dict_field(ix, result[0], index_builders[ix])
+    else:
+        req = urllib2.urlopen(serveraddr + r'/' + word)
+        self.update_dict_field(ix, req.read())
+    # try:
+    #     if use_local:
+    #         showInfo("  fill: %d   query: %s "%(ix, dict_path))
+    #         if not index_builders[ix]:
+    #             index_mdx(ix)
+    #         # index_mdx() if not index_builder else 0
+    #         result = index_builder.mdx_lookup(word)
+    #         showInfo(result[0])
+    #         if result:
+    #             self.update_dict_field(ix, result[0])
+    #     else:
+    #         req = urllib2.urlopen(serveraddr + r'/' + word)
+    #         self.update_dict_field(ix, req.read())
+    # except AssertionError as e:
+    #     # no valid mdict file found.
+    #     pass
+    # except sqlite3.OperationalError:
+    #     pass
+    # except:
+    #     # server error
+    #     pass
 
 
 def save_media_files(ib, *args, **kwargs):
@@ -268,21 +315,31 @@ def save_media_files(ib, *args, **kwargs):
     only get the necessary static files
     ** kwargs: data = list
     """
-    lst = [] 
-    wild = list(args) + ['*'+each for each in kwargs.get('data',[])]
+    lst = []
+    errors = []
+    wild = list(args) + ['*' + os.path.basename(each) for each in kwargs.get('data', [])]
     for each in wild:
-       lst.extend( ib.get_mdd_keys(each))
-    # showInfo('lst'+', '.join(lst))
+        keys = ib.get_mdd_keys(each)
+        if not keys:
+            errors.append(each)
+        lst.extend(keys)
+    # showInfo(str(errors))
     media_dir = mw.col.media.dir()
     for each in lst:
-        bytes_list = ib.mdd_lookup(each)
-        if bytes_list:
-            savepath = os.path.join(media_dir, '_'+os.path.basename(each))
-            if not os.path.exists(savepath): 
-                with open(savepath, 'wb') as f:
-                    f.write(bytes_list[0])
+        try:
+            bytes_list = ib.mdd_lookup(each)
+            if bytes_list:
+                savepath = os.path.join(
+                    media_dir, '_' + os.path.basename(each))
+                if not os.path.exists(savepath):
+                    with open(savepath, 'wb') as f:
+                        f.write(bytes_list[0])
+        except sqlite3.OperationalError as e:
+            showInfo(str(e))
+    return errors
 
-def convert_media_path(html):
+
+def convert_media_path(ib, html):
     """
     convert the media path to actual path in anki's collection media folder.'
     """
@@ -293,7 +350,8 @@ def convert_media_path(html):
     lst.extend(list(set(mjs)))
     msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
     lst.extend(list(set(msrc)))
-    save_media_files(index_builder, data = list(set(msrc)))
+    save_media_files(ib, data=list(set(msrc)))
+    # showInfo(str(list(set(msrc))))
     # print lst
     newlist = ['_' + each.split('/')[-1] for each in lst]
     # print newlist
@@ -301,23 +359,20 @@ def convert_media_path(html):
         html = html.replace(each[0], each[1])
     return unicode(html)
 
-    
-def update_field(result_text, note):
-    if len(note.fields) < 15:
-        showInfo("Template Error, Mdx!")
-        return
-    result_text = convert_media_path(result_text)
-    for rule in rules:
-        feature = rule["feature"]
-        if feature and feature in result_text:
-            note.fields[rule["pos"]] = result_text
+
+def update_dict_field(self, idx, text, ib=0):
+    note = self.editor.note
+    # old_items = note.items()
+    # item = list(note.items())[idx]
+    note.fields[idx] = convert_media_path(ib, text) if ib else text
 
 
-use_local, dictpath, use_server, serveraddr = read_parameters()
+paras = read_parameters()
 # showInfo(dictpath)
 AddCards.query = query
 AddCards.query_youdao = query_youdao
 AddCards.query_mdict = query_mdict
+AddCards.update_dict_field = update_dict_field
 AddCards.setupButtons = wrap(AddCards.setupButtons, my_setupButtons, "before")
 # create a new menu item, "test"
 action = QAction("Word Query", mw)
@@ -326,8 +381,6 @@ action.triggered.connect(set_options)
 # and add it to the tools menu
 mw.form.menuTools.addAction(action)
 
-
-from collections import defaultdict
 
 deck_name = u"test"
 note_type_name = u"MultiDicts"
