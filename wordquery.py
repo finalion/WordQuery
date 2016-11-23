@@ -20,17 +20,12 @@ from aqt.addcards import AddCards
 from aqt.modelchooser import ModelChooser
 from aqt.studydeck import StudyDeck
 from aqt.toolbar import Toolbar
-from aqt.utils import shortcut, showInfo, showText
+from aqt.utils import shortcut, showInfo, showText, tooltip
 # import trackback
 from mdict.mdict_query import IndexBuilder
 import cPickle
-# from Queue import Queue
 from collections import defaultdict
 
-
-enable_youdao = 0
-
-default_server = 'http://127.0.0.1:8000'
 index_builders = defaultdict(int)
 savepath = os.path.join(sys.path[0], 'config')
 
@@ -38,22 +33,26 @@ savepath = os.path.join(sys.path[0], 'config')
 def read_parameters():
     try:
         with open(savepath, 'rb') as f:
-            return cPickle.load(f)
-        # showInfo(str(paras))
+            paras = cPickle.load(f)
+            if isinstance(paras, list):
+                # 兼容之前的版本
+                return paras, ''
+            elif isinstance(paras, dict):
+                return paras.get('maps', list()), paras.get('model', '')
+            else:
+                return list(), ''
     except:
-        # showInfo("config file error")
-        return None
+        return list(), ''
 
 
 def set_parameters():
-    global paras
+    global maps
     cbs, les, lbs = mw.myWidget.findChildren(
         QCheckBox), mw.myWidget.findChildren(QLineEdit), mw.myWidget.findChildren(QLabel)
-    paras = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_name": lb.text()}
-             for (cb, le, lb) in zip(cbs, les, lbs)]
-    # showInfo(str(paras))
+    maps = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_name": lb.text()}
+            for (cb, le, lb) in zip(cbs, les, lbs)]
     with open(savepath, 'wb') as f:
-        cPickle.dump(paras, f)
+        cPickle.dump({'maps': maps, 'model': model_name}, f)
 
 
 class MdxIndexer(QThread):
@@ -65,22 +64,23 @@ class MdxIndexer(QThread):
     def run(self):
         if self.ix == -1:
             # index all dicts
-            for i, each in enumerate(paras):
+            for i, each in enumerate(maps):
                 if each['checked'] and each["dict_path"]:
                     index_builders[i] = self.work(each["dict_path"])
         else:
             # only index given dict, specified by ix
-            index_builders[self.ix] = self.work(paras[self.ix]["dict_path"])
+            index_builders[self.ix] = self.work(maps[self.ix]["dict_path"])
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
         if not dict_path.startswith("http://"):
             index_builder = IndexBuilder(dict_path)
             errors, styles = save_media_files(index_builder, '*.css', '*.js')
-            if '*.css' in errors:
-                # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
-                showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" %
-                         (dict_path))
+            # if '*.css' in errors:
+            # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if
+            # each in errors ])
+            # tooltip(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" %
+            #         (dict_path), period=3000)
             return index_builder
 
 
@@ -140,7 +140,7 @@ def build_layout(model=None):
             add_dict_layout(i, fld_name=fld['name'])
     else:
         # build from config
-        for i, each in enumerate(paras):
+        for i, each in enumerate(maps):
             add_dict_layout(i, **each)
     mw.myWidget.setLayout(mw.myMainLayout)
 
@@ -152,14 +152,16 @@ def show_models():
         cancel=True, geomKey="selectModel")
     if ret.name:
         model = mw.col.models.byName(ret.name)
-        # mw.myModelNameLabel.setText(ret.name)
+        global model_name
+        model_name = ret.name
+        mw.myChooseButton.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
         return model
 
 
 def add_dict_layout(i, **kwargs):
     """
     kwargs:
-    checked  dict_path  fld_name 
+    checked  dict_path  fld_name
     """
     checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
         'dict_path', ''), kwargs.get('fld_name', '')
@@ -192,8 +194,6 @@ def add_dict_layout(i, **kwargs):
 
 
 def set_options():
-    global paras
-    paras = read_parameters()
     mw.myWidget = widget = QWidget()
     mw.myMainLayout = main_layout = QVBoxLayout()
     models_layout = QHBoxLayout()
@@ -206,12 +206,13 @@ def set_options():
     mw.signal_mapper_sel = QSignalMapper(mw.myWidget)
     mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
     # mw.myModelNameLabel = QLabel(u"笔记类型")
-    models_button = QPushButton(u"选择笔记类型")
+    mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
-    # models_layout.addWidget(mw.myModelNameLabel)
+    if model_name:
+        models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % model_name)
     models_layout.addWidget(models_button)
     # build fields -- dicts layout
-    if paras:
+    if maps:
         build_layout()
     ok_button = QPushButton(u"确认")
     ok_button.clicked.connect(btn_ok_pressed)
@@ -237,9 +238,7 @@ def my_setupButtons(self):
 def query(self):
     for field in self.editor.note.fields:
         field = ''
-
-    # self.query_youdao()
-    for i, each in enumerate(paras):
+    for i, each in enumerate(maps):
         if each['checked'] and each['dict_path'].strip():
             self.query_mdict(i, **each)
     self.editor.setNote(self.editor.note, focus=True)
@@ -267,7 +266,6 @@ def query_youdao(self):
 
 
 def query_mdict(self, ix, **kwargs):
-
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
     result = None
@@ -390,9 +388,8 @@ def convert_media_path(ib, html):
     return unicode(html)
 
 
-paras = read_parameters()
+maps, model_name = read_parameters()
 
-# showInfo(dictpath)
 AddCards.query = query
 AddCards.query_youdao = query_youdao
 AddCards.query_mdict = query_mdict
@@ -439,6 +436,7 @@ def query_mdict2(word, ix, **kwargs):
     else:
         req = urllib2.urlopen(serveraddr + r'/' + word)
         return update_dict_field2(ix, req.read())
+    return ""
     # showInfo(str(d))
 
 
@@ -510,16 +508,17 @@ def batch_import2():
     mw.progress.finish()
 
     # insert
-    for i, data in enumerate(queue):
-        f = mw.col.newNote()
-        for ix, text in data.items():
-            if ix == 'word':
-                name = paras[0]['fld_name']
+    numbers = 0
+    for word, data in queue:
+        note = mw.col.newNote()
+        for ix, each in enumerate(maps):
+            fld_name = maps[ix]['fld_name']
+            if ix == 0:
+                note[fld_name] = word.decode('utf-8')
             else:
-                name = paras[ix]['fld_name']
-                # showInfo("text: %s"%text)
-            f[name] = unicode(text) if text else ""
-        mw.col.addNote(f)
+                note[fld_name] = data[ix].decode('utf-8')
+        numbers += mw.col.addNote(note)
+    tooltip(u'共批量导入%d张笔记' % numbers)
     mw.reset()
 
 
@@ -532,7 +531,7 @@ class BatchQueryer(QThread):
 
     def run(self):
         with open(self.filepath, 'rb') as f:
-            for i, line in enumerate(f):
+            for line in f:  # 每行一个单词
                 l = [each.strip() for each in line.split('\t')]
                 word, sentence = l if len(l) == 2 else (l[0], "")
                 if word:
@@ -540,20 +539,16 @@ class BatchQueryer(QThread):
                     m = re.search('\((.*?)\)', word)
                     if m:
                         word = m.groups()[0]
-                    d['word'] = word
-                    for i, each in enumerate(paras):
-                        # if enable_youdao == 1:
-                        #     showInfo("enable youdao")
+                    # 单词解析完毕
+                    for i, each in enumerate(maps):
+                        # 根据设置好的字段和字典的映射关系，轮询取每个字典的释义
                         if each['checked'] and each['dict_path'].strip():
                             d[i] = query_mdict2(word, i, **each)
-                    self.queue.append(d)
+                    self.queue.append((word, d))
 
 
 action = QAction("Batch Import...", mw)
-# set it to call testFunction when it's clicked
 action.triggered.connect(batch_import2)
-# and add it to the tools menu
-# mw.form.menuTools.addAction(action)
 actionSep = QAction("", mw)
 actionSep.setSeparator(True)
 mw.form.menuCol.insertAction(mw.form.actionExit, actionSep)
