@@ -147,8 +147,8 @@ def show_models():
         help="_notes", parent=mw.myWidget,
         cancel=True, geomKey="selectModel")
     if ret.name:
-        # model = mw.col.models.byName(ret.name)
-        mw.myModelNameLabel.setText(ret.name)
+        model = mw.col.models.byName(ret.name)
+        # mw.myModelNameLabel.setText(ret.name)
         return model
 
 
@@ -162,6 +162,7 @@ def add_dict_layout(i, **kwargs):
     layout = QHBoxLayout()
     dict_check = QCheckBox(u"使用字典")
     dict_check.setChecked(checked)
+    choose_btn = QPushButton(u"选择")
     path_edit = QLineEdit(dict_path)
     path_edit.setReadOnly(not checked)
     objname = "fld%d" % i
@@ -172,7 +173,6 @@ def add_dict_layout(i, **kwargs):
     # if ss:
     #     showInfo("found %d" % i)
     field_label = QLabel(fld_name)
-    choose_btn = QPushButton(u"选择")
     mw.myWidget.connect(choose_btn, SIGNAL("clicked()"),
                         mw.signal_mapper_sel, SLOT("map()"))
     mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
@@ -180,9 +180,9 @@ def add_dict_layout(i, **kwargs):
     mw.signal_mapper_sel.setMapping(choose_btn, i)
     mw.signal_mapper_chk.setMapping(dict_check, i)
     layout.addWidget(dict_check)
+    layout.addWidget(choose_btn)
     layout.addWidget(field_label)
     layout.addWidget(path_edit)
-    layout.addWidget(choose_btn)
     mw.myDictsLayout.addLayout(layout)
     mw.myWidget.setLayout(mw.myMainLayout)
 
@@ -328,7 +328,7 @@ def save_media_files(ib, *args, **kwargs):
                         f.write(bytes_list[0])
         except sqlite3.OperationalError as e:
             showInfo(str(e))
-    showInfo(str(styles))
+    # showInfo(str(styles))
     return errors, styles
 
 
