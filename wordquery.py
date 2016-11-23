@@ -345,7 +345,7 @@ def convert_media_path(ib, html):
     """
     convert the media path to actual path in anki's collection media folder.'
     """
-    showInfo('%s %s' % (type(html), str(html)))
+    # showInfo('%s %s' % (type(html), str(html)))
     lst = list()
     mcss = re.findall('href="(\S+?\.css)"', html)
     lst.extend(list(set(mcss)))
@@ -365,7 +365,7 @@ def convert_media_path(ib, html):
                         style for style in styles if style.endswith('.css')]) + html
     html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
                          style for style in styles if style.endswith('.js')])
-    showInfo(str(html))
+    # showInfo(str(html))
     # showInfo(html)
     return unicode(html)
 
