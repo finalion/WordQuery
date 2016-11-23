@@ -65,16 +65,18 @@ class MdxIndexer(QThread):
 
     def run(self):
         if self.ix == -1:
+            # index all dicts
             for i, each in enumerate(paras):
                 if each['checked'] and each["dict_path"]:
                     index_builders[i] = self.work(each["dict_path"])
         else:
+            # only index given dict, specified by ix
             index_builders[self.ix] = self.work(paras[self.ix]["dict_path"])
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
         index_builder = IndexBuilder(dict_path)
-        errors, styles = save_media_files(index_builder, '*.css', '.js')
+        errors, styles = save_media_files(index_builder, '*.css', '*.js')
         if '*.css' in errors:
             # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
             showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" % (dict_path))
@@ -210,7 +212,7 @@ def set_options():
     # build fields -- dicts layout
     if paras:
         build_layout()
-    ok_button = QPushButton("OK")
+    ok_button = QPushButton(u"确认")
     ok_button.clicked.connect(btn_ok_pressed)
     main_layout.addLayout(models_layout)
     main_layout.addWidget(scroll_area)
@@ -225,10 +227,10 @@ def set_options():
 def my_setupButtons(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
-    self.queryButton = bb.addButton(_("Query"), ar)
+    self.queryButton = bb.addButton(_(u"查询"), ar)
     self.queryButton.clicked.connect(self.query)
     self.queryButton.setShortcut(QKeySequence("Ctrl+Q"))
-    self.queryButton.setToolTip(shortcut(_("Query (shortcut: ctrl+q)")))
+    self.queryButton.setToolTip(shortcut(_(u"查询 (shortcut: ctrl+q)")))
 
 
 def query(self):
@@ -236,9 +238,8 @@ def query(self):
         field = ''
     # self.query_youdao()
     for i, each in enumerate(paras):
-        self.query_mdict(
-            i, **each) if each['checked'] and each['dict_path'].strip() else 0
-
+        if each['checked'] and each['dict_path'].strip():
+            self.query_mdict(i, **each)
     self.editor.setNote(self.editor.note, focus=True)
 
 
@@ -267,6 +268,7 @@ def query_mdict(self, ix, **kwargs):
     note = self.editor.note
     word = note.fields[0]      # choose the first field as the word
     result = None
+    self.update_dict_field(ix, "")
     dict_path, fld_name = kwargs.get(
         'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
     use_server = dict_path.startswith("http://")
@@ -307,6 +309,14 @@ def query_mdict(self, ix, **kwargs):
     #     pass
 
 
+def update_dict_field(self, idx, text, ib=0):
+    # showInfo('before: %d %d, %s' % (idx, len(text), text))
+    note = self.editor.note
+    # old_items = note.items()
+    # item = list(note.items())[idx]
+    note.fields[idx] = convert_media_path(ib, text) if ib else text
+
+
 def save_media_files(ib, *args, **kwargs):
     """
     only get the necessary static files
@@ -314,30 +324,36 @@ def save_media_files(ib, *args, **kwargs):
     """
     lst = []
     errors = []
+    styles = []
     wild = list(args) + ['*' + os.path.basename(each)
                          for each in kwargs.get('data', [])]
-    for each in wild:
-        keys = ib.get_mdd_keys(each)
-        if not keys:
-            errors.append(each)
-        lst.extend(keys)
-    # showInfo(str(errors))
-    media_dir = mw.col.media.dir()
-    styles = []
-    for each in lst:
-        try:
-            bytes_list = ib.mdd_lookup(each)
-            if bytes_list:
-                savepath = os.path.join(
-                    media_dir, '_' + os.path.basename(each))
-                if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
-                    styles.append(os.path.basename(each))
-                if not os.path.exists(savepath):
-                    with open(savepath, 'wb') as f:
-                        f.write(bytes_list[0])
-        except sqlite3.OperationalError as e:
-            showInfo(str(e))
-    # showInfo(str(styles))
+    try:
+        for each in wild:
+            keys = ib.get_mdd_keys(each)
+            if not keys:
+                errors.append(each)
+            lst.extend(keys)
+        # showInfo(str(errors))
+        media_dir = mw.col.media.dir()
+        for each in lst:
+            try:
+                bytes_list = ib.mdd_lookup(each)
+                if bytes_list:
+                    savepath = os.path.join(
+                        media_dir, '_' + os.path.basename(each))
+                    if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
+                        styles.append(os.path.basename(each))
+                    if not os.path.exists(savepath):
+                        with open(savepath, 'wb') as f:
+                            f.write(bytes_list[0])
+            except sqlite3.OperationalError as e:
+                showInfo(str(e))
+        # showInfo(str(styles))
+    except AttributeError:
+        '''
+        有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'
+        '''
+        pass
     return errors, styles
 
 
@@ -368,14 +384,6 @@ def convert_media_path(ib, html):
     # showInfo(str(html))
     # showInfo(html)
     return unicode(html)
-
-
-def update_dict_field(self, idx, text, ib=0):
-    # showInfo('before: %d %d, %s' % (idx, len(text), text))
-    note = self.editor.note
-    # old_items = note.items()
-    # item = list(note.items())[idx]
-    note.fields[idx] = convert_media_path(ib, text) if ib else text
 
 
 paras = read_parameters()
