@@ -75,12 +75,14 @@ class MdxIndexer(QThread):
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
-        index_builder = IndexBuilder(dict_path)
-        errors, styles = save_media_files(index_builder, '*.css', '*.js')
-        if '*.css' in errors:
-            # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
-            showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" % (dict_path))
-        return index_builder
+        if not dict_path.startswith("http://"):
+            index_builder = IndexBuilder(dict_path)
+            errors, styles = save_media_files(index_builder, '*.css', '*.js')
+            if '*.css' in errors:
+                # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
+                showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" %
+                         (dict_path))
+            return index_builder
 
 
 def index_mdx(ix=-1):
@@ -284,7 +286,8 @@ def query_mdict(self, ix, **kwargs):
             # showInfo('ssssssss  %s' % result[0])
             self.update_dict_field(ix, str(result[0]), index_builders[ix])
     else:
-        req = urllib2.urlopen(serveraddr + r'/' + word)
+        req = urllib2.urlopen(dict_path + r'/' + word)
+        # showInfo(req.read())
         self.update_dict_field(ix, req.read())
     # try:
     #     if use_local:
