@@ -518,7 +518,7 @@ def batch_import2():
             else:
                 name = paras[ix]['fld_name']
                 # showInfo("text: %s"%text)
-            f[name] = text
+            f[name] = unicode(text) if text else ""
         mw.col.addNote(f)
     mw.reset()
 
