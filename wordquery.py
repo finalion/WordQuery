@@ -32,25 +32,8 @@ enable_youdao = 0
 
 default_server = 'http://127.0.0.1:8000'
 index_builders = defaultdict(int)
-dictpath = ''
 savepath = os.path.join(sys.path[0], 'config')
 # showInfo(','.join(sys.path))
-
-serveraddr = default_server
-use_local, use_server = False, False
-
-rules = list()
-with open(os.path.join(sys.path[0], 'rules.json'), 'rb') as f:
-    rules = json.load(f)["fields"]
-
-
-def find_rule(**kwargs):
-    for rule in rules:
-        # print rule.items(), kwargs.items()
-        for arg in kwargs.items():
-            if arg in rule.items():
-                return rule
-
 
 def read_parameters():
     try:
@@ -88,8 +71,9 @@ class MdxIndexer(QThread):
             index_builders[self.ix] = self.work(paras[self.ix]["dict_path"])
 
     def work(self, dict_path):
+        # showInfo("%d, %s" % (self.ix, dict_path))
         index_builder = IndexBuilder(dict_path)
-        errors = save_media_files(index_builder, '*.css', '.js')
+        errors, styles = save_media_files(index_builder, '*.css', '.js')
         if '*.css' in errors:
         # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if each in errors ])
             showInfo(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中"%(dict_path))
@@ -163,7 +147,8 @@ def show_models():
         help="_notes", parent=mw.myWidget,
         cancel=True, geomKey="selectModel")
     if ret.name:
-        model = mw.col.models.byName(ret.name)
+        # model = mw.col.models.byName(ret.name)
+        mw.myModelNameLabel.setText(ret.name)
         return model
 
 
@@ -207,17 +192,21 @@ def set_options():
     paras = read_parameters()
     mw.myWidget = widget = QWidget()
     mw.myMainLayout = main_layout = QVBoxLayout()
+    models_layout = QHBoxLayout()    
     mw.myDictsLayout = dicts_layout = QVBoxLayout()
     mw.signal_mapper_sel = QSignalMapper(mw.myWidget)
     mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
-    models_button = QPushButton("Choose Note Type")
+    # mw.myModelNameLabel = QLabel(u"笔记类型")
+    models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
+    # models_layout.addWidget(mw.myModelNameLabel)
+    models_layout.addWidget(models_button)
     # build fields -- dicts layout
     if paras:
         build_layout()
     ok_button = QPushButton("OK")
     ok_button.clicked.connect(btn_ok_pressed)
-    main_layout.addWidget(models_button)
+    main_layout.addLayout(models_layout)
     main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
     mw.signal_mapper_sel.mapped.connect(select_dict)
@@ -325,18 +314,22 @@ def save_media_files(ib, *args, **kwargs):
         lst.extend(keys)
     # showInfo(str(errors))
     media_dir = mw.col.media.dir()
+    styles = []
     for each in lst:
         try:
             bytes_list = ib.mdd_lookup(each)
             if bytes_list:
                 savepath = os.path.join(
                     media_dir, '_' + os.path.basename(each))
+                if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
+                    styles.append(os.path.basename(each))
                 if not os.path.exists(savepath):
                     with open(savepath, 'wb') as f:
                         f.write(bytes_list[0])
         except sqlite3.OperationalError as e:
             showInfo(str(e))
-    return errors
+    showInfo(str(styles))
+    return errors, styles
 
 
 def convert_media_path(ib, html):
@@ -350,15 +343,19 @@ def convert_media_path(ib, html):
     lst.extend(list(set(mjs)))
     msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
     lst.extend(list(set(msrc)))
-    save_media_files(ib, data=list(set(msrc)))
+    errors, styles = save_media_files(ib, data=list(set(msrc)))
     # showInfo(str(list(set(msrc))))
     # print lst
     newlist = ['_' + each.split('/')[-1] for each in lst]
     # print newlist
     for each in zip(lst, newlist):
         html = html.replace(each[0], each[1])
+    html = '<br>'.join(["<style>@import url('_%s');</style>" % style for style in styles if style.endswith('.css')])+html
+    html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' % style for style in styles if style.endswith('.js')])
+    # showInfo(html)
     return unicode(html)
 
+    
 
 def update_dict_field(self, idx, text, ib=0):
     note = self.editor.note
@@ -400,42 +397,26 @@ def query_youdao2(word):
         ".//custom-translation/translation/content")]))
     return d
 
-
-def query_mdict2(word):
-    d = defaultdict(str)
-    result = None
+def query_mdict2(word, ix, **kwargs):
+    dict_path, fld_name = kwargs.get(
+        'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
+    use_server = dict_path.startswith("http://")
+    use_local = not use_server
     if use_local:
-        try:
-            if not index_builder:
-                index_mdx()
-            result = index_builder.mdx_lookup(word)
-            if result:
-                d = update_field2(result[0])
-        except AssertionError as e:
-            # no valid mdict file found.
-            pass
-    if use_server:
-        try:
-            req = urllib2.urlopen(
-                serveraddr + r'/' + word)
-            result2 = req.read()
-            if result2:
-                d.update(update_field2(result2))
-        except:
-            # server error
-            pass
-    return d
+        if not index_builders[ix]:
+            index_mdx(ix)
+        result = index_builders[ix].mdx_lookup(word)
+        if result:
+            return update_dict_field2(ix, result[0], index_builders[ix])
+    else:
+        req = urllib2.urlopen(serveraddr + r'/' + word)
+        return update_dict_field2(ix, req.read())
+    # showInfo(str(d))
 
 
-def update_field2(result_text):
-    d = defaultdict(str)
-    result_text = convert_media_path(result_text)
-    for rule in rules:
-        feature = rule["feature"]
-        if feature and feature in result_text:
-            d[rule["name"]] = result_text
-    return d
 
+def update_dict_field2(idx, text, ib=0):
+    return convert_media_path(ib, text) if ib else text
 
 def select():
     # select deck. Reuse deck if already exists, else add a desk with
@@ -472,7 +453,7 @@ def batch_import2():
     """
     # index_mdx()
     filepath = QFileDialog.getOpenFileName(
-        caption="select words table file", directory=os.path.dirname(dictpath), filter="All Files(*.*)")
+        caption="select words table file", directory=os.path.dirname(""), filter="All Files(*.*)")
     if not filepath:
         return
     model, deck = select()
@@ -500,14 +481,16 @@ def batch_import2():
         query_thread.wait(100)
     mw.progress.finish()
 
-    with open('t.txt', 'wb') as fff:
-        for data in queue:
-            fff.write(','.join(data.values()) + '\n')
     # insert
-    for data in queue:
+    for i, data in enumerate(queue):
         f = mw.col.newNote()
-        for key in data:
-            f[key] = data[key]
+        for ix, text in data.items():
+            if ix=='word':
+                name = paras[0]['fld_name']    
+            else:
+                name = paras[ix]['fld_name']    
+                # showInfo("text: %s"%text)
+            f[name] = text
         mw.col.addNote(f)
     mw.reset()
 
@@ -522,19 +505,19 @@ class BatchQueryer(QThread):
     def run(self):
         with open(self.filepath, 'rb') as f:
             for i, line in enumerate(f):
-                d = defaultdict(str)
                 l = [each.strip() for each in line.split('\t')]
                 word, sentence = l if len(l) == 2 else (l[0], "")
                 if word:
+                    d = defaultdict(str)
                     m = re.search('\((.*?)\)', word)
                     if m:
                         word = m.groups()[0]
-                    d[u'英语单词'] = unicode(word)
-                    d[u'英语例句'] = unicode(sentence)
-                    if enable_youdao == 1:
-                        showInfo("enable youdao")
-                        d.update(query_youdao2(word))
-                    d.update(query_mdict2(word))
+                    d['word'] = word
+                    for i,each in enumerate(paras):
+                        # if enable_youdao == 1:
+                        #     showInfo("enable youdao")
+                        if each['checked'] and each['dict_path'].strip():
+                            d[i] = query_mdict2(word,i,**each)
                     self.queue.append(d)
 
 
