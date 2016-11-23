@@ -328,7 +328,7 @@ def save_media_files(ib, *args, **kwargs):
                         f.write(bytes_list[0])
         except sqlite3.OperationalError as e:
             showInfo(str(e))
-    # showInfo(str(styles))
+    showInfo(str(styles))
     return errors, styles
 
 
@@ -351,6 +351,8 @@ def convert_media_path(ib, html):
     for each in zip(lst, newlist):
         html = html.replace(each[0], each[1])
     html = '<br>'.join(["<style>@import url('_%s');</style>" % style for style in styles if style.endswith('.css')])+html
+    if '.css' in styles:
+        showInfo(html)
     html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' % style for style in styles if style.endswith('.js')])
     # showInfo(html)
     return unicode(html)
