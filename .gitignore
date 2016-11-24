@@ -92,4 +92,4 @@ ENV/
 *.zip
 *.html
 test.py
-mdict/
+dicts/
