@@ -1,0 +1,24 @@
+## Available Hooks in Anki
+
+- currentModelChanged
+- sync
+- odueInvalid
+- exportedMediaFiles
+- newTag
+- AddCards.onHistory
+- AnkiWebView.contextMenuEvent
+- profileLoaded
+- reviewCleanup
+- httpSend
+- showDeckOptions
+- newDeck
+- newModel
+- remNotes
+- search
+- leech
+- browser.setupMenus
+- setupEditorButtons         ```used by awesomeTTS, but not found in source codes.```
+- fmod_*
+- modSchema
+- setupEditorShortcuts
+- odueInvalid

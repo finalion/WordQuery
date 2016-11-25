@@ -4,7 +4,7 @@ import sys
 
 reload(sys)
 sys.setdefaultencoding('utf8')
-
+import anki
 import os
 import re
 import urllib2
@@ -226,6 +226,14 @@ def set_options():
     widget.show()
 
 
+# def setupEditor(self):
+#     query_btn = QPushButton("Query2")
+#     self.form.horizontalLayout.insertWidget(
+#         -1, query_btn)
+
+
+# AddCards.setupChoosers = wrap(AddCards.setupChoosers, setupEditor, "before")
+
 def my_setupButtons(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
@@ -244,25 +252,25 @@ def query(self):
     self.editor.setNote(self.editor.note, focus=True)
 
 
-def query_youdao(self):
-    note = self.editor.note
-    word = note.fields[0]      # choose the first field as the word
-    # showInfo('youdoa:%s'%word)
-    result = urllib2.urlopen(
-        "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
-    file = StringIO(result)
-    doc = xml.etree.ElementTree.parse(file)
-    # fetch symbols
-    symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
-        ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
-    # showInfo(','.join([symbol, uk_symbol, us_symbol]))
-    try:
-        note.fields[1] = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
-        # fetch explanations
-        note.fields[3] = '<br>'.join([node.text for node in doc.findall(
-            ".//custom-translation/translation/content")])
-    except:
-        showInfo("Template Error, online!")
+# def query_youdao(self):
+#     note = self.editor.note
+#     word = note.fields[0]      # choose the first field as the word
+#     # showInfo('youdoa:%s'%word)
+#     result = urllib2.urlopen(
+#         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
+#     file = StringIO(result)
+#     doc = xml.etree.ElementTree.parse(file)
+#     # fetch symbols
+#     symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
+#         ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
+#     # showInfo(','.join([symbol, uk_symbol, us_symbol]))
+#     try:
+#         note.fields[1] = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
+#         # fetch explanations
+#         note.fields[3] = '<br>'.join([node.text for node in doc.findall(
+#             ".//custom-translation/translation/content")])
+#     except:
+#         showInfo("Template Error, online!")
 
 
 def query_mdict(self, ix, **kwargs):
@@ -391,7 +399,7 @@ def convert_media_path(ib, html):
 maps, model_name = read_parameters()
 
 AddCards.query = query
-AddCards.query_youdao = query_youdao
+# AddCards.query_youdao = query_youdao
 AddCards.query_mdict = query_mdict
 AddCards.update_dict_field = update_dict_field
 AddCards.setupButtons = wrap(AddCards.setupButtons, my_setupButtons, "before")
@@ -409,17 +417,17 @@ note_type_name = u"MultiDicts"
 expsdict = defaultdict(str)
 
 
-def query_youdao2(word):
-    d = defaultdict(str)
-    result = urllib2.urlopen(
-        "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
-    doc = xml.etree.ElementTree.parse(StringIO(result))
-    symbol, uk_symbol, us_symbol = unicode(doc.findtext(".//phonetic-symbol")), unicode(doc.findtext(
-        ".//uk-phonetic-symbol")), unicode(doc.findtext(".//us-phonetic-symbol"))
-    d[u'英美音标'] = unicode(u'UK [%s] US [%s]' % (uk_symbol, us_symbol))
-    d[u'简要中文释义'] = unicode('<br>'.join([node.text for node in doc.findall(
-        ".//custom-translation/translation/content")]))
-    return d
+# def query_youdao2(word):
+#     d = defaultdict(str)
+#     result = urllib2.urlopen(
+#         "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
+#     doc = xml.etree.ElementTree.parse(StringIO(result))
+#     symbol, uk_symbol, us_symbol = unicode(doc.findtext(".//phonetic-symbol")), unicode(doc.findtext(
+#         ".//uk-phonetic-symbol")), unicode(doc.findtext(".//us-phonetic-symbol"))
+#     d[u'英美音标'] = unicode(u'UK [%s] US [%s]' % (uk_symbol, us_symbol))
+#     d[u'简要中文释义'] = unicode('<br>'.join([node.text for node in doc.findall(
+#         ".//custom-translation/translation/content")]))
+#     return d
 
 
 def query_mdict2(word, ix, **kwargs):
@@ -553,3 +561,130 @@ actionSep = QAction("", mw)
 actionSep.setSeparator(True)
 mw.form.menuCol.insertAction(mw.form.actionExit, actionSep)
 mw.form.menuCol.insertAction(actionSep, action)
+
+
+def browser_menus():
+    """
+    Gives user access to mass generator, MP3 stripper, and the hook that
+    disables and enables it upon selection of items.
+    """
+
+    # from PyQt4 import QtGui
+
+    def on_setup_menus(browser):
+        """Create an AwesomeTTS menu and add browser actions to it."""
+
+        menu = QtGui.QMenu("WordQuery", browser.form.menubar)
+        browser.form.menubar.addMenu(menu)
+
+        gui.Action(
+            target=Bundle(
+                constructor=gui.BrowserGenerator,
+                args=(),
+                kwargs=dict(browser=browser,
+                            addon=addon,
+                            alerts=aqt.utils.showWarning,
+                            ask=aqt.utils.getText,
+                            parent=browser),
+            ),
+            text="&Add Audio to Selected...",
+            sequence=sequences['browser_generator'],
+            parent=menu,
+        )
+        gui.Action(
+            target=Bundle(
+                constructor=gui.BrowserStripper,
+                args=(),
+                kwargs=dict(browser=browser,
+                            addon=addon,
+                            alerts=aqt.utils.showWarning,
+                            parent=browser),
+            ),
+            text="&Remove Audio from Selected...",
+            sequence=sequences['browser_stripper'],
+            parent=menu,
+        )
+
+    def update_title_wrapper(browser):
+        """Enable/disable AwesomeTTS menu items upon selection."""
+
+        enabled = bool(browser.form.tableView.selectionModel().selectedRows())
+        for action in browser.findChildren(gui.Action):
+            action.setEnabled(enabled)
+
+    anki.hooks.addHook(
+        'browser.setupMenus',
+        on_setup_menus,
+    )
+
+    aqt.browser.Browser.updateTitle = anki.hooks.wrap(
+        aqt.browser.Browser.updateTitle,
+        update_title_wrapper,
+        'before',
+    )
+
+focus_word = ''
+focus_editor = None
+
+query_result = ''
+
+
+def query3():
+    mw.progress.start(immediate=True, label="Querying...")
+    for field in focus_editor.note.fields:
+        field = ''
+    for i, each in enumerate(maps):
+        if each['checked'] and each['dict_path'].strip():
+            res = query_mdict3(i, **each)
+            focus_editor.note.fields[i] = res
+    focus_editor.setNote(focus_editor.note, focus=True)
+    mw.progress.finish()
+
+
+def query_mdict3(ix, **kwargs):
+    note = focus_editor.note
+    word = note.fields[0]      # choose the first field as the word
+    dict_path, fld_name = kwargs.get(
+        'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
+    use_server = dict_path.startswith("http://")
+    use_local = not use_server
+    if use_local:
+        if not index_builders[ix]:
+            index_mdx(ix)
+        result = index_builders[ix].mdx_lookup(word)
+        if result:
+            tt = update_dict_field2(ix, result[0], index_builders[ix])
+            return tt
+    else:
+        req = urllib2.urlopen(serveraddr + r'/' + word)
+        return update_dict_field2(ix, req.read())
+    return ""
+
+
+def add_context_menu(web_view, menu):
+    note = web_view.editor.note
+    current_field = web_view.editor.currentField
+    global focus_word
+    focus_word = note.fields[current_field]
+    global focus_editor
+    focus_editor = web_view.editor
+    action_query_button = QPushButton("Query")
+    action_query_button.clicked.connect(query3)
+    submenu = QMenu("WordQuery", menu)
+    submenu.addAction(
+        "Word Query",
+        lambda: action_query_button.click() if action_query_button.isEnabled()
+        else aqt.utils.showWarning(
+            "Select the note field to which you want query",
+            web_view.window,
+        )
+    )
+    needs_separator = True
+    menu.addMenu(submenu)
+
+
+# anki.hooks.addHook('AnkiWebView.contextMenuEvent', add_context_menu)
+anki.hooks.addHook('EditorWebView.contextMenuEvent', add_context_menu)
+# anki.hooks.addHook('Reviewer.contextMenuEvent',
+#                    lambda reviewer, menu:
+#                    add_context_menu(reviewer.web, menu))
