@@ -28,9 +28,9 @@ from aqt.utils import shortcut, showInfo, showText, tooltip
 
 
 if currentLang == 'zh_CN':
-    tags = [u'单词', u'单词原型', u'例句', u'创建时间']
+    tags = [u'单词', u'单词原型', u'例句', u'书籍', u'创建时间']
 else:
-    tags = [u'Word', u'Stem', u'Usage', u'Create Time']
+    tags = [u'Word', u'Stem', u'Usage', u'Book', u'Create Time']
 
 
 class KindleDbImporter(TextImporter):
@@ -51,15 +51,14 @@ class KindleDbImporter(TextImporter):
         # for word, stem, lang, timestamp in db.execute("select word_key, usage
         # from lookups"):
         self.data = list()
-        # pure recursive algorithm in python is limited to 999, so a pity.
         # showInfo('begin execute sql')
         results = db.execute(
-            "select ws.id, ws.word, ws.stem, ws.lang, datetime(ws.timestamp*0.001, 'unixepoch', 'localtime'), lus.usage from words as ws, lookups as lus where ws.id=lus.word_key")
+            "select ws.id, ws.word, ws.stem, ws.lang, datetime(ws.timestamp*0.001, 'unixepoch', 'localtime'), lus.usage, bi.title, bi.authors from words as ws left join lookups as lus on ws.id=lus.word_key left join book_info as bi on lus.book_key=bi.id")
         self.fileobj = 1   # make sure file open ok
         # showInfo(str(len(results)))
 
-        self.data = [[word, stem, usage, timestamp]
-                     for id, word, stem, lang, timestamp, usage in results]
+        self.data = [[word, stem, usage, u'%s ---- %s' % (book_title, book_authors), create_time]
+                     for id, word, stem, lang, create_time, usage, book_title, book_authors in results]
         self.numFields = len(tags)
         # showInfo(','.join(self.data[0]))
         self.initMapping()
