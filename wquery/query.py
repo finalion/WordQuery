@@ -55,89 +55,57 @@ def index_mdx(ix=-1):
     mw.progress.finish()
 
 
-class BatchQueryer(QThread):
-
-    def __init__(self):
-        QThread.__init__(self)
-
-    def run(self):
-        if c.focus_browser:
-            c.focus_editor = c.focus_browser.editor
-        notes = [
-            c.focus_browser.mw.col.getNote(note_id)
-            for note_id in c.focus_browser.selectedNotes()
-        ]
-        for each in notes:
-            c.focus_note = each
-            c.model_id = each.model()['id']
-            c.maps = c.mappings[c.model_id]
-            query()
-        c.focus_note = None
-        # showInfo(str(len(notes)))
-
-
-def query_from_bmenu():
-    # queryer = BatchQueryer()
-    # queryer.start()
-    # while not queryer.isFinished():
-    #     mw.app.processEvents()
-    #     queryer.wait(100)
-    if c.focus_browser:
-        c.focus_editor = c.focus_browser.editor
-        notes = [
-            c.focus_browser.mw.col.getNote(note_id)
-            for note_id in c.focus_browser.selectedNotes()
-        ]
-        mw.progress.start(immediate=True, label="Querying...")
-        for i, each in enumerate(notes):
-            c.focus_note = each
-            c.model_id = each.model()['id']
-            c.maps = c.mappings[c.model_id]
-            query()
-            mw.progress.update(label="Queried %d words..." % (i + 1))
-        mw.progress.finish()
-        c.focus_note = None
-
-
-def query_from_cmenu():
-    mw.progress.start(immediate=True, label="Querying...")
-    query()
-    mw.progress.finish()
-
-
-def query_from_btn():
-    mw.progress.start(immediate=True, label="Querying...")
-    query()
-    mw.progress.finish()
-
-
 def query():
-    # restricted to query the first item as the word
-    if c.focus_editor and c.focus_editor.note:
-        c.model_id = c.focus_editor.note.model()['id']
-        word = c.focus_editor.note.fields[0]  # c.focus_editor.currentField]
-    elif c.focus_note:
-        c.model_id = c.focus_note.model()['id']
-        word = c.focus_note.fields[0]
-    c.maps = c.mappings[c.model_id]
+    if c.context['type'] == 'editor':
+        editor = c.context['obj']
+        c.model_id = editor.note.model()['id']
+        word = editor.note.fields[0]
+        c.maps = c.mappings[c.model_id]
+        for i, res in query_all_flds(word):
+            if res == "":
+                if c.update_all:
+                    editor.note.fields[i] = res
+            else:
+                editor.note.fields[i] = res
+        editor.note.flush()
+        mw.requireReset()
+        editor.setNote(editor.note, focus=True)
+        # browser = c.context.get('action', '')
+        # if browser:
+
+    if c.context['type'] == 'browser':
+        browser = c.context['obj']
+        notes = [browser.mw.col.getNote(note_id)
+                 for note_id in browser.selectedNotes()]
+        mw.progress.start(immediate=True, label="Querying...")
+        for i, note in enumerate(notes):
+            word = note.fields[0]
+            c.model_id = note.model()['id']
+            c.maps = c.mappings[c.model_id]
+            for j, res in query_all_flds(word):
+                if res == "":
+                    if c.update_all:
+                        note.fields[j] = res
+                    else:
+                        note.fields[j] = res
+                else:
+                    note.fields[j] = res
+                note.flush()
+            mw.progress.update(label="Queried %d words..." % (i + 1))
+
+        mw.progress.finish()
+        tooltip(u'共更新 %d 张卡片' % len(notes))
+
+
+def query_all_flds(word):
     for i, each in enumerate(c.maps):
+        res = ""
         if i == 0:
             res = word
         else:
-            res = ""
             if each['checked'] and each['dict_path'].strip():
                 res = query_mdict(word, i, **each)
-
-        if c.focus_editor and c.focus_editor.note:
-            if not c.update_all and not res:
-                res = c.focus_editor.note.fields[i]
-            c.focus_editor.note.fields[i] = res
-            c.focus_editor.setNote(c.focus_editor.note, focus=True)
-        elif c.focus_note:
-            if not c.update_all and not res:
-                res = c.focus_note.fields[i]
-            c.focus_note.fields[i] = res
-            c.focus_note.flush()
+        yield i, res
 
 
 def query_mdict(word, ix, **kwargs):
