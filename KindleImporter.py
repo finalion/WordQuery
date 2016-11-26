@@ -95,21 +95,25 @@ def showMapping(self, keepMapping=False, hook=None):
     self.grid.setSpacing(6)
     fields = self.importer.fields()
     for num in range(len(self.mapping)):
-        # showInfo(str(num))
+        i = 0
         text = _("Field <b>%d</b> of file is:") % (num + 1)
+        self.grid.addWidget(QLabel(text), num, i)
+        i += 1
         # , tags[num]
-        self.grid.addWidget(QLabel(text), num, 0)
-        text = _(tags[num])
-        self.grid.addWidget(QLabel(text), num, 1)
+        if isinstance(self.importer, KindleDbImporter):
+            text = _(tags[num])
+            self.grid.addWidget(QLabel(text), num, i)
+            i += 1
         if self.mapping[num] == "_tags":
             text = _("mapped to <b>Tags</b>")
         elif self.mapping[num]:
             text = _("mapped to <b>%s</b>") % self.mapping[num]
         else:
             text = _("<ignored>")
-        self.grid.addWidget(QLabel(text), num, 2)
+        self.grid.addWidget(QLabel(text), num, i)
+        i += 1
         button = QPushButton(_("Change"))
-        self.grid.addWidget(button, num, 3)
+        self.grid.addWidget(button, num, i)
         button.clicked.connect(lambda _, s=self, n=num: s.changeMappingNum(n))
 
 aqt.importing.ImportDialog.showMapping = showMapping
