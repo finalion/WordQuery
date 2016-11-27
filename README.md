@@ -1,5 +1,7 @@
 # WordQuery 插件(anki)
 
+[Introduction in English](introduction.md) *contributed by Li Tan*.
+
 ## 主要功能
 
 1. 快速零散制卡      
