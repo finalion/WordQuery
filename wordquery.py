@@ -2,6 +2,8 @@
 import wquery
 from wquery import context as c
 
+c.update_all = False
+
 wquery.read_parameters()
 # showInfo(str(c.maps) + str(c.model_name))
 

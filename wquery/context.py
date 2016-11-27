@@ -11,4 +11,4 @@ mappings = defaultdict(list)
 
 update_all = False
 
-context = defaultdict(str)
+context = defaultdict(int)
