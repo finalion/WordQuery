@@ -61,6 +61,9 @@ def query():
         c.model_id = editor.note.model()['id']
         word = editor.note.fields[0]
         c.maps = c.mappings[c.model_id]
+        # showText(str(c.mappings))
+        # showInfo('%s, %s, %s, %s' %
+        #          (word, editor.note.model()['name'], str(c.model_id), str(c.maps)))
         for i, res in query_all_flds(word):
             if res == "":
                 if c.update_all:
@@ -68,8 +71,8 @@ def query():
             else:
                 editor.note.fields[i] = res
         editor.note.flush()
-        mw.requireReset()
         editor.setNote(editor.note, focus=True)
+        mw.requireReset()
         # browser = c.context.get('action', '')
         # if browser:
 
@@ -86,15 +89,14 @@ def query():
                 if res == "":
                     if c.update_all:
                         note.fields[j] = res
-                    else:
-                        note.fields[j] = res
                 else:
                     note.fields[j] = res
                 note.flush()
             mw.progress.update(label="Queried %d words..." % (i + 1))
 
         mw.progress.finish()
-        tooltip(u'共更新 %d 张卡片' % len(notes))
+        if len(notes) > 1:
+            tooltip(u'共更新 %d 张卡片' % len(notes))
 
 
 def query_all_flds(word):

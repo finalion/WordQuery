@@ -89,7 +89,6 @@ ENV/
 .ropeproject
 
 
-*.zip
 *.html
 test.py
 dicts/
