@@ -55,31 +55,18 @@ def index_mdx(ix=-1):
     mw.progress.finish()
 
 
-def query():
-    if c.context['type'] == 'editor':
-        editor = c.context['obj']
-        c.model_id = editor.note.model()['id']
-        word = editor.note.fields[0]
-        c.maps = c.mappings[c.model_id]
-        # showText(str(c.mappings))
-        # showInfo('%s, %s, %s, %s' %
-        #          (word, editor.note.model()['name'], str(c.model_id), str(c.maps)))
-        for i, res in query_all_flds(word):
-            if res == "":
-                if c.update_all:
-                    editor.note.fields[i] = res
-            else:
-                editor.note.fields[i] = res
-        editor.note.flush()
-        editor.setNote(editor.note, focus=True)
-        mw.requireReset()
-        # browser = c.context.get('action', '')
-        # if browser:
-
-    if c.context['type'] == 'browser':
-        browser = c.context['obj']
-        notes = [browser.mw.col.getNote(note_id)
-                 for note_id in browser.selectedNotes()]
+def query_from_menu():
+    browser = c.context['browser']
+    if not browser:
+        return
+    notes = [browser.mw.col.getNote(note_id)
+             for note_id in browser.selectedNotes()]
+    if len(notes) == 0:
+        return
+    if len(notes) == 1:
+        c.context['editor'] = browser.editor
+        query_from_editor()
+    if len(notes) > 1:
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
             word = note.fields[0]
@@ -93,10 +80,29 @@ def query():
                     note.fields[j] = res
                 note.flush()
             mw.progress.update(label="Queried %d words..." % (i + 1))
-
+        browser.model.reset()
         mw.progress.finish()
-        if len(notes) > 1:
-            tooltip(u'共更新 %d 张卡片' % len(notes))
+        # browser.model.reset()
+        # browser.endReset()
+        tooltip(u'共更新 %d 张卡片' % len(notes))
+
+
+def query_from_editor():
+    editor = c.context['editor']
+    if not editor:
+        return
+    c.model_id = editor.note.model()['id']
+    word = editor.note.fields[0]
+    c.maps = c.mappings[c.model_id]
+    for i, res in query_all_flds(word):
+        if res == "":
+            if c.update_all:
+                editor.note.fields[i] = res
+        else:
+            editor.note.fields[i] = res
+    # editor.note.flush()
+    editor.setNote(editor.note, focus=True)
+    editor.saveNow()
 
 
 def query_all_flds(word):

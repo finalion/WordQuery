@@ -13,8 +13,7 @@ from aqt.utils import shortcut, showInfo, showText, tooltip
 import cPickle
 from collections import defaultdict
 from wquery.ui import show_options
-from wquery.batch import batch_import
-from wquery.query import query
+from wquery.query import query_from_menu, query_from_editor
 import wquery.context as c
 
 
@@ -75,9 +74,9 @@ def read_parameters():
 def add_query_button(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
-    c.context = {'type': 'editor', 'obj': self.editor}
+    c.context['editor'] = self.editor
     self.queryButton = bb.addButton(_(u"Query"), ar)
-    self.queryButton.clicked.connect(query)
+    self.queryButton.clicked.connect(query_from_editor)
     self.queryButton.setShortcut(QKeySequence("Ctrl+Q"))
     self.queryButton.setToolTip(shortcut(_(u"Query (shortcut: ctrl+q)")))
 
@@ -85,15 +84,11 @@ def add_query_button(self):
 def setup_browser_menu():
 
     def on_setup_menus(browser):
+        c.context['browser'] = browser
         menu = QMenu("WordQuery", browser.form.menubar)
-        if hasattr(browser, 'editor'):
-            c.context = {'type': 'editor',
-                         'obj': browser.editor, 'action_browser': browser}
-        else:
-            c.context = {'type': 'browser', 'obj': browser}
         browser.form.menubar.addMenu(menu)
         action_queryselected = QAction("Query Selected", browser)
-        action_queryselected.triggered.connect(query)
+        action_queryselected.triggered.connect(query_from_menu)
         action_queryselected.setShortcut(QKeySequence("Ctrl+Q"))
         action_options = QAction("Options", browser)
         action_options.triggered.connect(show_options)
@@ -108,17 +103,17 @@ def setup_context_menu():
         """
         add context menu to webview
         """
-        c.context = {'type': 'editor', 'obj': web_view.editor}
+        c.context['editor'] = web_view.editor
         c.model_id = web_view.editor.note.model()['id']
         c.maps = c.mappings[c.model_id]
         if web_view.editor.currentField == 0:  # 只在第一项加右键菜单
             action = menu.addAction(_("Query"))
-            action.triggered.connect(query)
+            action.triggered.connect(query_from_editor)
             needs_separator = True
         # menu.addMenu(submenu)
     anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
     shortcuts = [("Ctrl+Q", query), ]
-    anki.hooks.addHook('setupEditorShortcuts', on_setup_menus)
+    anki.hooks.addHook('setupEditorShortcuts', shortcuts)
 
 
 def customize_addcards():
