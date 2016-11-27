@@ -6,7 +6,7 @@ import anki
 import aqt
 from aqt import mw
 from aqt.qt import *
-from anki.hooks import addHook, runHook, wrap
+from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import shortcut, showInfo, showText, tooltip
 # import trackback
@@ -18,10 +18,48 @@ from wquery.query import query
 import wquery.context as c
 
 
+def note_changed(nid):
+    note = mw.col.deck.notes
+    note.flush()
+
+addHook('noteChanged', note_changed)
+
+
+def _show_mappings():
+    s = ''
+    for id, maps in c.mappings.items():
+        if id == 'last':
+            continue
+        s += str(id) + ', '
+        for each in maps:
+
+            s += each['fld_name'] + ', '
+        s += '\n--------\n'
+    showText(s)
+
+
+def mode_changed():
+    model_id = mw.col.models.current()['id']
+    # showInfo(str(type(c.model_id)))
+    if c.mappings.has_key(model_id):
+        c.model_id = model_id
+        c.maps = c.mappings[model_id]
+        # showText(str(c.mappings))
+        # showInfo('having ' + str(c.model_id) + ', ' +
+        #          '\n '.join([each['fld_name'] for each in c.maps]))
+    # else:
+        # showInfo(str(c.model_id))
+        # showInfo('not have %d' % c.model_id)
+        # _show_mappings()
+
+# addHook('currentModelChanged', mode_changed)
+
+
 def read_parameters():
     try:
         with open(c.savepath, 'rb') as f:
             c.mappings = cPickle.load(f)
+            # c.mappings = {for k,v in c.mappings.items()}
             try:
                 c.model_id = c.mappings['last']
                 c.maps = c.mappings[c.model_id]
@@ -31,6 +69,7 @@ def read_parameters():
     except:
         c.mappings = defaultdict(list)
         c.maps, c.model_id = list(), 0
+    # showInfo(str(c.model_id) + ',' + str(c.mappings))
 
 
 def add_query_button(self):
@@ -82,16 +121,6 @@ def setup_context_menu():
     anki.hooks.addHook('setupEditorShortcuts', on_setup_menus)
 
 
-def setup_batchimport_menu():
-    # add batch import submenu to File menu
-    action = QAction("Batch Import...", mw)
-    action.triggered.connect(batch_import)
-    actionSep = QAction("", mw)
-    actionSep.setSeparator(True)
-    mw.form.menuCol.insertAction(mw.form.actionExit, actionSep)
-    mw.form.menuCol.insertAction(actionSep, action)
-
-
 def customize_addcards():
     AddCards.setupButtons = wrap(
         AddCards.setupButtons, add_query_button, "before")
@@ -99,6 +128,6 @@ def customize_addcards():
 
 def setup_options_menu():
     # add options submenu to Tools menu
-    action = QAction("Word Query", mw)
+    action = QAction("WordQuery...", mw)
     action.triggered.connect(show_options)
     mw.form.menuTools.addAction(action)

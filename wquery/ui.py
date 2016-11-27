@@ -7,7 +7,7 @@ import aqt
 from aqt import mw
 from aqt.qt import *
 from aqt.studydeck import StudyDeck
-from aqt.utils import shortcut, showInfo, showText, tooltip
+from aqt.utils import shortcut, showInfo, showText, tooltip, getFile
 # import trackback
 import cPickle
 import wquery
@@ -18,6 +18,7 @@ from anki.hooks import addHook, runHook, wrap
 
 def _get_model_byId(id):
     for m in list(mw.col.models.all()):
+        # showInfo(str(m['id']) + ', ' + m['name'])
         if m['id'] == id:
             return m
 
@@ -97,13 +98,6 @@ def build_layout(model=None):
     mw.myWidget.setLayout(mw.myMainLayout)
 
 
-def mode_changed():
-    c.mode_id = mw.col.decks.current()['mid']
-    c.maps = c.mappings[c.model_id]
-
-addHook('currentModelChanged', mode_changed)
-
-
 def show_models():
     set_parameters()
     ret = StudyDeck(
@@ -124,7 +118,7 @@ def add_dict_layout(i, **kwargs):
     """
     checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
         'dict_path', ''), kwargs.get('fld_name', '')
-    layout = QHBoxLayout()
+    layout = QGridLayout()
     dict_check = QCheckBox(u"使用字典")
     choose_btn = QPushButton(u"选择")
     if i == 0:
@@ -148,10 +142,10 @@ def add_dict_layout(i, **kwargs):
                         mw.signal_mapper_chk, SLOT("map()"))
     mw.signal_mapper_sel.setMapping(choose_btn, i)
     mw.signal_mapper_chk.setMapping(dict_check, i)
-    layout.addWidget(dict_check)
-    layout.addWidget(field_label)
-    layout.addWidget(path_edit)
-    layout.addWidget(choose_btn)
+    layout.addWidget(dict_check, i, 0)
+    layout.addWidget(field_label, i, 1)
+    layout.addWidget(path_edit, i, 2)
+    layout.addWidget(choose_btn, i, 3)
     mw.myDictsLayout.addLayout(layout)
     mw.myWidget.setLayout(mw.myMainLayout)
 
@@ -172,13 +166,14 @@ def show_options():
     # mw.myModelNameLabel = QLabel(u"笔记类型")
     mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
-    if c.model_id:
-        model_name = _get_model_byId(c.model_id)['name']
-        models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % model_name)
     models_layout.addWidget(models_button)
-    # build fields -- dicts layout
-    if c.maps:
-        build_layout()
+    if c.model_id:
+        model = _get_model_byId(c.model_id)
+        if model:
+            models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % model['name'])
+            # build fields -- dicts layout
+            if c.maps:
+                build_layout()
     ok_button = QPushButton(u"OK")
     ok_button.clicked.connect(btn_ok_pressed)
     main_layout.addLayout(models_layout)
