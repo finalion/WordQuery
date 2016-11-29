@@ -4,6 +4,9 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 import os
 import re
+import json
+import xml
+import urllib2
 import aqt
 from aqt import mw
 from aqt.qt import *
@@ -12,7 +15,7 @@ from aqt.utils import shortcut, showInfo, showText, tooltip
 from mdict.mdict_query import IndexBuilder
 from collections import defaultdict
 import wquery.context as c
-
+import sqlite3
 index_builders = defaultdict(int)
 
 
@@ -34,7 +37,7 @@ class MdxIndexer(QThread):
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
-        if not dict_path.startswith("http://"):
+        if not dict_path.startswith("http://") and not dict_path.startswith("{{youdao"):
             index_builder = IndexBuilder(dict_path)
             errors, styles = save_media_files(index_builder, '*.css', '*.js')
             # if '*.css' in errors:
@@ -119,18 +122,57 @@ def query_all_flds(word):
 def query_mdict(word, ix, **kwargs):
     dict_path, fld_name = kwargs.get(
         'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
-    use_server = dict_path.startswith("http://")
-    use_local = not use_server
-    if use_local:
+    if dict_path.startswith("http://"):
+        dict_path = dict_path + \
+            '/' if not dict_path.endswith('/') else dict_path
+        req = urllib2.urlopen(dict_path + word)
+        return update_dict_field(ix, req.read())
+    elif dict_path.startswith("{{youdao"):
+        result = query_youdao(word)
+        for fld in c.available_online_fields:
+            if dict_path.endswith("%s}}" % fld):
+                return result[fld]
+        return _flatten_youdao(result)
+    else:
         if not index_builders[ix]:
             index_mdx(ix)
         result = index_builders[ix].mdx_lookup(word)
         if result:
             return update_dict_field(ix, result[0], index_builders[ix])
-    else:
-        req = urllib2.urlopen(serveraddr + r'/' + word)
-        return update_dict_field(ix, req.read())
-    return ""
+
+
+def _flatten_youdao(d):
+    return '<br><br>'.join(d.values())
+
+
+def query_youdao(word):
+    if word in c.online_cache:
+        return c.online_cache[word]
+    phonetics, explains, web_explains = '', '', ''
+    try:
+        result = urllib2.urlopen(
+            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
+        # showInfo(str(result))
+        doc = xml.etree.ElementTree.fromstring(result)
+        # fetch symbols
+        symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
+            ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
+        if uk_symbol and us_symbol:
+            phonetics = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
+        elif symbol:
+            phonetics = '[%s]' % symbol
+        else:
+            phonetics = ''
+        # fetch explanations
+        explains = '<br>'.join([node.text for node in doc.findall(
+            ".//custom-translation/translation/content")])
+        # return json.dumps({'phonetics': phonetics, 'explains': explains})
+    except:
+        pass
+    finally:
+        c.online_cache[word] = {'phonetic': phonetics,
+                                'explains': explains, 'web-explains': web_explains}
+        return c.online_cache[word]
 
 
 def update_dict_field(idx, text, ib=0):
