@@ -2,6 +2,7 @@
 
 [Introduction in English](introduction.md) *contributed by Li Tan*.
 
+
 ## 主要功能
 
 1. 快速零散制卡      
@@ -26,10 +27,17 @@
 
 3. 对笔记模板的每个字段设定是否需要使用字典，以及字典路径
 
-   字典路径可以为本地mdx文件，也可以设置为远程mdx server地址。mdx server部署方式：  
+   字典路径可以为本地mdx文件，远程mdx server地址或者有道在线词典解释字段。
+
+   有道字段设置如下：
+   - 音标：{{youdao:phonetic}}
+   - 解释：{{youdao:explains}}
+   
+   ![](screenshots/sp_youdao.png)
+
+   mdx server部署方式：  
 
     - [你家老黄](https://ninja33.github.io/) - MDX server  
-
     - [mmjang](https://github.com/mmjang/mdict-query) -  mdict-query
 
 
