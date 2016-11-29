@@ -12,3 +12,7 @@ mappings = defaultdict(list)
 update_all = False
 
 context = defaultdict(int)
+# online dictionary cache to avoid duplicate query
+online_cache = defaultdict(str)
+
+available_online_fields = ['phonetic', 'explains', 'web-explains']
