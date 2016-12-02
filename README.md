@@ -32,7 +32,16 @@
    有道字段设置如下：
    - 音标：{{youdao:phonetic}}
    - 解释：{{youdao:explains}}
-   
+   - 柯林斯词典: {{youdao:collins}}
+   - 21世纪词典: {{youdao:ec21}}
+   - 英英解释: {{youdao:ee}}
+   - 网络释义: {{youdao:web_trans}}
+   - 同根词: {{youdao:rel_word}}
+   - 同近义词: {{youdao:syno}}
+   - 双语例句: {{youdao:blng_sents_part}}
+   - 权威例句: {{youdao:auth_sents_part}}
+   - 百科: {{youdao:baike}}
+
    ![](screenshots/sp_youdao.png)
 
    mdx server部署方式：  
