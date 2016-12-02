@@ -23,10 +23,19 @@ def _get_model_byId(id):
             return m
 
 
+def _get_ord_from_fldname(model, name):
+    flds = model['flds']
+    for fld in flds:
+        if fld['name'] == name:
+            return fld['ord']
+
+
+
 def set_parameters():
     cbs, les, lbs = mw.myWidget.findChildren(
         QCheckBox), mw.myWidget.findChildren(QLineEdit), mw.myWidget.findChildren(QLabel)
-    c.maps = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_name": lb.text()}
+    model = _get_model_byId(c.model_id)
+    c.maps = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_ord": _get_ord_from_fldname(model, lb.text())}
               for (cb, le, lb) in zip(cbs, les, lbs)]
     # update mappings
     c.mappings[c.model_id] = c.maps
@@ -34,8 +43,6 @@ def set_parameters():
     c.mappings['last'] = c.model_id
     with open(c.savepath, 'wb') as f:
         cPickle.dump(c.mappings, f)
-        # cPickle.dump({'maps': c.maps,
-        #               'model': c.model_id}, f)
 
 
 def btn_ok_pressed():
@@ -83,18 +90,32 @@ def clear_layout(layout):
 def build_layout(model=None):
     # wquery.read_parameters()
     clear_layout(mw.myDictsLayout)
-    if model:
-        c.maps = c.mappings[c.model_id]
-        if c.mappings[c.model_id]:
-            for i, each in enumerate(c.maps):
-                add_dict_layout(i, **each)
+    if not model:
+        model = _get_model_byId(c.model_id)
+    c.maps = c.mappings[model['id']]
+    for i, fld in enumerate(model['flds']):
+        ord = fld['ord']
+        name = fld['name']
+        if c.maps:
+            for j, each in enumerate(c.maps):
+                if each['fld_ord'] == ord:
+                    add_dict_layout(j, fld_name=name, checked=each['checked'], dict_path=each['dict_path'])
         else:
-            for i, fld in enumerate(model['flds']):
-                add_dict_layout(i, fld_name=fld['name'])
-    else:
-        # build from config
-        for i, each in enumerate(c.maps):
-            add_dict_layout(i, **each)
+            add_dict_layout(i, fld_name=name)
+                
+            
+
+
+    #     if c.maps:
+    #         for i, each in enumerate(c.maps):
+    #             add_dict_layout(i, **each)
+    #     else:
+    #         for i, fld in enumerate(model['flds']):
+    #             add_dict_layout(i, fld_name=fld['name'])
+    # else:
+    #     # build from config
+    #     for i, each in enumerate(c.maps):
+    #         add_dict_layout(i, **each)
     mw.myWidget.setLayout(mw.myMainLayout)
 
 
@@ -116,6 +137,7 @@ def add_dict_layout(i, **kwargs):
     kwargs:
     checked  dict_path  fld_name
     """
+
     checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
         'dict_path', ''), kwargs.get('fld_name', '')
     layout = QGridLayout()

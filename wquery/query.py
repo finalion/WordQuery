@@ -122,8 +122,7 @@ def query_all_flds(word):
 
 
 def query_mdict(word, ix, **kwargs):
-    dict_path, fld_name = kwargs.get(
-        'dict_path', '').strip(), kwargs.get('fld_name', '').strip()
+    dict_path = kwargs.get('dict_path', '').strip()
     if dict_path.startswith("http://"):
         dict_path = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path

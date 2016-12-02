@@ -39,7 +39,6 @@ def _show_mappings():
 
 def mode_changed():
     model_id = mw.col.models.current()['id']
-    # showInfo(str(type(c.model_id)))
     if c.mappings.has_key(model_id):
         c.model_id = model_id
         c.maps = c.mappings[model_id]

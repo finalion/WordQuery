@@ -5,6 +5,7 @@ from collections import defaultdict
 savepath = os.path.join(sys.path[0], 'config')
 
 maps = list()
+model = None
 model_id = -10000
 # [model_id: maps]
 mappings = defaultdict(list)
