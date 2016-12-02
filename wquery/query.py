@@ -97,6 +97,7 @@ def query_from_editor():
     c.model_id = editor.note.model()['id']
     word = editor.note.fields[0]
     c.maps = c.mappings[c.model_id]
+    mw.progress.start(immediate=True, label="Querying...")
     for i, res in query_all_flds(word):
         if res == "":
             if c.update_all:
@@ -104,6 +105,7 @@ def query_from_editor():
         else:
             editor.note.fields[i] = res
     # editor.note.flush()
+    mw.progress.finish()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
 
@@ -128,11 +130,8 @@ def query_mdict(word, ix, **kwargs):
         req = urllib2.urlopen(dict_path + word)
         return update_dict_field(ix, req.read())
     elif dict_path.startswith("{{youdao"):
-        result = query_youdao(word)
-        for fld in c.available_online_fields:
-            if dict_path.endswith("%s}}" % fld):
-                return result[fld]
-        return _flatten_youdao(result)
+        fld = dict_path[dict_path.index(':') + 1:-2].strip()
+        return query_youdao(word, fld)
     else:
         if not index_builders[ix]:
             index_mdx(ix)
@@ -141,13 +140,18 @@ def query_mdict(word, ix, **kwargs):
             return update_dict_field(ix, result[0], index_builders[ix])
 
 
-def _flatten_youdao(d):
-    return '<br><br>'.join(d.values())
+def query_youdao(word, fld):
+    if fld in c.available_youdao_fields[:2]:
+        return query_youdao_api(word, fld)
+    elif fld in c.available_youdao_fields[2:]:
+        return query_youdao_web(word, fld)
+    else:
+        return ''
 
 
-def query_youdao(word):
+def query_youdao_api(word, fld):
     if word in c.online_cache:
-        return c.online_cache[word]
+        return c.online_cache[word][fld]
     phonetics, explains, web_explains = '', '', ''
     try:
         result = urllib2.urlopen(
@@ -166,13 +170,23 @@ def query_youdao(word):
         # fetch explanations
         explains = '<br>'.join([node.text for node in doc.findall(
             ".//custom-translation/translation/content")])
-        # return json.dumps({'phonetics': phonetics, 'explains': explains})
     except:
         pass
     finally:
         c.online_cache[word] = {'phonetic': phonetics,
                                 'explains': explains, 'web-explains': web_explains}
-        return c.online_cache[word]
+        return c.online_cache[word][fld]
+
+
+def query_youdao_web(word, single_dict):
+    try:
+        result = urllib2.urlopen(
+            "http://m.youdao.com/singledict?q=%s&dict=%s&more=false" % (word, single_dict), timeout=5).read()
+        return c.youdao_css + '<div id="collins_contentWrp" class="content-wrp dict-container"><div id="collins" class="trans-container collins ">%s</div></div>' % result
+    except:
+        return ''
+    finally:
+        mw.progress.update(label="Queried youdao %s ..." % single_dict)
 
 
 def update_dict_field(idx, text, ib=0):
