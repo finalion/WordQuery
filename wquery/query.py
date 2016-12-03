@@ -151,7 +151,7 @@ def query_youdao(word, fld):
 def query_youdao_api(word, fld):
     if word in c.online_cache:
         return c.online_cache[word][fld]
-    phonetics, explains, web_explains = '', '', ''
+    phonetics, explains = '', ''
     try:
         result = urllib2.urlopen(
             "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
@@ -172,20 +172,18 @@ def query_youdao_api(word, fld):
     except:
         pass
     finally:
-        c.online_cache[word] = {'phonetic': phonetics,
-                                'explains': explains, 'web-explains': web_explains}
+        c.online_cache[word] = {'phonetic': phonetics, 'explains': explains}
         return c.online_cache[word][fld]
 
 
 def query_youdao_web(word, single_dict):
+    mw.progress.update(label="Query Youdao {{%s}} ..." % single_dict)
     try:
         result = urllib2.urlopen(
             "http://m.youdao.com/singledict?q=%s&dict=%s&more=false" % (word, single_dict), timeout=5).read()
         return c.youdao_css + '<div id="collins_contentWrp" class="content-wrp dict-container"><div id="collins" class="trans-container collins ">%s</div></div>' % result
     except:
         return ''
-    finally:
-        mw.progress.update(label="Queried youdao %s ..." % single_dict)
 
 
 def update_dict_field(idx, text, ib=0):
