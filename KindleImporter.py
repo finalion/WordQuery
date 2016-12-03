@@ -29,6 +29,7 @@ from aqt.utils import shortcut, showInfo, showText, tooltip
 
 if currentLang == 'zh_CN':
     tags = [u'单词', u'单词原型', u'例句', u'书籍', u'创建时间']
+    import_mode = u'导入单词字段相同但其他字段不同的生词'
 else:
     tags = [u'Word', u'Stem', u'Usage', u'Book', u'Create Time']
 
@@ -40,30 +41,19 @@ class KindleDbImporter(TextImporter):
     # def __init__
 
     def openFile(self):
-        # showInfo('open file')
         db = DB(self.file)
-        # ver = db.scalar(
-        #     "select word,stem,lang,timestamp from words")
-        # assert ver.startswith('Mnemosyne SQL 1') or ver == "2"
-        # # gather facts into temp objects
         notes = {}
         note = None
-        # for word, stem, lang, timestamp in db.execute("select word_key, usage
-        # from lookups"):
         self.data = list()
         # showInfo('begin execute sql')
         results = db.execute(
             "select ws.id, ws.word, ws.stem, ws.lang, datetime(ws.timestamp*0.001, 'unixepoch', 'localtime'), lus.usage, bi.title, bi.authors from words as ws left join lookups as lus on ws.id=lus.word_key left join book_info as bi on lus.book_key=bi.id")
         self.fileobj = 1   # make sure file open ok
         # showInfo(str(len(results)))
-
-        self.data = [[word, stem, usage, u'%s ---- %s' % (book_title, book_authors), create_time]
+        self.data = [[word, stem, usage.replace(word, u'<b>%s</b>' % word), u'%s ---- %s' % (book_title, book_authors), create_time]
                      for id, word, stem, lang, create_time, usage, book_title, book_authors in results]
         self.numFields = len(tags)
-        # showInfo(','.join(self.data[0]))
         self.initMapping()
-
-        # showInfo(str(self.mapping))
 
     def foreignNotes(self):
         self.open()
@@ -74,6 +64,11 @@ class KindleDbImporter(TextImporter):
             note.fields.extend(d)
             notes.append(note)
         return notes
+
+
+def customImportMode(self):
+    self.frm.importMode.insertItem(
+        4, u'Import when first field matches existing note but other fields does not match.')
 
 
 def showMapping(self, keepMapping=False, hook=None):
@@ -116,6 +111,8 @@ def showMapping(self, keepMapping=False, hook=None):
         self.grid.addWidget(button, num, i)
         button.clicked.connect(lambda _, s=self, n=num: s.changeMappingNum(n))
 
+aqt.importing.ImportDialog.setupMappingFrame = wrap(
+    aqt.importing.ImportDialog.setupMappingFrame, customImportMode)
 aqt.importing.ImportDialog.showMapping = showMapping
 
 
