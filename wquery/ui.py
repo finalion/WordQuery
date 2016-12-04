@@ -34,7 +34,8 @@ def set_parameters():
     cbs, les, lbs = mw.myWidget.findChildren(
         QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
     model = _get_model_byId(c.model_id)
-    c.maps = [{"checked": cb.isChecked(), "dict_path": le.currentText().strip(), "fld_ord": _get_ord_from_fldname(model, lb.text())}
+    c.maps = [{"checked": cb.isChecked(), "dict_path": le.currentText().strip(),
+               "fld_ord": _get_ord_from_fldname(model, lb.text()), "youdao": c.youdao}
               for (cb, le, lb) in zip(cbs, les, lbs)]
     # update mappings
     c.mappings[c.model_id] = c.maps
@@ -175,6 +176,26 @@ def add_dict_layout(i, **kwargs):
     mw.myWidget.setLayout(mw.myMainLayout)
 
 
+def youdao_eng_clicked(checked):
+    if checked:
+        c.youdao = 'eng'
+
+
+def youdao_fr_clicked(checked):
+    if checked:
+        c.youdao = 'fr'
+
+
+def youdao_jap_clicked(checked):
+    if checked:
+        c.youdao = 'jap'
+
+
+def youdao_ko_clicked(checked):
+    if checked:
+        c.youdao = 'ko'
+
+
 def show_options():
     wquery.read_parameters()
     mw.myWidget = widget = QWidget()
@@ -186,7 +207,6 @@ def show_options():
     dicts_widget.setLayout(dicts_layout)
     scroll_area.setWidget(dicts_widget)
     scroll_area.setWidgetResizable(True)
-    mw.signal_mapper_sel = QSignalMapper(mw.myWidget)
     mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
     # mw.myModelNameLabel = QLabel(u"笔记类型")
     mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
@@ -199,9 +219,27 @@ def show_options():
             # build fields -- dicts layout
             if c.maps:
                 build_layout()
+    youdao_check_group = QGroupBox(u"翻译类型")
+    youdao_layout = QHBoxLayout()
+    eng_check, fr_check, jap_check, ko_check = QRadioButton(
+        u"中英"), QRadioButton(u"中法"), QRadioButton(u"中日"), QRadioButton(u"中韩")
+    youdao_layout.addWidget(eng_check)
+    youdao_layout.addWidget(fr_check)
+    youdao_layout.addWidget(jap_check)
+    youdao_layout.addWidget(ko_check)
+    youdao_type_maps = {'eng': eng_check, 'fr': fr_check,
+                        'jap': jap_check, 'ko': ko_check}
+    youdao_type = c.maps[0].get('youdao', 'eng')
+    youdao_type_maps[youdao_type].setChecked(True)
+    eng_check.clicked.connect(youdao_eng_clicked)
+    fr_check.clicked.connect(youdao_fr_clicked)
+    jap_check.clicked.connect(youdao_jap_clicked)
+    ko_check.clicked.connect(youdao_ko_clicked)
+    youdao_check_group.setLayout(youdao_layout)
     ok_button = QPushButton(u"OK")
     ok_button.clicked.connect(btn_ok_pressed)
     main_layout.addLayout(models_layout)
+    main_layout.addWidget(youdao_check_group)
     main_layout.addWidget(scroll_area)
     # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
