@@ -109,8 +109,9 @@ def show_models():
         return model
 
 
-def combobox_index_changed(index):
+def combobox_activated(index):
     dict_combos = mw.myWidget.findChildren(QComboBox)
+    current_combo = None
     for each in dict_combos:
         if each.hasFocus():
             current_combo = each
@@ -143,12 +144,13 @@ def add_dict_layout(i, **kwargs):
     dict_check.setChecked(checked)
     dict_check.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
     dict_combo = QComboBox()
+    dict_combo.setMinimumSize(180, 0)
     dict_combo.setEnabled(checked)
     dict_combo.setEditable(True)
     dict_combo.addItems([u'选择mdx词典...', u'mdx服务器设定'] +
                         c.available_youdao_fields.keys())
     dict_combo.setEditText(dict_path)
-    dict_combo.activated.connect(combobox_index_changed)
+    dict_combo.activated.connect(combobox_activated)
     # path_edit = QLineEdit(dict_path)
     # path_edit.setReadOnly(not checked)
     # objname = "fld%d" % i
