@@ -30,12 +30,11 @@ def _get_ord_from_fldname(model, name):
             return fld['ord']
 
 
-
 def set_parameters():
     cbs, les, lbs = mw.myWidget.findChildren(
-        QCheckBox), mw.myWidget.findChildren(QLineEdit), mw.myWidget.findChildren(QLabel)
+        QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
     model = _get_model_byId(c.model_id)
-    c.maps = [{"checked": cb.isChecked(), "dict_path": le.text().strip(), "fld_ord": _get_ord_from_fldname(model, lb.text())}
+    c.maps = [{"checked": cb.isChecked(), "dict_path": le.currentText().strip(), "fld_ord": _get_ord_from_fldname(model, lb.text())}
               for (cb, le, lb) in zip(cbs, les, lbs)]
     # update mappings
     c.mappings[c.model_id] = c.maps
@@ -57,20 +56,11 @@ def btn_models_pressed():
         build_layout(model)
 
 
-def select_dict(fld_number):
-    path = QFileDialog.getOpenFileName(
-        caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
-    if path:
-        path = path.decode('utf-8')
-        path_edits = mw.myWidget.findChildren(QLineEdit)
-        path_edits[fld_number].setText(path)
-
-
 def chkbox_state_changed(fld_number):
     dict_checks = mw.myWidget.findChildren(QCheckBox)
-    line_edits = mw.myWidget.findChildren(QLineEdit)
-    line_edits[fld_number].setReadOnly(
-        dict_checks[fld_number].checkState() == 0)
+    dict_combos = mw.myWidget.findChildren(QComboBox)
+    dict_combos[fld_number].setEnabled(
+        dict_checks[fld_number].checkState() != 0)
 
 
 def clear_layout(layout):
@@ -99,23 +89,10 @@ def build_layout(model=None):
         if c.maps:
             for j, each in enumerate(c.maps):
                 if each['fld_ord'] == ord:
-                    add_dict_layout(j, fld_name=name, checked=each['checked'], dict_path=each['dict_path'])
+                    add_dict_layout(j, fld_name=name, checked=each[
+                                    'checked'], dict_path=each['dict_path'])
         else:
             add_dict_layout(i, fld_name=name)
-                
-            
-
-
-    #     if c.maps:
-    #         for i, each in enumerate(c.maps):
-    #             add_dict_layout(i, **each)
-    #     else:
-    #         for i, fld in enumerate(model['flds']):
-    #             add_dict_layout(i, fld_name=fld['name'])
-    # else:
-    #     # build from config
-    #     for i, each in enumerate(c.maps):
-    #         add_dict_layout(i, **each)
     mw.myWidget.setLayout(mw.myMainLayout)
 
 
@@ -132,42 +109,66 @@ def show_models():
         return model
 
 
+def combobox_index_changed(index):
+    dict_combos = mw.myWidget.findChildren(QComboBox)
+    for each in dict_combos:
+        if each.hasFocus():
+            current_combo = each
+            break
+    if current_combo:
+        if index == 0:
+            path = QFileDialog.getOpenFileName(
+                caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
+            if path:
+                path = path.decode('utf-8')
+                current_combo.lineEdit().setText(path)
+            else:
+                current_combo.lineEdit().setText("")
+        if index == 1:
+            current_combo.lineEdit().setText('http://')
+
+
 def add_dict_layout(i, **kwargs):
     """
     kwargs:
     checked  dict_path  fld_name
     """
-
     checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
         'dict_path', ''), kwargs.get('fld_name', '')
     layout = QGridLayout()
     dict_check = QCheckBox(u"使用字典")
-    choose_btn = QPushButton(u"选择")
     if i == 0:
         checked, dict_path = False, ""
         dict_check.setEnabled(False)
-        choose_btn.setEnabled(False)
     dict_check.setChecked(checked)
-    path_edit = QLineEdit(dict_path)
-    path_edit.setReadOnly(not checked)
-    objname = "fld%d" % i
-    path_edit.setObjectName(objname)
+    dict_check.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    dict_combo = QComboBox()
+    dict_combo.setEnabled(checked)
+    dict_combo.setEditable(True)
+    dict_combo.addItems([u'选择mdx词典...', u'mdx服务器设定'] +
+                        c.available_youdao_fields.keys())
+    dict_combo.setEditText(dict_path)
+    dict_combo.activated.connect(combobox_index_changed)
+    # path_edit = QLineEdit(dict_path)
+    # path_edit.setReadOnly(not checked)
+    # objname = "fld%d" % i
+    # path_edit.setObjectName(objname)
     # important! only myWidget can find the children!!!!
     # when use some joined string, it can not find too !!!
     # ss = mw.myWidget.findChildren(QLineEdit, objname)
     # if ss:
     #     showInfo("found %d" % i)
     field_label = QLabel(fld_name)
-    mw.myWidget.connect(choose_btn, SIGNAL("clicked()"),
-                        mw.signal_mapper_sel, SLOT("map()"))
+    field_label.setMinimumSize(100, 0)
+    field_label.setMaximumSize(100, 100)
+    field_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
     mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
                         mw.signal_mapper_chk, SLOT("map()"))
-    mw.signal_mapper_sel.setMapping(choose_btn, i)
     mw.signal_mapper_chk.setMapping(dict_check, i)
     layout.addWidget(dict_check, i, 0)
     layout.addWidget(field_label, i, 1)
-    layout.addWidget(path_edit, i, 2)
-    layout.addWidget(choose_btn, i, 3)
+    layout.addWidget(dict_combo, i, 2)
+    # layout.addWidget(choose_btn, i, 3)
     mw.myDictsLayout.addLayout(layout)
     mw.myWidget.setLayout(mw.myMainLayout)
 
@@ -202,7 +203,6 @@ def show_options():
     main_layout.addWidget(scroll_area)
     # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
-    mw.signal_mapper_sel.mapped.connect(select_dict)
     mw.signal_mapper_chk.mapped.connect(chkbox_state_changed)
     widget.setLayout(main_layout)
     widget.show()
