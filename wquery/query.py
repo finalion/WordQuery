@@ -95,7 +95,8 @@ def query_from_editor():
     if not editor:
         return
     c.model_id = editor.note.model()['id']
-    word = editor.note.fields[0]
+    word = editor.note.fields[0].decode('utf-8')
+    # showInfo(word.decode('utf-8'))
     c.maps = c.mappings[c.model_id]
     mw.progress.start(immediate=True, label="Querying...")
     for i, res in query_all_flds(word):
@@ -152,9 +153,10 @@ def query_youdao_api(word, fld):
     if word in c.online_cache:
         return c.online_cache[word][fld]
     phonetics, explains = '', ''
+    mw.progress.update(label="Query Youdao {{%s}} ..." % fld)
     try:
         result = urllib2.urlopen(
-            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=eng&q=%s" % word, timeout=5).read()
+            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (c.maps[0].get('youdao', 'eng'), word), timeout=5).read()
         # showInfo(str(result))
         doc = xml.etree.ElementTree.fromstring(result)
         # fetch symbols
@@ -179,8 +181,9 @@ def query_youdao_api(word, fld):
 def query_youdao_web(word, single_dict):
     mw.progress.update(label="Query Youdao {{%s}} ..." % single_dict)
     try:
+        # eng, fr,jap,ko
         result = urllib2.urlopen(
-            "http://m.youdao.com/singledict?q=%s&dict=%s&more=false" % (word, single_dict), timeout=5).read()
+            "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (word, single_dict, c.maps[0].get('youdao', 'eng')), timeout=5).read()
         return c.youdao_css + '<div id="collins_contentWrp" class="content-wrp dict-container"><div id="collins" class="trans-container collins ">%s</div></div>' % result
     except:
         return ''

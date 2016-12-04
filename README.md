@@ -25,26 +25,23 @@
 
 1. “工具”菜单-->"Word Query"，弹出设置界面，点击“选择笔记类型”按钮，设定笔记模板
 
+2. 设置有道词典类型：支持中英，中法，中日，中韩
+
+   ![](screenshots/cn.png)
+
+   ![](screenshots/fr.png)
+
+   ![](screenshots/jap.png)
+
+
 3. 对笔记模板的每个字段设定是否需要使用字典，以及字典路径
 
    字典路径可以为本地mdx文件，远程mdx server地址或者有道在线词典解释字段。
 
-   有道字段设置如下：
-   - 音标：{{youdao:phonetic}}
-   - 解释：{{youdao:explains}}
-   - 柯林斯词典: {{youdao:collins}}
-   - 21世纪词典: {{youdao:ec21}}
-   - 英英解释: {{youdao:ee}}
-   - 网络释义: {{youdao:web_trans}}
-   - 同根词: {{youdao:rel_word}}
-   - 同近义词: {{youdao:syno}}
-   - 双语例句: {{youdao:blng_sents_part}}
-   - 权威例句: {{youdao:auth_sents_part}}
-   - 百科: {{youdao:baike}}
-
    ![](screenshots/sp_youdao.png)
 
-   mdx server部署方式：  
+   
+   mdx server部署方式参考：  
 
     - [你家老黄](https://ninja33.github.io/) - MDX server  
     - [mmjang](https://github.com/mmjang/mdict-query) -  mdict-query
