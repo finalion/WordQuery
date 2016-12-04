@@ -16,8 +16,12 @@ context = defaultdict(int)
 # online dictionary cache to avoid duplicate query
 online_cache = defaultdict(str)
 
-available_youdao_fields = ['phonetic', 'explains', 'collins', 'ec21', 'ee', 'web_trans', 'rel_word',
-                           'syno', 'blng_sents_part', 'auth_sents_part', 'baike']
+available_youdao_fields = {
+    u'有道·音标': 'phonetic', u'有道·中文释义': 'explains', u'有道·柯林斯英汉': 'collins', u'有道·21世纪': 'ec21',
+    u'有道·英英释义': 'ee', u'有道·网络释义': 'web_trans', u'有道·同根词': 'rel_word', u'有道·同近义词': 'syno',
+    u'有道·双语例句': 'blng_sents_part', u'有道·原生例句': 'media_sents_part', u'有道·权威例句': 'auth_sents_part',
+    u'有道·百科': 'baike'
+}
 
 youdao_css = '''
     <style type="text/css">

@@ -37,7 +37,7 @@ class MdxIndexer(QThread):
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
-        if not dict_path.startswith("http://") and not dict_path.startswith("{{youdao"):
+        if not dict_path.startswith("http://") and not dict_path.startswith(u"有道·"):
             index_builder = IndexBuilder(dict_path)
             errors, styles = save_media_files(index_builder, '*.css', '*.js')
             # if '*.css' in errors:
@@ -128,8 +128,8 @@ def query_mdict(word, ix, **kwargs):
             '/' if not dict_path.endswith('/') else dict_path
         req = urllib2.urlopen(dict_path + word)
         return update_dict_field(ix, req.read())
-    elif dict_path.startswith("{{youdao"):
-        fld = dict_path[dict_path.index(':') + 1:-2].strip()
+    elif dict_path.startswith(u"有道·"):
+        fld = c.available_youdao_fields.get(dict_path, None)
         return query_youdao(word, fld)
     else:
         if not index_builders[ix]:
@@ -140,12 +140,12 @@ def query_mdict(word, ix, **kwargs):
 
 
 def query_youdao(word, fld):
-    if fld in c.available_youdao_fields[:2]:
+    if not fld:
+        return ""
+    if fld in ('phonetic', 'explains'):
         return query_youdao_api(word, fld)
-    elif fld in c.available_youdao_fields[2:]:
-        return query_youdao_web(word, fld)
     else:
-        return ''
+        return query_youdao_web(word, fld)
 
 
 def query_youdao_api(word, fld):
