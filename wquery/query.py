@@ -124,14 +124,15 @@ def query_all_flds(word):
 
 def query_mdict(word, ix, **kwargs):
     dict_path = kwargs.get('dict_path', '').strip()
+    lang = kwargs.get('youdao', 'eng').strip()
     if dict_path.startswith("http://"):
         dict_path = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
         req = urllib2.urlopen(dict_path + word)
         return update_dict_field(ix, req.read())
     elif dict_path.startswith(u"有道·"):
-        fld = c.available_youdao_fields.get(dict_path, None)
-        return query_youdao(word, fld)
+        fld = c.available_youdao_fields[lang].get(dict_path, None)
+        return query_youdao(word, lang, fld)
     else:
         if not index_builders[ix]:
             index_mdx(ix)
@@ -140,23 +141,23 @@ def query_mdict(word, ix, **kwargs):
             return update_dict_field(ix, result[0], index_builders[ix])
 
 
-def query_youdao(word, fld):
+def query_youdao(word, lang, fld):
     if not fld:
         return ""
     if fld in ('phonetic', 'explains'):
-        return query_youdao_api(word, fld)
+        return query_youdao_api(word, lang, fld)
     else:
-        return query_youdao_web(word, fld)
+        return query_youdao_web(word, lang, fld)
 
 
-def query_youdao_api(word, fld):
+def query_youdao_api(word, lang, fld):
     if word in c.online_cache:
         return c.online_cache[word][fld]
     phonetics, explains = '', ''
     mw.progress.update(label="Query Youdao {{%s}} ..." % fld)
     try:
         result = urllib2.urlopen(
-            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (c.maps[0].get('youdao', 'eng'), word), timeout=5).read()
+            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (lang, word), timeout=5).read()
         # showInfo(str(result))
         doc = xml.etree.ElementTree.fromstring(result)
         # fetch symbols
@@ -178,12 +179,12 @@ def query_youdao_api(word, fld):
         return c.online_cache[word][fld]
 
 
-def query_youdao_web(word, single_dict):
-    mw.progress.update(label="Query Youdao {{%s}} ..." % single_dict)
+def query_youdao_web(word, lang, fld):
+    mw.progress.update(label="Query Youdao {{%s}} ..." % fld)
     try:
         # eng, fr,jap,ko
         result = urllib2.urlopen(
-            "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (word, single_dict, c.maps[0].get('youdao', 'eng')), timeout=5).read()
+            "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (word, fld, lang), timeout=5).read()
         return c.youdao_css + '<div id="collins_contentWrp" class="content-wrp dict-container"><div id="collins" class="trans-container collins ">%s</div></div>' % result
     except:
         return ''

@@ -35,7 +35,7 @@ def set_parameters():
         QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
     model = _get_model_byId(c.model_id)
     c.maps = [{"checked": cb.isChecked(), "dict_path": le.currentText().strip(),
-               "fld_ord": _get_ord_from_fldname(model, lb.text()), "youdao": c.youdao}
+               "fld_ord": _get_ord_from_fldname(model, lb.text()), "youdao": c.lang}
               for (cb, le, lb) in zip(cbs, les, lbs)]
     # update mappings
     c.mappings[c.model_id] = c.maps
@@ -89,9 +89,12 @@ def build_layout(model=None):
         name = fld['name']
         if c.maps:
             for j, each in enumerate(c.maps):
-                if each['fld_ord'] == ord:
+                if each.get('fld_ord', -1) == ord:
                     add_dict_layout(j, fld_name=name, checked=each[
                                     'checked'], dict_path=each['dict_path'])
+                    break
+            else:
+                add_dict_layout(j, fld_name=name)
         else:
             add_dict_layout(i, fld_name=name)
     mw.myWidget.setLayout(mw.myMainLayout)
@@ -135,8 +138,8 @@ def add_dict_layout(i, **kwargs):
     kwargs:
     checked  dict_path  fld_name
     """
-    checked, dict_path, fld_name = kwargs.get('checked', False), kwargs.get(
-        'dict_path', ''), kwargs.get('fld_name', '')
+    checked, dict_path, fld_name, lang = kwargs.get('checked', False), kwargs.get(
+        'dict_path', ''), kwargs.get('fld_name', ''), kwargs.get('youdao', 'eng')
     layout = QGridLayout()
     dict_check = QCheckBox(u"使用字典")
     if i == 0:
@@ -148,8 +151,9 @@ def add_dict_layout(i, **kwargs):
     dict_combo.setMinimumSize(180, 0)
     dict_combo.setEnabled(checked)
     dict_combo.setEditable(True)
-    dict_combo.addItems([u'选择mdx词典...', u'mdx服务器设定'] +
-                        c.available_youdao_fields.keys())
+    dict_combo.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
+    dict_combo.insertSeparator(2)
+    dict_combo.addItems(c.available_youdao_fields[lang].keys())
     dict_combo.setEditText(dict_path)
     dict_combo.activated.connect(combobox_activated)
     # path_edit = QLineEdit(dict_path)
@@ -176,24 +180,41 @@ def add_dict_layout(i, **kwargs):
     mw.myWidget.setLayout(mw.myMainLayout)
 
 
+def _update_dicts_combo(lang):
+    cbs = mw.myWidget.findChildren(QComboBox)
+    for i, box in enumerate(cbs):
+        box.clear()
+        box.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
+        box.insertSeparator(2)
+        box.addItems(c.available_youdao_fields[lang].keys())
+        if c.maps[i].get('lang', 'eng') == lang:
+            box.setEditText(c.maps[i].get('dict_path', ''))
+        else:
+            box.setEditText('')
+
+
 def youdao_eng_clicked(checked):
     if checked:
-        c.youdao = 'eng'
+        c.lang = 'eng'
+        _update_dicts_combo('eng')
 
 
 def youdao_fr_clicked(checked):
     if checked:
-        c.youdao = 'fr'
+        c.lang = 'fr'
+        _update_dicts_combo('fr')
 
 
 def youdao_jap_clicked(checked):
     if checked:
-        c.youdao = 'jap'
+        c.lang = 'jap'
+        _update_dicts_combo('jap')
 
 
 def youdao_ko_clicked(checked):
     if checked:
-        c.youdao = 'ko'
+        c.lang = 'ko'
+        _update_dicts_combo('ko')
 
 
 def show_options():
@@ -219,7 +240,7 @@ def show_options():
             # build fields -- dicts layout
             if c.maps:
                 build_layout()
-    youdao_check_group = QGroupBox(u"翻译类型")
+    mw.myYoudaoCheck = youdao_check_group = QGroupBox(u"有道词典")
     youdao_layout = QHBoxLayout()
     eng_check, fr_check, jap_check, ko_check = QRadioButton(
         u"中英"), QRadioButton(u"中法"), QRadioButton(u"中日"), QRadioButton(u"中韩")
@@ -229,8 +250,8 @@ def show_options():
     youdao_layout.addWidget(ko_check)
     youdao_type_maps = {'eng': eng_check, 'fr': fr_check,
                         'jap': jap_check, 'ko': ko_check}
-    youdao_type = c.maps[0].get('youdao', 'eng')
-    youdao_type_maps[youdao_type].setChecked(True)
+    lang = c.maps[0].get('youdao', 'eng')
+    youdao_type_maps[lang].setChecked(True)
     eng_check.clicked.connect(youdao_eng_clicked)
     fr_check.clicked.connect(youdao_fr_clicked)
     jap_check.clicked.connect(youdao_jap_clicked)
