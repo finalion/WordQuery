@@ -187,7 +187,8 @@ def _update_dicts_combo(lang):
         box.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
         box.insertSeparator(2)
         box.addItems(c.available_youdao_fields[lang].keys())
-        if c.maps[i].get('lang', 'eng') == lang:
+        # showInfo('%d, %s' % (i, str(c.maps)))
+        if c.maps and c.maps[i].get('lang', 'eng') == lang:
             box.setEditText(c.maps[i].get('dict_path', ''))
         else:
             box.setEditText('')
