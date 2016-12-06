@@ -41,7 +41,7 @@ def set_parameters():
     c.mappings[c.model_id] = c.maps
     # save the last model set to read next time
     c.mappings['last'] = c.model_id
-    with open(c.savepath, 'wb') as f:
+    with open(c.cfgpath, 'wb') as f:
         cPickle.dump(c.mappings, f)
 
 
@@ -112,6 +112,8 @@ def show_models():
         mw.myChooseButton.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
         return model
 
+app = QApplication.instance()
+
 
 def combobox_activated(index):
     dict_combos = mw.myWidget.findChildren(QComboBox)
@@ -120,6 +122,9 @@ def combobox_activated(index):
         if each.hasFocus():
             current_combo = each
             break
+    # focus = app.focusWidget()
+    # if focus and isinstance(focus, QComboBox):
+    #     current_combo = focus
     if current_combo:
         if index == 0:
             path = QFileDialog.getOpenFileName(
@@ -151,6 +156,7 @@ def add_dict_layout(i, **kwargs):
     dict_combo.setMinimumSize(180, 0)
     dict_combo.setEnabled(checked)
     dict_combo.setEditable(True)
+    dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
     dict_combo.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
     dict_combo.insertSeparator(2)
     dict_combo.addItems(c.available_youdao_fields[lang].keys())

@@ -3,9 +3,11 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 import os
+import urlparse
 import re
 import json
 import xml
+import urllib
 import urllib2
 import aqt
 from aqt import mw
@@ -26,6 +28,7 @@ class MdxIndexer(QThread):
         self.ix = ix
 
     def run(self):
+        global index_builders
         if self.ix == -1:
             # index all dicts
             for i, each in enumerate(c.maps):
@@ -136,8 +139,11 @@ def query_mdict(word, ix, **kwargs):
     if dict_path.startswith("http://"):
         dict_path = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
-        req = urllib2.urlopen(dict_path + word)
-        return update_dict_field(ix, req.read())
+        try:
+            req = urllib2.urlopen(dict_path + word)
+            return update_dict_field(ix, req.read(), url=dict_path)
+        except:
+            return ""
     elif dict_path.startswith(u"有道·"):
         fld = c.available_youdao_fields[lang].get(dict_path, None)
         return query_youdao(word, lang, fld)
@@ -146,7 +152,7 @@ def query_mdict(word, ix, **kwargs):
             index_mdx(ix)
         result = index_builders[ix].mdx_lookup(word)
         if result:
-            return update_dict_field(ix, result[0], index_builders[ix])
+            return update_dict_field(ix, result[0], index_builder=index_builders[ix])
         return ""
 
 
@@ -163,7 +169,7 @@ def query_youdao_api(word, lang, fld):
     if word in c.online_cache:
         return c.online_cache[word][fld]
     phonetics, explains = '', ''
-    mw.progress.update(label="Query Youdao {{%s}} ..." % fld)
+    mw.progress.update(label="Query %s {{%s}} ..." % (word, fld))
     try:
         result = urllib2.urlopen(
             "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (lang, word), timeout=5).read()
@@ -189,7 +195,7 @@ def query_youdao_api(word, lang, fld):
 
 
 def query_youdao_web(word, lang, fld):
-    mw.progress.update(label="Query Youdao {{%s}} ..." % fld)
+    mw.progress.update(label="Query %s {{%s}} ..." % (word, fld))
     try:
         # eng, fr,jap,ko
         result = urllib2.urlopen(
@@ -199,13 +205,18 @@ def query_youdao_web(word, lang, fld):
         return ''
 
 
-def update_dict_field(idx, text, ib=0):
-    return convert_media_path(ib, text) if ib else text
+def update_dict_field(idx, text, **kwargs):
+    url = kwargs.get('url', '')
+    index_builder = kwargs.get('index_builder', 0)
+    if url:
+        return convert_media_path(text, url)
+    if index_builder:
+        return convert_media_path(text, index_builder)
 
 
 def save_media_files(ib, *args, **kwargs):
     """
-    only get the necessary static files
+    get the necessary static files from local mdx dictionary
     ** kwargs: data = list
     """
     lst = []
@@ -220,13 +231,12 @@ def save_media_files(ib, *args, **kwargs):
                 errors.append(each)
             lst.extend(keys)
         # showInfo(str(errors))
-        media_dir = mw.col.media.dir()
         for each in lst:
             try:
                 bytes_list = ib.mdd_lookup(each)
                 if bytes_list:
                     savepath = os.path.join(
-                        media_dir, '_' + os.path.basename(each))
+                        mw.col.media.dir(), '_' + os.path.basename(each))
                     if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
                         styles.append(os.path.basename(each))
                     if not os.path.exists(savepath):
@@ -243,11 +253,26 @@ def save_media_files(ib, *args, **kwargs):
     return errors, styles
 
 
-def convert_media_path(ib, html):
+def download_media_files(html, url, *args, **kwargs):
+    errors, styles = list(), list()
+    for each in kwargs.get('data', []):
+        abs_url = urlparse.urljoin(url, each)
+        savepath = os.path.join(
+            mw.col.media.dir(), '_' + os.path.basename(each))
+        if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
+            styles.append(os.path.basename(each))
+        if not os.path.exists(savepath):
+            try:
+                urllib.urlretrieve(abs_url, savepath)
+            except:
+                errors.append(each)
+    return errors, styles
+
+
+def convert_media_path(html, key):
     """
     convert the media path to actual path in anki's collection media folder.'
     """
-    # showInfo('%s %s' % (type(html), str(html)))
     lst = list()
     mcss = re.findall('href="(\S+?\.css)"', html)
     lst.extend(list(set(mcss)))
@@ -255,10 +280,11 @@ def convert_media_path(ib, html):
     lst.extend(list(set(mjs)))
     msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
     lst.extend(list(set(msrc)))
-    errors, styles = save_media_files(ib, data=list(set(lst)))
-    # showInfo(str(styles))
-    # showInfo(str(list(set(msrc))))
-    # print lst
+    if isinstance(key, IndexBuilder):
+        errors, styles = save_media_files(key, data=list(set(lst)))
+    else:
+        errors, styles = download_media_files(html, key, data=list(set(lst)))
+
     newlist = ['_' + each.split('/')[-1] for each in lst]
     # print newlist
     for each in zip(lst, newlist):
@@ -267,6 +293,4 @@ def convert_media_path(ib, html):
                         style for style in styles if style.endswith('.css')]) + html
     html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
                          style for style in styles if style.endswith('.js')])
-    # showInfo(str(html))
-    # showInfo(html)
     return unicode(html)

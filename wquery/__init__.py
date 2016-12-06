@@ -17,13 +17,6 @@ from wquery.query import query_from_menu, query_from_editor
 import wquery.context as c
 
 
-def note_changed(nid):
-    note = mw.col.deck.notes
-    note.flush()
-
-addHook('noteChanged', note_changed)
-
-
 def _show_mappings():
     s = ''
     for id, maps in c.mappings.items():
@@ -55,7 +48,7 @@ def mode_changed():
 
 def read_parameters():
     try:
-        with open(c.savepath, 'rb') as f:
+        with open(c.cfgpath, 'rb') as f:
             c.mappings = cPickle.load(f)
             # c.mappings = {for k,v in c.mappings.items()}
             try:
@@ -67,7 +60,6 @@ def read_parameters():
     except:
         c.mappings = defaultdict(list)
         c.maps, c.model_id = list(), 0
-    # showInfo(str(c.model_id) + ',' + str(c.mappings))
 
 
 def add_query_button(self):
