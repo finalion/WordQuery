@@ -90,6 +90,13 @@ def query_from_menu():
         tooltip(u'共更新 %d 张卡片' % len(notes))
 
 
+def purify_word(word):
+    m = re.search('\s*[a-zA-Z]+[a-zA-Z ]*', word)
+    if m:
+        return m.group().strip()
+    return ""
+
+
 def query_from_editor():
     editor = c.context['editor']
     if not editor:
@@ -112,13 +119,14 @@ def query_from_editor():
 
 
 def query_all_flds(word):
+    purified_word = purify_word(word)
     for i, each in enumerate(c.maps):
         res = ""
         if i == 0:
             res = word
         else:
             if each['checked'] and each['dict_path'].strip():
-                res = query_mdict(word, i, **each)
+                res = query_mdict(purified_word, i, **each)
         yield i, res
 
 
@@ -139,6 +147,7 @@ def query_mdict(word, ix, **kwargs):
         result = index_builders[ix].mdx_lookup(word)
         if result:
             return update_dict_field(ix, result[0], index_builders[ix])
+        return ""
 
 
 def query_youdao(word, lang, fld):
