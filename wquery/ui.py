@@ -250,7 +250,10 @@ def show_options():
     youdao_layout.addWidget(ko_check)
     youdao_type_maps = {'eng': eng_check, 'fr': fr_check,
                         'jap': jap_check, 'ko': ko_check}
-    lang = c.maps[0].get('youdao', 'eng')
+    if c.maps:
+        lang = c.maps[0].get('youdao', 'eng')
+    else:
+        lang = 'eng'
     youdao_type_maps[lang].setChecked(True)
     eng_check.clicked.connect(youdao_eng_clicked)
     fr_check.clicked.connect(youdao_fr_clicked)
