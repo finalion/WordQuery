@@ -58,6 +58,12 @@
     - 一次选中多个单词，浏览器Word Query菜单中，点击“Query” 或者使用“Ctrl+Q”快捷键，批量对单词释义进行更新。
 
 
+## 问题
+
+1. 老用户升级后，如果出现如图所示的错误，请删除原词典目录下的.db文件
+
+   ![](screenshots/qa1.png)
+
 ## 感谢
 - 模板在[你家老黄](https://ninja33.github.io/)基础上修改
 - mdx解析工具由[mmjang](https://github.com/mmjang/mdict-query)提供

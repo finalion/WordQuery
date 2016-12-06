@@ -1,11 +1,10 @@
 #-*- coding:utf-8 -*-
 import os
-import sys
 from collections import defaultdict
-savepath = os.path.join(sys.path[0], 'config')
+
+cfgpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wqcfg')
 
 maps = list()
-model = None
 model_id = -10000
 # [model_id: maps]
 mappings = defaultdict(list)
