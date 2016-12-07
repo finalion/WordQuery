@@ -117,25 +117,19 @@ app = QApplication.instance()
 
 def combobox_activated(index):
     dict_combos = mw.myWidget.findChildren(QComboBox)
-    current_combo = None
-    for each in dict_combos:
-        if each.hasFocus():
-            current_combo = each
+    for combo in dict_combos:
+        if combo.hasFocus():
+            if index == 0:
+                path = QFileDialog.getOpenFileName(
+                    caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
+                if path:
+                    path = path.decode('utf-8')
+                    combo.lineEdit().setText(path)
+                else:
+                    combo.lineEdit().setText("")
+            if index == 1:
+                combo.lineEdit().setText('http://')
             break
-    # focus = app.focusWidget()
-    # if focus and isinstance(focus, QComboBox):
-    #     current_combo = focus
-    if current_combo:
-        if index == 0:
-            path = QFileDialog.getOpenFileName(
-                caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
-            if path:
-                path = path.decode('utf-8')
-                current_combo.lineEdit().setText(path)
-            else:
-                current_combo.lineEdit().setText("")
-        if index == 1:
-            current_combo.lineEdit().setText('http://')
 
 
 def add_dict_layout(i, **kwargs):
