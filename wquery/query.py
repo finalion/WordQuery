@@ -137,6 +137,7 @@ def query_all_flds(word):
 def query_mdict(word, ix, **kwargs):
     dict_path = kwargs.get('dict', '').strip()
     dict_field = kwargs.get('dict_field', '').strip()
+    lang = kwargs.get('youdao', 'eng').strip()
     if dict_path.startswith("http://"):
         dict_path = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
@@ -145,7 +146,9 @@ def query_mdict(word, ix, **kwargs):
             return update_dict_field(ix, req.read(), url=dict_path)
         except:
             return ""
-
+    # elif dict_path.startswith(u"有道·"):
+    #     fld = c.available_youdao_fields[lang].get(dict_path, None)
+    #     return query_youdao(word, lang, fld)
     elif os.path.isabs(dict_path):
         if not index_builders[ix]:
             index_mdx(ix)
