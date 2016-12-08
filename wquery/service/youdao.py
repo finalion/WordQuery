@@ -4,7 +4,8 @@ import urllib2
 import re
 from collections import defaultdict
 import xml.etree.ElementTree
-from .base import Service
+from .base import Service, export, with_css, register
+from aqt.utils import showInfo
 
 youdao_css = '''
     <style type="text/css">
@@ -12,50 +13,17 @@ youdao_css = '''
 '''
 
 
-def with_css(css):
-    def _with(fld_func):
-        def _deco(cls, word, single_dict):
-            div_wrapper = '<div id="%s_contentWrp" class="content-wrp dict-container"><div id="%s" class="trans-container %s ">%s</div></div>'
-            return css + div_wrapper % (single_dict, single_dict, single_dict, fld_func(cls, word, single_dict))
-        return _deco
-    return _with
-
-
-def label(label):
-    def _with(fld_func):
-        def _deco(cls, word):
-            fld_func.export_fld_label = tag
-        return _deco
-    return _with
-
-
 class Youdao(Service):
 
+    __register_label__ = u'有道词典'
+
     def __init__(self):
+        Service.__init__(self)
         self.cache = defaultdict(str)
 
-    @property
-    def fields(self):
-        return [dict(label=u'音标', action=self.fld_phonetic),
-                dict(label=u'基本释义', action=self.fld_explains),
-                dict(label=u'柯林斯英汉', action=self.fld_collins),
-                dict(label=u'21世纪', action=self.fld_ec21),
-                dict(label=u'英英释义', action=self.fld_ee),
-                dict(label=u'网络释义', action=self.fld_web_trans),
-                dict(label=u'同根词', action=self.fld_rel_word),
-                dict(label=u'同近义词', action=self.fld_syno),
-                dict(label=u'双语例句', action=self.fld_blng_sents_part),
-                dict(label=u'权威例句', action=self.fld_auth_sents_part),
-                dict(label=u'百科', action=self.fld_baike),
-                dict(label=u'新英汉大辞典(中)', action=self.fld_ce_new),
-                dict(label=u'汉语词典(中)', action=self.fld_hh),
-                dict(label=u'专业释义(中)', action=self.fld_special),
-                dict(label=u'原生例句', action=self.fld_media_sents_part),
-                ]
-
-    def _get_from_api(self, word, lang='eng'):
+    def _get_from_api(self, lang='eng'):
         url = "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (
-            lang, word)
+            lang, self.word)
         phonetics, explains = '', ''
         try:
             result = urllib2.urlopen(url, timeout=5).read()
@@ -78,81 +46,75 @@ class Youdao(Service):
         finally:
             result = {'phonetic': phonetics, 'explains': explains}
             if phonetics or explains:
-                self.cache[word] = result
+                self.cache[self.word] = result
             return result
 
-    @label(u'音标')
-    def export_fld_phonetic(self, word):
-        if word in self.cache:
-            return self.cache[word]['phonetic']
-        else:
-            return self._get_from_api(word)['phonetic']
+    @export(u'音标', 0)
+    def fld_phonetic(self):
+        return self.cache[self.word]['phonetic'] if self.word in self.cache else self._get_from_api(self.word)['phonetic']
 
-    @label(u'基本释义')
-    def export_fld_explains(self, word):
-        if word in self.cache:
-            return self.cache[word]['explains']
-        else:
-            return self._get_from_api(word)['explains']
+    @export(u'基本释义', 1)
+    def fld_explains(self):
+        return self.cache[self.word]['explains'] if self.word in self.cache else self._get_from_api(self.word)['explains']
 
     @with_css(youdao_css)
-    def _get_singledict(self, word, single_dict, lang='eng'):
+    def _get_singledict(self, single_dict, lang='eng'):
         url = "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (
-            word, single_dict, 'eng')
+            self.word, single_dict, 'eng')
         try:
             result = urllib2.urlopen(url, timeout=5).read()
-            return result
+            return '<div id="%s_contentWrp" class="content-wrp dict-container"><div id="%s" class="trans-container %s ">%s</div></div>' % (single_dict, single_dict, single_dict, result)
         except:
             return ''
 
-    @label(u'柯林斯英汉')
-    def export_fld_collins(self, word):
-        return self._get_singledict(word, 'collins')
+    @export(u'柯林斯英汉', 2)
+    def fld_collins(self):
+        return self._get_singledict('collins')
 
-    @label(u'21世纪')
-    def export_fld_ec21(self, word):
-        return self._get_singledict(word, 'ec21')
+    @export(u'21世纪', 3)
+    def fld_ec21(self):
+        return self._get_singledict('ec21')
 
-    @label(u'英英释义')
-    def export_fld_ee(self, word):
-        return self._get_singledict(word, 'ee')
+    @export(u'英英释义', 4)
+    def fld_ee(self):
+        return self._get_singledict('ee')
 
-    @label(u'网络释义')
-    def export_fld_web_trans(self, word):
-        return self._get_singledict(word, 'web_trans')
+    @export(u'网络释义', 5)
+    def fld_web_trans(self):
+        return self._get_singledict('web_trans')
 
-    @label(u'同根词')
-    def export_fld_rel_word(self, word):
-        return self._get_singledict(word, 'rel_word')
+    @export(u'同根词', 6)
+    def fld_rel_word(self):
+        return self._get_singledict('rel_word')
 
-    @label(u'同近义词')
-    def export_fld_syno(self, word):
-        return self._get_singledict(word, 'syno')
+    @export(u'同近义词', 7)
+    def fld_syno(self):
+        return self._get_singledict('syno')
 
-    @label(u'双语例句')
-    def export_fld_blng_sents_part(self, word):
-        return self._get_singledict(word, 'blng_sents_part')
+    @export(u'双语例句', 8)
+    def fld_blng_sents_part(self):
+        return self._get_singledict('blng_sents_part')
 
-    @label(u'原生例句')
-    def export_fld_media_sents_part(self, word):
-        return self._get_singledict(word, 'media_sents_part')
+    @export(u'原生例句', 9)
+    def fld_media_sents_part(self):
+        return self._get_singledict('media_sents_part')
 
-    @label(u'权威例句')
-    def export_fld_auth_sents_part(self, word):
-        return self._get_singledict(word, 'auth_sents_part')
+    @export(u'权威例句', 10)
+    def fld_auth_sents_part(self):
+        return self._get_singledict('auth_sents_part')
 
-    @label(u'新英汉大辞典(中)')
-    def export_fld_ce_new(self, word):
-        return self._get_singledict(word, 'ce_new')
+    @export(u'新英汉大辞典(中)', 12)
+    def fld_ce_new(self):
+        return self._get_singledict('ce_new')
 
-    @label(u'百科')
-    def export_fld_baike(self, word):
-        return self._get_singledict(word, 'baike')
+    @export(u'百科', 11)
+    def fld_baike(self):
+        return self._get_singledict('baike')
 
-    @label(u'汉语词典(中)')
-    def export_fld_hh(self, word):
-        return self._get_singledict(word, 'hh')
+    @export(u'汉语词典(中)', 13)
+    def fld_hh(self):
+        return self._get_singledict('hh')
 
-    @label(u'专业释义(中)')
-    def export_fld_special(self, word):
-        return self._get_singledict(word, 'special')
+    @export(u'专业释义(中)', 14)
+    def fld_special(self):
+        return self._get_singledict('special')

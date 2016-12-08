@@ -18,7 +18,7 @@ from mdict.mdict_query import IndexBuilder
 from collections import defaultdict
 import wquery.context as c
 import sqlite3
-from .service import find_service
+from .service import service_manager
 index_builders = defaultdict(int)
 
 
@@ -107,7 +107,6 @@ def query_from_editor():
         return
     c.model_id = editor.note.model()['id']
     word = editor.note.fields[0].decode('utf-8')
-    # showInfo(word.decode('utf-8'))
     c.maps = c.mappings[c.model_id]
     mw.progress.start(immediate=True, label="Querying...")
     for i, res in query_all_flds(word):
@@ -157,10 +156,10 @@ def query_mdict(word, ix, **kwargs):
             return update_dict_field(ix, result[0], index_builder=index_builders[ix])
         return ""
     else:
-        service = find_service(dict_path)
+        service = service_manager.get_service(dict_path)
         if service:
-            result = service['instance'].active(dict_field, word)
-            # showInfo(result)
+            # showInfo(word)
+            result = service.instance.active(dict_field, word)
             return result
 
 
