@@ -14,6 +14,7 @@ import wquery
 from wquery.query import index_mdx
 import wquery.context as c
 from anki.hooks import addHook, runHook, wrap
+from service import services, find_service
 
 
 def _get_model_byId(id):
@@ -31,12 +32,13 @@ def _get_ord_from_fldname(model, name):
 
 
 def set_parameters():
-    cbs, les, lbs = mw.myWidget.findChildren(
+    checkboxs, comboboxs, labels = mw.myWidget.findChildren(
         QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
+    dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
     model = _get_model_byId(c.model_id)
-    c.maps = [{"checked": cb.isChecked(), "dict_path": le.currentText().strip(),
-               "fld_ord": _get_ord_from_fldname(model, lb.text()), "youdao": c.lang}
-              for (cb, le, lb) in zip(cbs, les, lbs)]
+    c.maps = [{"checked": checkbox.isChecked(), "dict": dict_cb.currentText().strip(),
+               "dict_field": field_cb.currentText().strip(), "fld_ord": _get_ord_from_fldname(model, label.text())}
+              for (checkbox, dict_cb, field_cb, label) in zip(checkboxs, dict_cbs, field_cbs, labels)]
     # update mappings
     c.mappings[c.model_id] = c.maps
     # save the last model set to read next time
@@ -59,8 +61,11 @@ def btn_models_pressed():
 
 def chkbox_state_changed(fld_number):
     dict_checks = mw.myWidget.findChildren(QCheckBox)
-    dict_combos = mw.myWidget.findChildren(QComboBox)
+    combos = mw.myWidget.findChildren(QComboBox)
+    dict_combos, field_combos = combos[::2], combos[1::2]
     dict_combos[fld_number].setEnabled(
+        dict_checks[fld_number].checkState() != 0)
+    field_combos[fld_number].setEnabled(
         dict_checks[fld_number].checkState() != 0)
 
 
@@ -78,11 +83,8 @@ def clear_layout(layout):
 # name, mod, flds, tmpls, tags, id
 
 
-def build_layout(model=None):
-    # wquery.read_parameters()
+def build_layout(model):
     clear_layout(mw.myDictsLayout)
-    if not model:
-        model = _get_model_byId(c.model_id)
     c.maps = c.mappings[model['id']]
     for i, fld in enumerate(model['flds']):
         ord = fld['ord']
@@ -91,7 +93,7 @@ def build_layout(model=None):
             for j, each in enumerate(c.maps):
                 if each.get('fld_ord', -1) == ord:
                     add_dict_layout(j, fld_name=name, checked=each[
-                                    'checked'], dict_path=each['dict_path'])
+                                    'checked'], dict=each['dict'], dict_field=each['dict_field'])
                     break
             else:
                 add_dict_layout(j, fld_name=name)
@@ -115,9 +117,11 @@ def show_models():
 app = QApplication.instance()
 
 
-def combobox_activated(index):
-    dict_combos = mw.myWidget.findChildren(QComboBox)
-    for combo in dict_combos:
+def dict_combobox_activated(index):
+    combos = mw.myWidget.findChildren(QComboBox)
+    dict_combos, field_combos = combos[::2], combos[1::2]
+    assert len(dict_combos) == len(field_combos)
+    for i, combo in enumerate(dict_combos):
         if combo.hasFocus():
             if index == 0:
                 path = QFileDialog.getOpenFileName(
@@ -127,95 +131,69 @@ def combobox_activated(index):
                     combo.lineEdit().setText(path)
                 else:
                     combo.lineEdit().setText("")
-            if index == 1:
+            elif index == 1:
                 combo.lineEdit().setText('http://')
-            break
+            else:
+                field_combos[i].clear()
+                current_service = services[index - 3]['instance']
+                field_combos[i].addItems([each['label']
+                                          for each in current_service.fields])
+        # combo.lineEdit().setText(str(i))
 
 
 def add_dict_layout(i, **kwargs):
     """
     kwargs:
-    checked  dict_path  fld_name
+    checked  dict  fld_name dict_field
     """
-    checked, dict_path, fld_name, lang = kwargs.get('checked', False), kwargs.get(
-        'dict_path', ''), kwargs.get('fld_name', ''), kwargs.get('youdao', 'eng')
+    checked, dict_name, fld_name, dict_field = kwargs.get('checked', False), kwargs.get(
+        'dict', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
     layout = QGridLayout()
     dict_check = QCheckBox(u"使用字典")
     if i == 0:
-        checked, dict_path = False, ""
+        checked, dict_name = False, ""
         dict_check.setEnabled(False)
     dict_check.setChecked(checked)
     dict_check.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
+    fldname_label = QLabel(fld_name)
+    fldname_label.setMinimumSize(100, 0)
+    fldname_label.setMaximumSize(100, 100)
+    fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+
     dict_combo = QComboBox()
-    dict_combo.setMinimumSize(180, 0)
+    dict_combo.setMinimumSize(150, 0)
     dict_combo.setEnabled(checked)
     dict_combo.setEditable(True)
     dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
     dict_combo.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
     dict_combo.insertSeparator(2)
-    dict_combo.addItems(c.available_youdao_fields[lang].keys())
-    dict_combo.setEditText(dict_path)
-    dict_combo.activated.connect(combobox_activated)
-    # path_edit = QLineEdit(dict_path)
-    # path_edit.setReadOnly(not checked)
-    # objname = "fld%d" % i
-    # path_edit.setObjectName(objname)
-    # important! only myWidget can find the children!!!!
-    # when use some joined string, it can not find too !!!
-    # ss = mw.myWidget.findChildren(QLineEdit, objname)
-    # if ss:
-    #     showInfo("found %d" % i)
-    field_label = QLabel(fld_name)
-    field_label.setMinimumSize(100, 0)
-    field_label.setMaximumSize(100, 100)
-    field_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+    dict_combo.addItems([s['label'] for s in services])
+    dict_combo.setEditText(dict_name)
+    dict_combo.activated.connect(dict_combobox_activated)
+
+    field_combo = QComboBox()
+    field_combo.setMinimumSize(100, 0)
+    field_combo.setEnabled(checked)
+    service = find_service(dict_name)
+    if service:
+        field_combo.addItems([each['label']
+                              for each in service['instance'].fields])
+    field_combo.setEditable(True)
+    field_combo.setEditText(dict_field)
+    # field_combo.setEditable(False)
+    # field_combo.activated.connect(combobox_activated)
+
     mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
                         mw.signal_mapper_chk, SLOT("map()"))
     mw.signal_mapper_chk.setMapping(dict_check, i)
     layout.addWidget(dict_check, i, 0)
-    layout.addWidget(field_label, i, 1)
+    layout.addWidget(fldname_label, i, 1)
     layout.addWidget(dict_combo, i, 2)
+    layout.addWidget(field_combo, i, 3)
     # layout.addWidget(choose_btn, i, 3)
     mw.myDictsLayout.addLayout(layout)
     mw.myWidget.setLayout(mw.myMainLayout)
-
-
-def _update_dicts_combo(lang):
-    cbs = mw.myWidget.findChildren(QComboBox)
-    for i, box in enumerate(cbs):
-        box.clear()
-        box.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
-        box.insertSeparator(2)
-        box.addItems(c.available_youdao_fields[lang].keys())
-        # showInfo('%d, %s' % (i, str(c.maps)))
-        if c.maps and c.maps[i].get('lang', 'eng') == lang:
-            box.setEditText(c.maps[i].get('dict_path', ''))
-        else:
-            box.setEditText('')
-
-
-def youdao_eng_clicked(checked):
-    if checked:
-        c.lang = 'eng'
-        _update_dicts_combo('eng')
-
-
-def youdao_fr_clicked(checked):
-    if checked:
-        c.lang = 'fr'
-        _update_dicts_combo('fr')
-
-
-def youdao_jap_clicked(checked):
-    if checked:
-        c.lang = 'jap'
-        _update_dicts_combo('jap')
-
-
-def youdao_ko_clicked(checked):
-    if checked:
-        c.lang = 'ko'
-        _update_dicts_combo('ko')
 
 
 def show_options():
@@ -239,32 +217,10 @@ def show_options():
         if model:
             models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % model['name'])
             # build fields -- dicts layout
-            if c.maps:
-                build_layout()
-    mw.myYoudaoCheck = youdao_check_group = QGroupBox(u"有道词典")
-    youdao_layout = QHBoxLayout()
-    eng_check, fr_check, jap_check, ko_check = QRadioButton(
-        u"中英"), QRadioButton(u"中法"), QRadioButton(u"中日"), QRadioButton(u"中韩")
-    youdao_layout.addWidget(eng_check)
-    youdao_layout.addWidget(fr_check)
-    youdao_layout.addWidget(jap_check)
-    youdao_layout.addWidget(ko_check)
-    youdao_type_maps = {'eng': eng_check, 'fr': fr_check,
-                        'jap': jap_check, 'ko': ko_check}
-    if c.maps:
-        lang = c.maps[0].get('youdao', 'eng')
-    else:
-        lang = 'eng'
-    youdao_type_maps[lang].setChecked(True)
-    eng_check.clicked.connect(youdao_eng_clicked)
-    fr_check.clicked.connect(youdao_fr_clicked)
-    jap_check.clicked.connect(youdao_jap_clicked)
-    ko_check.clicked.connect(youdao_ko_clicked)
-    youdao_check_group.setLayout(youdao_layout)
+            build_layout(model)
     ok_button = QPushButton(u"OK")
     ok_button.clicked.connect(btn_ok_pressed)
     main_layout.addLayout(models_layout)
-    main_layout.addWidget(youdao_check_group)
     main_layout.addWidget(scroll_area)
     # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
