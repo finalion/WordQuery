@@ -34,7 +34,7 @@ class ServiceManager(object):
         pass
 
     def start(service):
-        pass
+        service.cls()
 
     def start_all(self):
         for service in self.services:
@@ -57,10 +57,10 @@ class ServiceManager(object):
             mypath) if f not in ('__init__.py', 'base.py', 'importlib.py') and os.path.isfile(os.path.join(mypath, f))]
         for f in files:
             # try:
-            module = importlib.import_module('.youdao', __package__)
+            module = importlib.import_module('.%s' % f[:-3], __package__)
             for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
                 if cls is not Service and issubclass(cls, Service):
-                    # showInfo(str(dir(cls)))
+                    # showInfo('%s %s' % (name, str(cls)))
                     label = getattr(cls, '__register_label__', name)
                     services.append(ServiceProfile(label, cls))
         return services
@@ -74,7 +74,8 @@ class Service(object):
 
     def __init__(self):
         self._exporters = self.get_exporters()
-        self._fields, self._actions = zip(*self._exporters)
+        self._fields, self._actions = zip(
+            *self._exporters) if self._exporters else (None, None)
 
     @property
     def fields(self):
