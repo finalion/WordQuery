@@ -21,6 +21,14 @@ def with_css(css):
     return _with
 
 
+def label(label):
+    def _with(fld_func):
+        def _deco(cls, word):
+            fld_func.export_fld_label = tag
+        return _deco
+    return _with
+
+
 class Youdao(Service):
 
     def __init__(self):
@@ -41,7 +49,7 @@ class Youdao(Service):
                 dict(label=u'百科', action=self.fld_baike),
                 dict(label=u'新英汉大辞典(中)', action=self.fld_ce_new),
                 dict(label=u'汉语词典(中)', action=self.fld_hh),
-                dict(label=u'有道·专业释义(中)', action=self.fld_special),
+                dict(label=u'专业释义(中)', action=self.fld_special),
                 dict(label=u'原生例句', action=self.fld_media_sents_part),
                 ]
 
@@ -73,13 +81,15 @@ class Youdao(Service):
                 self.cache[word] = result
             return result
 
-    def fld_phonetic(self, word):
+    @label(u'音标')
+    def export_fld_phonetic(self, word):
         if word in self.cache:
             return self.cache[word]['phonetic']
         else:
             return self._get_from_api(word)['phonetic']
 
-    def fld_explains(self, word):
+    @label(u'基本释义')
+    def export_fld_explains(self, word):
         if word in self.cache:
             return self.cache[word]['explains']
         else:
@@ -95,41 +105,54 @@ class Youdao(Service):
         except:
             return ''
 
-    def fld_collins(self, word):
+    @label(u'柯林斯英汉')
+    def export_fld_collins(self, word):
         return self._get_singledict(word, 'collins')
 
-    def fld_ec21(self, word):
+    @label(u'21世纪')
+    def export_fld_ec21(self, word):
         return self._get_singledict(word, 'ec21')
 
-    def fld_ee(self, word):
+    @label(u'英英释义')
+    def export_fld_ee(self, word):
         return self._get_singledict(word, 'ee')
 
-    def fld_web_trans(self, word):
+    @label(u'网络释义')
+    def export_fld_web_trans(self, word):
         return self._get_singledict(word, 'web_trans')
 
-    def fld_rel_word(self, word):
+    @label(u'同根词')
+    def export_fld_rel_word(self, word):
         return self._get_singledict(word, 'rel_word')
 
-    def fld_syno(self, word):
+    @label(u'同近义词')
+    def export_fld_syno(self, word):
         return self._get_singledict(word, 'syno')
 
-    def fld_blng_sents_part(self, word):
+    @label(u'双语例句')
+    def export_fld_blng_sents_part(self, word):
         return self._get_singledict(word, 'blng_sents_part')
 
-    def fld_media_sents_part(self, word):
+    @label(u'原生例句')
+    def export_fld_media_sents_part(self, word):
         return self._get_singledict(word, 'media_sents_part')
 
-    def fld_auth_sents_part(self, word):
+    @label(u'权威例句')
+    def export_fld_auth_sents_part(self, word):
         return self._get_singledict(word, 'auth_sents_part')
 
-    def fld_ce_new(self, word):
+    @label(u'新英汉大辞典(中)')
+    def export_fld_ce_new(self, word):
         return self._get_singledict(word, 'ce_new')
 
-    def fld_baike(self, word):
+    @label(u'百科')
+    def export_fld_baike(self, word):
         return self._get_singledict(word, 'baike')
 
-    def fld_hh(self, word):
+    @label(u'汉语词典(中)')
+    def export_fld_hh(self, word):
         return self._get_singledict(word, 'hh')
 
-    def fld_special(self, word):
+    @label(u'专业释义(中)')
+    def export_fld_special(self, word):
         return self._get_singledict(word, 'special')
