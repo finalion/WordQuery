@@ -14,7 +14,7 @@ import wquery
 from wquery.query import index_mdx
 import wquery.context as c
 from anki.hooks import addHook, runHook, wrap
-from service import services, find_service
+from service import service_manager
 
 
 def _get_model_byId(id):
@@ -114,31 +114,36 @@ def show_models():
         mw.myChooseButton.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
         return model
 
-app = QApplication.instance()
-
 
 def dict_combobox_activated(index):
     combos = mw.myWidget.findChildren(QComboBox)
     dict_combos, field_combos = combos[::2], combos[1::2]
     assert len(dict_combos) == len(field_combos)
-    for i, combo in enumerate(dict_combos):
-        if combo.hasFocus():
+    for i, dict_combo in enumerate(dict_combos):
+        if dict_combo.hasFocus():
             if index == 0:
                 path = QFileDialog.getOpenFileName(
                     caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
                 if path:
                     path = path.decode('utf-8')
-                    combo.lineEdit().setText(path)
+                    dict_combo.lineEdit().setText(path)
                 else:
-                    combo.lineEdit().setText("")
+                    dict_combo.lineEdit().setText("")
             elif index == 1:
-                combo.lineEdit().setText('http://')
+                dict_combo.lineEdit().setText('http://')
             else:
+                field_text = field_combos[i].currentText()
                 field_combos[i].clear()
-                current_service = services[index - 3]['instance']
-                field_combos[i].addItems([each['label']
-                                          for each in current_service.fields])
-        # combo.lineEdit().setText(str(i))
+                current_service = service_manager.get_service(
+                    dict_combo.currentText())
+
+                if current_service:
+                    current_fields = current_service.instance.fields
+                    for each in current_fields:
+                        field_combos[i].addItem(each)
+                        if each == field_text:
+                            field_combos[i].setEditText(field_text)
+            break
 
 
 def add_dict_layout(i, **kwargs):
@@ -168,18 +173,20 @@ def add_dict_layout(i, **kwargs):
     dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
     dict_combo.addItems([u'选择mdx词典...', u'设定mdx服务器...'])
     dict_combo.insertSeparator(2)
-    dict_combo.addItems([s['label'] for s in services])
+    dict_combo.addItems([s.label for s in service_manager.services])
+
+    dict_name = dict_name if service_manager.get_service(dict_name) else ""
     dict_combo.setEditText(dict_name)
     dict_combo.activated.connect(dict_combobox_activated)
 
     field_combo = QComboBox()
     field_combo.setMinimumSize(100, 0)
     field_combo.setEnabled(checked)
-    service = find_service(dict_name)
+    service = service_manager.get_service(dict_name)
     if service:
-        field_combo.addItems([each['label']
-                              for each in service['instance'].fields])
+        field_combo.addItems(service.instance.fields)
     field_combo.setEditable(True)
+    dict_field = dict_field if dict_name else ""
     field_combo.setEditText(dict_field)
     # field_combo.setEditable(False)
     # field_combo.activated.connect(combobox_activated)
