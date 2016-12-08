@@ -15,6 +15,7 @@ from collections import defaultdict
 from wquery.ui import show_options
 from wquery.query import query_from_menu, query_from_editor
 import wquery.context as c
+import service
 
 
 def _show_mappings():

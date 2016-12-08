@@ -18,6 +18,7 @@ from mdict.mdict_query import IndexBuilder
 from collections import defaultdict
 import wquery.context as c
 import sqlite3
+from .service import find_service
 index_builders = defaultdict(int)
 
 
@@ -32,15 +33,15 @@ class MdxIndexer(QThread):
         if self.ix == -1:
             # index all dicts
             for i, each in enumerate(c.maps):
-                if each['checked'] and each["dict_path"]:
-                    index_builders[i] = self.work(each["dict_path"])
+                if each['checked'] and each["dict"]:
+                    index_builders[i] = self.work(each["dict"])
         else:
             # only index given dict, specified by ix
-            index_builders[self.ix] = self.work(c.maps[self.ix]["dict_path"])
+            index_builders[self.ix] = self.work(c.maps[self.ix]["dict"])
 
     def work(self, dict_path):
         # showInfo("%d, %s" % (self.ix, dict_path))
-        if not dict_path.startswith("http://") and not dict_path.startswith(u"有道·"):
+        if not dict_path.startswith("http://") and os.path.isabs(dict_path):
             index_builder = IndexBuilder(dict_path)
             errors, styles = save_media_files(index_builder, '*.css', '*.js')
             # if '*.css' in errors:
@@ -128,14 +129,14 @@ def query_all_flds(word):
         if i == 0:
             res = word
         else:
-            if each['checked'] and each['dict_path'].strip():
+            if each['checked'] and each['dict'].strip():
                 res = query_mdict(purified_word, i, **each)
         yield i, res
 
 
 def query_mdict(word, ix, **kwargs):
-    dict_path = kwargs.get('dict_path', '').strip()
-    lang = kwargs.get('youdao', 'eng').strip()
+    dict_path = kwargs.get('dict', '').strip()
+    dict_field = kwargs.get('dict_field', '').strip()
     if dict_path.startswith("http://"):
         dict_path = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
@@ -144,65 +145,20 @@ def query_mdict(word, ix, **kwargs):
             return update_dict_field(ix, req.read(), url=dict_path)
         except:
             return ""
-    elif dict_path.startswith(u"有道·"):
-        fld = c.available_youdao_fields[lang].get(dict_path, None)
-        return query_youdao(word, lang, fld)
-    else:
+
+    elif os.path.isabs(dict_path):
         if not index_builders[ix]:
             index_mdx(ix)
         result = index_builders[ix].mdx_lookup(word)
         if result:
             return update_dict_field(ix, result[0], index_builder=index_builders[ix])
         return ""
-
-
-def query_youdao(word, lang, fld):
-    if not fld:
-        return ""
-    if fld in ('phonetic', 'explains'):
-        return query_youdao_api(word, lang, fld)
     else:
-        return query_youdao_web(word, lang, fld)
-
-
-def query_youdao_api(word, lang, fld):
-    if word in c.online_cache:
-        return c.online_cache[word][fld]
-    phonetics, explains = '', ''
-    mw.progress.update(label="Query %s {{%s}} ..." % (word, fld))
-    try:
-        result = urllib2.urlopen(
-            "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (lang, word), timeout=5).read()
-        # showInfo(str(result))
-        doc = xml.etree.ElementTree.fromstring(result)
-        # fetch symbols
-        symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
-            ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
-        if uk_symbol and us_symbol:
-            phonetics = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
-        elif symbol:
-            phonetics = '[%s]' % symbol
-        else:
-            phonetics = ''
-        # fetch explanations
-        explains = '<br>'.join([node.text for node in doc.findall(
-            ".//custom-translation/translation/content")])
-    except:
-        pass
-    finally:
-        c.online_cache[word] = {'phonetic': phonetics, 'explains': explains}
-        return c.online_cache[word][fld]
-
-
-def query_youdao_web(word, lang, fld):
-    mw.progress.update(label="Query %s {{%s}} ..." % (word, fld))
-    try:
-        # eng, fr,jap,ko
-        result = urllib2.urlopen(
-            "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (word, fld, lang), timeout=5).read()
-        return c.youdao_css + '<div id="collins_contentWrp" class="content-wrp dict-container"><div id="collins" class="trans-container collins ">%s</div></div>' % result
-    except:
-        return ''
+        service = find_service(dict_path)
+        if service:
+            result = service['instance'].active(dict_field, word)
+            # showInfo(result)
+            return result
 
 
 def update_dict_field(idx, text, **kwargs):
