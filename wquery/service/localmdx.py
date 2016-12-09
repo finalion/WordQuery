@@ -50,14 +50,16 @@ class MdxService(Service):
         #         (dict_path), period=3000)
         self.index_builders[self.dict_path] = index_builder
         mw.progress.finish()
+        return index_builder
 # @export('完整释义', 0)
 
     def active(self, dict_path, word):
         self.word = word
         self.dict_path = dict_path
-        if not self.index_builders[dict_path]:
-            self.index()
-        result = self.index_builders[dict_path].mdx_lookup(word)
+        self.index_builder = self.index_builders[dict_path]
+        if not self.index_builder:
+            self.index_builder = self.index()
+        result = self.index_builder.mdx_lookup(word)
         if result:
             ss = self.convert_media_path(result[0])
             return ss
@@ -99,16 +101,14 @@ class MdxService(Service):
                              for each in kwargs.get('data', [])]
         try:
             for each in wild:
-                keys = self.index_builders[
-                    self.dict_path].get_mdd_keys(each)
+                keys = self.index_builder.get_mdd_keys(each)
                 if not keys:
                     errors.append(each)
                 lst.extend(keys)
             # showInfo(str(errors))
             for each in lst:
                 try:
-                    bytes_list = self.index_builders[
-                        self.dict_path].mdd_lookup(each)
+                    bytes_list = self.index_builder.mdd_lookup(each)
                     if bytes_list:
                         savepath = os.path.join(
                             mw.col.media.dir(), '_' + os.path.basename(each))
