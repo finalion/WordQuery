@@ -23,15 +23,12 @@ class RemoteMdxService(Service):
 
     def active(self, dict_path, word):
         self.word = word
-        self.url = dict_path
-        if dict_path.startswith("http://"):
-            self.url = dict_path + \
-                '/' if not dict_path.endswith('/') else dict_path
-        # try:
-        req = urllib2.urlopen(self.url + word)
-        return self.convert_media_path(req.read())
-        # except:
-        #     return ""
+        self.url = dict_path + '/' if not dict_path.endswith('/') else dict_path
+        try:
+            req = urllib2.urlopen(self.url + word)
+            return self.convert_media_path(req.read())
+        except:
+            return ""
 
     def download_media_files(self, html,  *args, **kwargs):
         errors, styles = list(), list()
