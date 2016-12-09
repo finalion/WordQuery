@@ -11,7 +11,6 @@ from aqt.utils import shortcut, showInfo, showText, tooltip, getFile
 # import trackback
 import cPickle
 import wquery
-# from wquery.query import index_mdx
 import wquery.context as c
 from anki.hooks import addHook, runHook, wrap
 from service import service_manager

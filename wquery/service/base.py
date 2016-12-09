@@ -23,11 +23,10 @@ class ServiceProfile(object):
         self.cls = cls
         self.instance = instance
 
-
+@singleton
 class ServiceManager(object):
 
     def __init__(self):
-        # self.services = []
         self.services = self.get_package_services()
 
     def register(self, service):
@@ -53,16 +52,17 @@ class ServiceManager(object):
     def get_package_services(self):
         services = []
         mypath = os.path.dirname(os.path.realpath(__file__))
-        files = [f for f in os.listdir(
-            mypath) if f not in ('__init__.py', 'base.py', 'importlib.py') and os.path.isfile(os.path.join(mypath, f))]
+        files = [f for f in os.listdir(mypath) if f not in ('__init__.py', 'base.py', 'importlib.py') and not f.endswith('.pyc')]
+        
         for f in files:
             # try:
             module = importlib.import_module('.%s' % f[:-3], __package__)
             for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
                 if cls is not Service and issubclass(cls, Service):
-                    # showInfo('%s %s' % (name, str(cls)))
                     label = getattr(cls, '__register_label__', name)
-                    services.append(ServiceProfile(label, cls))
+                    sp = ServiceProfile(label, cls)
+                    if sp not in services:
+                        services.append(sp)
         return services
         # except ImportError:
         #     showInfo('Import Error')
