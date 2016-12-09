@@ -2,19 +2,10 @@
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
-import os
-import urlparse
 import re
-import json
-import xml
-import urllib
-import urllib2
 import aqt
 from aqt import mw
-from aqt.qt import *
-from aqt.utils import shortcut, showInfo, showText, tooltip
-# import trackback
-from mdict.mdict_query import IndexBuilder
+from aqt.utils import showInfo,  tooltip
 from collections import defaultdict
 import wquery.context as c
 import sqlite3
@@ -36,8 +27,7 @@ def query_from_menu():
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
             word = note.fields[0]
-            c.model_id = note.model()['id']
-            c.maps = c.mappings[c.model_id]
+            c.maps = c.mappings[note.model()['id']]
             for j, res in query_all_flds(word):
                 if res == "":
                     if c.update_all:
@@ -64,9 +54,8 @@ def query_from_editor():
     editor = c.context['editor']
     if not editor:
         return
-    c.model_id = editor.note.model()['id']
     word = editor.note.fields[0].decode('utf-8')
-    c.maps = c.mappings[c.model_id]
+    c.maps = c.mappings[editor.note.model()['id']]
     mw.progress.start(immediate=True, label="Querying...")
     for i, res in query_all_flds(word):
         if res == "":
@@ -83,32 +72,15 @@ def query_from_editor():
 def query_all_flds(word):
     purified_word = purify_word(word)
     for i, each in enumerate(c.maps):
+        use_dict = each.get('checked', False)
+        dict_type = each.get('dict', '').strip()
+        dict_field = each.get('dict_field', '').strip()
         res = ""
         if i == 0:
             res = word
         else:
-            if each['checked'] and each['dict'].strip():
-                res = query_mdict(purified_word, i, **each)
+            if use_dict and dict_type and dict_field:
+                service = service_manager.get_service(dict_type)
+                res = service.instance.active(
+                    dict_field, purified_word) if service else ""
         yield i, res
-
-
-def query_mdict(word, ix, **kwargs):
-    dict_path = kwargs.get('dict', '').strip()
-    dict_field = kwargs.get('dict_field', '').strip()
-    if dict_field.startswith("http://"):
-        service = service_manager.get_service(dict_path)
-        if service:
-            result = service.instance.active(dict_field, word)
-            return result
-
-    elif os.path.isabs(dict_field):
-        service = service_manager.get_service(dict_path)
-        if service:
-            result = service.instance.active(dict_field, word)
-            return result
-    else:
-        service = service_manager.get_service(dict_path)
-        if service:
-            # showInfo(word)
-            result = service.instance.active(dict_field, word)
-            return result

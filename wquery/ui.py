@@ -12,7 +12,6 @@ from aqt.utils import shortcut, showInfo, showText, tooltip, getFile
 import cPickle
 import wquery
 import wquery.context as c
-from anki.hooks import addHook, runHook, wrap
 from service import service_manager
 
 
@@ -34,14 +33,14 @@ def set_parameters():
     checkboxs, comboboxs, labels = mw.myWidget.findChildren(
         QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
     dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
-    model = _get_model_byId(c.model_id)
+    model = _get_model_byId(c.last_model_id)
     c.maps = [{"checked": checkbox.isChecked(), "dict": dict_cb.currentText().strip(),
                "dict_field": field_cb.currentText().strip(), "fld_ord": _get_ord_from_fldname(model, label.text())}
               for (checkbox, dict_cb, field_cb, label) in zip(checkboxs, dict_cbs, field_cbs, labels)]
     # update mappings
-    c.mappings[c.model_id] = c.maps
+    c.mappings[c.last_model_id] = c.maps
     # save the last model set to read next time
-    c.mappings['last'] = c.model_id
+    c.mappings['last'] = c.last_model_id
     with open(c.cfgpath, 'wb') as f:
         cPickle.dump(c.mappings, f)
 
@@ -67,7 +66,12 @@ def chkbox_state_changed(fld_number):
     field_combos[fld_number].setEnabled(
         dict_checks[fld_number].checkState() != 0)
 
-
+combo_index = 0
+def combo_clicked(fld_number):
+    global combo_index
+    combo_index = fld_number
+    showInfo(str(fld_number))
+    
 def clear_layout(layout):
     if layout is not None:
         while layout.count():
@@ -109,7 +113,7 @@ def show_models():
         cancel=True, geomKey="selectModel")
     if ret.name:
         model = mw.col.models.byName(ret.name)
-        c.model_id = model['id']
+        c.last_model_id = model['id']
         mw.myChooseButton.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
         return model
 
@@ -119,7 +123,7 @@ def dict_combobox_activated(index):
     dict_combos, field_combos = combos[::2], combos[1::2]
     assert len(dict_combos) == len(field_combos)
     for i, dict_combo in enumerate(dict_combos):
-        if dict_combo.hasFocus():
+        if dict_combo.hasFocus():  # useless on mac
             dict_combo_text = dict_combo.currentText()
             if dict_combo_text == u'本地Mdx词典':
                 field_combos[i].clear()
@@ -129,10 +133,11 @@ def dict_combobox_activated(index):
                     field_combos[i].setEditText(path.decode('utf-8'))
                 else:
                     field_combos[i].setEditText("")
-                    field_combos[i].setFocus(1)  # MouseFocusReason
+                    # field_combos[i].setFocus(1)  # MouseFocusReason
             elif dict_combo_text == u'Mdx服务器':
                 field_combos[i].clear()
                 field_combos[i].setEditText('http://')
+                field_combos[i].setFocus(1)  # MouseFocusReason
             else:
                 field_text = field_combos[i].currentText()
                 field_combos[i].clear()
@@ -144,7 +149,37 @@ def dict_combobox_activated(index):
                         if each == field_text:
                             field_combos[i].setEditText(field_text)
             break
-
+def dict_combobox_activated2(index):
+    combos = mw.myWidget.findChildren(QComboBox)
+    dict_combos, field_combos = combos[::2], combos[1::2]
+    assert len(dict_combos) == len(field_combos)
+    # showInfo(str(combo_index))
+    dict_combo, field_combo = dict_combos[combo_index], field_combos[combo_index]
+    
+    dict_combo_text = dict_combo.currentText()
+    if dict_combo_text == u'本地Mdx词典':
+        field_combos[i].clear()
+        path = QFileDialog.getOpenFileName(
+            caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
+        if path:
+            field_combos[i].setEditText(path.decode('utf-8'))
+        else:
+            field_combos[i].setEditText("")
+            # field_combos[i].setFocus(1)  # MouseFocusReason
+    elif dict_combo_text == u'Mdx服务器':
+        field_combos[i].clear()
+        field_combos[i].setEditText('http://')
+        field_combos[i].setFocus(1)  # MouseFocusReason
+    else:
+        field_text = field_combos[i].currentText()
+        field_combos[i].clear()
+        current_service = service_manager.get_service(
+            dict_combo.currentText())
+        if current_service and current_service.instance.fields:
+            for each in current_service.instance.fields:
+                field_combos[i].addItem(each)
+                if each == field_text:
+                    field_combos[i].setEditText(field_text)
 
 def add_dict_layout(i, **kwargs):
     """
@@ -167,7 +202,7 @@ def add_dict_layout(i, **kwargs):
     fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
 
     dict_combo = QComboBox()
-    dict_combo.setMinimumSize(150, 0)
+    dict_combo.setMinimumSize(100, 0)
     dict_combo.setEnabled(checked)
     dict_combo.setEditable(True)
     dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
@@ -178,7 +213,7 @@ def add_dict_layout(i, **kwargs):
     dict_combo.activated.connect(dict_combobox_activated)
 
     field_combo = QComboBox()
-    field_combo.setMinimumSize(100, 0)
+    field_combo.setMinimumSize(120, 0)
     field_combo.setEnabled(checked)
     service = service_manager.get_service(dict_name)
     if service and service.instance.fields:
@@ -191,7 +226,10 @@ def add_dict_layout(i, **kwargs):
 
     mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
                         mw.signal_mapper_chk, SLOT("map()"))
+    mw.myWidget.connect(dict_combo, SIGNAL("currentIndexChanged()"),
+                        mw.signal_mapper_combo, SLOT("map()"))
     mw.signal_mapper_chk.setMapping(dict_check, i)
+    mw.signal_mapper_combo.setMapping(dict_combo, i)
     layout.addWidget(dict_check, i, 0)
     layout.addWidget(fldname_label, i, 1)
     layout.addWidget(dict_combo, i, 2)
@@ -213,12 +251,13 @@ def show_options():
     scroll_area.setWidget(dicts_widget)
     scroll_area.setWidgetResizable(True)
     mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
+    mw.signal_mapper_combo = QSignalMapper(mw.myWidget)
     # mw.myModelNameLabel = QLabel(u"笔记类型")
     mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
     models_layout.addWidget(models_button)
-    if c.model_id:
-        model = _get_model_byId(c.model_id)
+    if c.last_model_id:
+        model = _get_model_byId(c.last_model_id)
         if model:
             models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % model['name'])
             # build fields -- dicts layout
@@ -230,5 +269,6 @@ def show_options():
     # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
     mw.signal_mapper_chk.mapped.connect(chkbox_state_changed)
+    mw.signal_mapper_combo.mapped.connect(combo_clicked)
     widget.setLayout(main_layout)
     widget.show()
