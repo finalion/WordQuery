@@ -20,19 +20,25 @@ class RemoteMdxService(Service):
 
     def __init__(self):
         Service.__init__(self)
+        # key: url
+        # value: set of static files
+        self.cache = defaultdict(set)
 
     def active(self, dict_path, word):
         self.word = word
-        self.url = dict_path + '/' if not dict_path.endswith('/') else dict_path
+        self.url = dict_path + \
+            '/' if not dict_path.endswith('/') else dict_path
         try:
             req = urllib2.urlopen(self.url + word)
             return self.convert_media_path(req.read())
         except:
             return ""
 
-    def download_media_files(self, html,  *args, **kwargs):
+    def download_media_files(self, data):
+        diff = data.difference(self.cache[self.url])
+        self.cache[self.url].update(diff)
         errors, styles = list(), list()
-        for each in kwargs.get('data', []):
+        for each in diff:
             abs_url = urlparse.urljoin(self.url, each)
             savepath = os.path.join(
                 mw.col.media.dir(), '_' + os.path.basename(each))
@@ -49,20 +55,16 @@ class RemoteMdxService(Service):
         """
         convert the media path to actual path in anki's collection media folder.'
         """
-        lst = list()
+        media_files_set = set()
         mcss = re.findall('href="(\S+?\.css)"', html)
-        lst.extend(list(set(mcss)))
+        media_files_set.update(set(mcss))
         mjs = re.findall('src="([\w\./]\S+?\.js)"', html)
-        lst.extend(list(set(mjs)))
+        media_files_set.update(set(mjs))
         msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
-        lst.extend(list(set(msrc)))
-
-        errors, styles = self.download_media_files(html, data=list(set(lst)))
-
-        newlist = ['_' + each.split('/')[-1] for each in lst]
-        # print newlist
-        for each in zip(lst, newlist):
-            html = html.replace(each[0], each[1])
+        media_files_set.update(set(msrc))
+        for each in media_files_set:
+            html = html.replace(each, '_' + each.split('/')[-1])
+        errors, styles = self.download_media_files(media_files_set)
         html = '<br>'.join(["<style>@import url('_%s');</style>" %
                             style for style in styles if style.endswith('.css')]) + html
         html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %

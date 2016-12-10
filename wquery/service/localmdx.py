@@ -14,51 +14,34 @@ from mdict.mdict_query import IndexBuilder
 from .base import Service, export
 
 
-class MdxIndexer(QThread):
-
-    def __init__(self, dict_path, index_builders):
-        QThread.__init__(self)
-        self.dict_path = dict_path
-        self.index_builders = index_builders
-
-    def run(self):
-        index_builder = IndexBuilder(dict_path)
-        errors, styles = save_media_files(index_builder, '*.css', '*.js')
-        # if '*.css' in errors:
-        # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if
-        # each in errors ])
-        # tooltip(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" %
-        #         (dict_path), period=3000)
-        self.index_builders[self.dict_path] = index_builder
-
-
 class MdxService(Service):
     __register_label__ = u'本地Mdx词典'
 
     def __init__(self):
         Service.__init__(self)
-        self.index_builders = defaultdict(int)
+        # cache all the static files queried, cache index_builder
+        # key: dict_path
+        # value: {'builder':index_builder, 'files':[...static files list...]}
+        self.cache = defaultdict(lambda: defaultdict(set))
 
     def index(self):
         mw.progress.start(immediate=True, label="Index building...")
         index_builder = IndexBuilder(self.dict_path)
-        errors, styles = self.save_media_files(index_builder, '*.css', '*.js')
         # if '*.css' in errors:
         # info = ' '.join([each[2:] for each in ['*.css', '*.js'] if
         # each in errors ])
         # tooltip(u"%s字典中缺失css文件，格式显示可能不正确，请自行查找文件并放入媒体文件夹中" %
         #         (dict_path), period=3000)
-        self.index_builders[self.dict_path] = index_builder
         mw.progress.finish()
         return index_builder
-# @export('完整释义', 0)
 
     def active(self, dict_path, word):
         self.word = word
         self.dict_path = dict_path
-        self.index_builder = self.index_builders[dict_path]
+        self.index_builder = self.cache[dict_path]['builder']
         if not self.index_builder:
             self.index_builder = self.index()
+            self.cache[dict_path]['builder'] = self.index_builder
         result = self.index_builder.mdx_lookup(word)
         if result:
             ss = self.convert_media_path(result[0])
@@ -69,36 +52,31 @@ class MdxService(Service):
         """
         convert the media path to actual path in anki's collection media folder.'
         """
-        lst = list()
+        media_files_set = set()
         mcss = re.findall('href="(\S+?\.css)"', html)
-        lst.extend(list(set(mcss)))
+        media_files_set.update(set(mcss))
         mjs = re.findall('src="([\w\./]\S+?\.js)"', html)
-        lst.extend(list(set(mjs)))
+        media_files_set.update(set(mjs))
         msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
-        lst.extend(list(set(msrc)))
-
-        errors, styles = self.save_media_files(data=list(set(lst)))
-
-        newlist = ['_' + each.split('/')[-1] for each in lst]
-        # print newlist
-        for each in zip(lst, newlist):
-            html = html.replace(each[0], each[1])
+        media_files_set.update(set(msrc))
+        for each in media_files_set:
+            html = html.replace(each, '_' + each.split('/')[-1])
+        errors, styles = self.save_media_files(media_files_set)
         html = '<br>'.join(["<style>@import url('_%s');</style>" %
                             style for style in styles if style.endswith('.css')]) + html
         html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
                              style for style in styles if style.endswith('.js')])
         return unicode(html)
 
-    def save_media_files(self, *args, **kwargs):
+    def save_media_files(self, data):
         """
         get the necessary static files from local mdx dictionary
         ** kwargs: data = list
         """
-        lst = []
-        errors = []
-        styles = []
-        wild = list(args) + ['*' + os.path.basename(each)
-                             for each in kwargs.get('data', [])]
+        diff = data.difference(self.cache[self.dict_path]['files'])
+        self.cache[self.dict_path]['files'].update(diff)
+        lst, errors, styles = list(), list(), list()
+        wild = ['*' + os.path.basename(each) for each in diff]
         try:
             for each in wild:
                 keys = self.index_builder.get_mdd_keys(each)
@@ -113,7 +91,7 @@ class MdxService(Service):
                         savepath = os.path.join(
                             mw.col.media.dir(), '_' + os.path.basename(each))
                         if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
-                            styles.append(os.path.basename(each))
+                            styles.append('_' + os.path.basename(each))
                         if not os.path.exists(savepath):
                             with open(savepath, 'wb') as f:
                                 f.write(bytes_list[0])
@@ -125,4 +103,5 @@ class MdxService(Service):
             有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'
             '''
             pass
+
         return errors, styles
