@@ -23,6 +23,7 @@ class ServiceProfile(object):
         self.cls = cls
         self.instance = instance
 
+
 @singleton
 class ServiceManager(object):
 
@@ -52,8 +53,9 @@ class ServiceManager(object):
     def get_package_services(self):
         services = []
         mypath = os.path.dirname(os.path.realpath(__file__))
-        files = [f for f in os.listdir(mypath) if f not in ('__init__.py', 'base.py', 'importlib.py') and not f.endswith('.pyc')]
-        
+        files = [f for f in os.listdir(mypath) if f not in (
+            '__init__.py', 'base.py', 'importlib.py') and not f.endswith('.pyc')]
+
         for f in files:
             # try:
             module = importlib.import_module('.%s' % f[:-3], __package__)
@@ -94,7 +96,8 @@ class Service(object):
         # showInfo('service active: %s ##%s##' % (action_label, word))
         for each in self.exporters:
             if action_label == each[0]:
-                return each[1]()
+                result = each[1]()
+                return result if result else ""  # avoid return None
         return ""
 
     def get_exporters(self):
