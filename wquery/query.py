@@ -5,11 +5,14 @@ sys.setdefaultencoding('utf8')
 import re
 import aqt
 from aqt import mw
+from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
 from aqt.utils import showInfo,  tooltip
 from collections import defaultdict
 import wquery.context as c
 import sqlite3
 from .service import service_manager
+from .utils import Queue, Empty
+import time
 
 
 def query_from_menu():
@@ -28,7 +31,8 @@ def query_from_menu():
         for i, note in enumerate(notes):
             word = note.fields[0]
             c.maps = c.mappings[note.model()['id']]
-            for j, res in query_all_flds(word):
+            results = query_all_flds(word)
+            for j, res in results.items():
                 if res == "":
                     if c.update_all:
                         note.fields[j] = res
@@ -57,7 +61,8 @@ def query_from_editor():
     word = editor.note.fields[0].decode('utf-8')
     c.maps = c.mappings[editor.note.model()['id']]
     mw.progress.start(immediate=True, label="Querying...")
-    for i, res in query_all_flds(word):
+    results = query_all_flds(word)
+    for i, res in results.items():
         if res == "":
             if c.update_all:
                 editor.note.fields[i] = res
@@ -70,6 +75,7 @@ def query_from_editor():
 
 
 def query_all_flds(word):
+    handle_results.total = dict()
     purified_word = purify_word(word)
     for i, each in enumerate(c.maps):
         use_dict = each.get('checked', False)
@@ -80,7 +86,67 @@ def query_all_flds(word):
             res = word
         else:
             if use_dict and dict_type and dict_field:
-                service = service_manager.get_service(dict_type)
-                res = service.instance.active(
-                    dict_field, purified_word) if service else ""
-        yield i, res
+                worker = work_manager.get_worker(dict_type)
+                worker.target(i, dict_field, purified_word)
+                worker.start()
+    for name, worker in work_manager.workers.items():
+        while not worker.isFinished():
+            mw.app.processEvents()
+            worker.wait(100)
+
+    return handle_results('__query_over__')
+
+
+@pyqtSlot(dict)
+def handle_results(result):
+    # showInfo('slot: ' + str(result))
+    if result != '__query_over__':
+        handle_results.total.update(result)
+    return handle_results.total
+
+
+class QueryWorkerManager(object):
+
+    def __init__(self):
+        self.workers = defaultdict(QueryWorker)
+
+    def get_worker(self, service_name):
+        if service_name not in self.workers:
+            worker = QueryWorker(service_name)
+            self.workers[service_name] = worker
+        else:
+            worker = self.workers[service_name]
+        return worker
+
+
+class QueryWorker(QThread):
+
+    result_ready = pyqtSignal(dict)
+
+    def __init__(self, service_name):
+        super(QueryWorker, self).__init__()
+        self.service_name = service_name
+        self.queue = Queue()
+        self.service = service_manager.get_service(service_name)
+        self.result_ready.connect(handle_results)
+
+    def target(self, index, service_field, word):
+        self.queue.put((index, service_field, word))
+
+    def run(self):
+        # try:
+        while True:
+            try:
+                index, service_field, word = self.queue.get(timeout=0.1)
+                result = self.query(
+                    service_field, word) if self.service else ""
+                self.result_ready.emit({index: result})
+                time.sleep(1)
+                # showInfo("%d:  %s" % (index, result))
+            except Empty:
+                break
+
+    def query(self, service_field, word):
+        return self.service.instance.active(service_field, word)
+
+work_manager = QueryWorkerManager()

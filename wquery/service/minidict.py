@@ -18,7 +18,8 @@ class MiniDict(Service):
         self.cache = defaultdict(defaultdict)
         self.encoder = Encoder()
         self.cookie = cookielib.CookieJar()
-        self.opener = urllib2.build_opener(urllib2.HTTPCookieProcessor(self.cookie))
+        self.opener = urllib2.build_opener(
+            urllib2.HTTPCookieProcessor(self.cookie))
 
     def get_content(self, token):
         expressions, sentences, variations = [''] * 3
@@ -39,11 +40,12 @@ class MiniDict(Service):
             encoded_word = self.encoder.go(self.word, token)
             data = urllib.urlencode(
                 {'q': self.word, 's': 2, 't': encoded_word})
-            result = self.opener.open(content_url, data=data, timeout=15).read()
+            result = self.opener.open(
+                content_url, data=data, timeout=15).read()
             expressions = json.loads(result).get("e", "")
             sentences = json.loads(result).get("s", "")
             variations = json.loads(result).get("t", "")
-            sentences = re.sub('/imgs/audio\.gif',"", sentences)
+            sentences = re.sub('/imgs/audio\.gif', "", sentences)
             self.cache[self.word].update(
                 {'expressions': expressions, 'sentences': sentences, 'variations': variations})
         except:
@@ -57,7 +59,7 @@ class MiniDict(Service):
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36',
             #    'Accept-Encoding': 'gzip, deflate',
             'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
-                               'Host': 'dict.cn'}
+            'Host': 'dict.cn'}
         self.opener.addheaders = headers.items()
         result = self.opener.open(url, timeout=15).read()
         mt = re.search('<script>var dict_pagetoken="(.*?)";</script>', result)
@@ -81,18 +83,25 @@ class MiniDict(Service):
     @export(u'基本释义', 1)
     def fld_explains(self):
         if self.word in self.cache and self.cache[self.word].has_key('expressions'):
-            return '<div id="e">%s</div>' % self.cache[self.word]['expressions']
+            res = self.cache[self.word]['expressions']
+            # showInfo(u'%s 基本释义cached:\n %s' % (self.word, res))
         else:
             page_token, phonetic = self.get_token_phonetic()
-            return '<div id="e">%s</div>' % self.get_content(page_token)[0]
+            res = self.get_content(page_token)[0]
+            # showInfo(u'%s 基本释义获取:\n %s' % (self.word, res))
+        return res
 
     @export(u'例句与用法', 2)
     def fld_sentences(self):
         if self.word in self.cache and self.cache[self.word].has_key('sentences'):
-            return self.cache[self.word]['sentences']
+            res = self.cache[self.word]['sentences']
+            # showInfo(u'%s 例句与用法cached:\n %s' % (self.word, res))
+
         else:
             page_token, phonetic = self.get_token_phonetic()
-            return self.get_content(page_token)[1]
+            res = self.get_content(page_token)[1]
+            # showInfo(u'%s 例句与用法获取:\n %s' % (self.word, res))
+        return res
 
     @export(u'词形变化', 3)
     def fld_variations(self):
@@ -102,7 +111,6 @@ class MiniDict(Service):
             page_token, phonetic = self.get_token_phonetic()
             return self.get_content(page_token)[2]
 
-        
 
 class Encoder(object):
 
