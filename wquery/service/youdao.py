@@ -47,6 +47,7 @@ class Youdao(Service):
             result = {'phonetic': phonetics, 'explains': explains}
             if phonetics or explains:
                 self.cache[self.word] = result
+            # showInfo('queried youdao:%s' % str(result))
             return result
 
     @export(u'音标', 0)

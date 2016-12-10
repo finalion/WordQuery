@@ -2,7 +2,7 @@
 import inspect
 from functools import wraps
 import os
-import importlib
+from wquery.utils import importlib
 from aqt.utils import showInfo
 
 
