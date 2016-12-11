@@ -3,6 +3,7 @@ import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
 import re
+import os
 import aqt
 from aqt import mw
 from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
@@ -15,6 +16,20 @@ from .utils import Queue, Empty
 import time
 
 
+@pyqtSlot(dict)
+def update_progress_label(info):
+    update_progress_label.kwargs.update(info)
+    words_number, fields_number = update_progress_label.kwargs.get(
+        'words_number', 0), update_progress_label.kwargs.get('fields_number', 0)
+    number_info = '<br>已查询%d个单词, %d个字段' % (
+        words_number, fields_number) if words_number and fields_number else ""
+    mw.progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
+        update_progress_label.kwargs[
+            'word'], update_progress_label.kwargs['service_name'],
+        update_progress_label.kwargs['field_name'], number_info))
+# update_progress_label.kwargs = defaultdict(str)
+
+
 def query_from_menu():
     browser = c.context['browser']
     if not browser:
@@ -25,8 +40,11 @@ def query_from_menu():
         return
     if len(notes) == 1:
         c.context['editor'] = browser.editor
+
         query_from_editor()
     if len(notes) > 1:
+        fields_number = 0
+        update_progress_label.kwargs = defaultdict(str)
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
             word = note.fields[0]
@@ -39,7 +57,9 @@ def query_from_menu():
                 else:
                     note.fields[j] = res
                 note.flush()
-            mw.progress.update(label="Queried %d words..." % (i + 1))
+            fields_number += len(results)
+            update_progress_label(
+                {'words_number': i + 1, 'fields_number': fields_number})
         browser.model.reset()
         mw.progress.finish()
         # browser.model.reset()
@@ -60,7 +80,8 @@ def query_from_editor():
         return
     word = editor.note.fields[0].decode('utf-8')
     c.maps = c.mappings[editor.note.model()['id']]
-    mw.progress.start(immediate=True, label="Querying...")
+    mw.progress.start(immediate=True, label="Querying <b>%s<b>..." % word)
+    update_progress_label.kwargs = defaultdict(str)
     results = query_all_flds(word)
     for i, res in results.items():
         if res == "":
@@ -68,6 +89,8 @@ def query_from_editor():
                 editor.note.fields[i] = res
         else:
             editor.note.fields[i] = res
+    update_progress_label(
+        {'words_number': 1, 'fields_number': len(results)})
     # editor.note.flush()
     mw.progress.finish()
     editor.setNote(editor.note, focus=True)
@@ -122,6 +145,7 @@ class QueryWorkerManager(object):
 class QueryWorker(QThread):
 
     result_ready = pyqtSignal(dict)
+    progress_update = pyqtSignal(dict)
 
     def __init__(self, service_name):
         super(QueryWorker, self).__init__()
@@ -129,6 +153,7 @@ class QueryWorker(QThread):
         self.queue = Queue()
         self.service = service_manager.get_service(service_name)
         self.result_ready.connect(handle_results)
+        self.progress_update.connect(update_progress_label)
 
     def target(self, index, service_field, word):
         self.queue.put((index, service_field, word))
@@ -138,15 +163,21 @@ class QueryWorker(QThread):
         while True:
             try:
                 index, service_field, word = self.queue.get(timeout=0.1)
+                field_info = os.path.basename(service_field) if os.path.isabs(
+                    service_field) else service_field
+                self.progress_update.emit(
+                    {'service_name': self.service_name, 'word': word, 'service_field': service_field, 'field_name': field_info})
+                # name = self.service.instance.__class__.__name__
                 result = self.query(
                     service_field, word) if self.service else ""
                 self.result_ready.emit({index: result})
-                time.sleep(1)
+                # time.sleep(1)
                 # showInfo("%d:  %s" % (index, result))
             except Empty:
                 break
 
     def query(self, service_field, word):
+
         return self.service.instance.active(service_field, word)
 
 work_manager = QueryWorkerManager()
