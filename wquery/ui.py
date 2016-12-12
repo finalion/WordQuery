@@ -6,8 +6,9 @@ import anki
 import aqt
 from aqt import mw
 from aqt.qt import *
+import aqt.models
 from aqt.studydeck import StudyDeck
-from aqt.utils import shortcut, showInfo, showText, tooltip, getFile
+from aqt.utils import shortcut, showInfo
 # import trackback
 import cPickle
 import wquery
@@ -30,8 +31,8 @@ def _get_ord_from_fldname(model, name):
 
 
 def set_parameters():
-    checkboxs, comboboxs, labels = mw.myWidget.findChildren(
-        QCheckBox), mw.myWidget.findChildren(QComboBox), mw.myWidget.findChildren(QLabel)
+    checkboxs, comboboxs, labels = mw.myDialog.findChildren(
+        QCheckBox), mw.myDialog.findChildren(QComboBox), mw.myDialog.findChildren(QLabel)
     dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
     model = _get_model_byId(c.last_model_id)
     c.maps = [{"checked": checkbox.isChecked(), "dict": dict_cb.currentText().strip(),
@@ -46,7 +47,7 @@ def set_parameters():
 
 
 def btn_ok_pressed():
-    mw.myWidget.close()
+    mw.myDialog.close()
     set_parameters()
     # index_mdx(-1)
 
@@ -58,21 +59,13 @@ def btn_models_pressed():
 
 
 def chkbox_state_changed(fld_number):
-    dict_checks = mw.myWidget.findChildren(QCheckBox)
-    combos = mw.myWidget.findChildren(QComboBox)
+    dict_checks = mw.myDialog.findChildren(QCheckBox)
+    combos = mw.myDialog.findChildren(QComboBox)
     dict_combos, field_combos = combos[::2], combos[1::2]
     dict_combos[fld_number].setEnabled(
         dict_checks[fld_number].checkState() != 0)
     field_combos[fld_number].setEnabled(
         dict_checks[fld_number].checkState() != 0)
-
-combo_index = 0
-
-
-def combo_clicked(fld_number):
-    global combo_index
-    combo_index = fld_number
-    showInfo(str(fld_number))
 
 
 def clear_layout(layout):
@@ -84,9 +77,6 @@ def clear_layout(layout):
                 widget.deleteLater()
             else:
                 clear_layout(item.layout())
-
-# model has 6 properties.
-# name, mod, flds, tmpls, tags, id
 
 
 def build_layout(model):
@@ -105,14 +95,16 @@ def build_layout(model):
                 add_dict_layout(j, fld_name=name)
         else:
             add_dict_layout(i, fld_name=name)
-    mw.myWidget.setLayout(mw.myMainLayout)
+    mw.myDialog.setLayout(mw.myMainLayout)
 
 
 def show_models():
     set_parameters()
+    edit = QPushButton(
+        _("Manage"), clicked=lambda: aqt.models.Models(mw, mw.myDialog))
     ret = StudyDeck(
         mw, names=lambda: sorted(mw.col.models.allNames()), accept=_("Choose"), title=_("Choose Note Type"),
-        help="_notes", parent=mw.myWidget,
+        help="_notes", parent=mw.myDialog, buttons=[edit],
         cancel=True, geomKey="selectModel")
     if ret.name:
         model = mw.col.models.byName(ret.name)
@@ -122,11 +114,14 @@ def show_models():
 
 
 def dict_combobox_activated(index):
-    combos = mw.myWidget.findChildren(QComboBox)
+    combos = mw.myDialog.findChildren(QComboBox)
     dict_combos, field_combos = combos[::2], combos[1::2]
     assert len(dict_combos) == len(field_combos)
     for i, dict_combo in enumerate(dict_combos):
-        if dict_combo.hasFocus():  # useless on mac
+        # in windows and linux: the combo has current focus,
+        # in mac: the combo's listview has current focus, and the listview can
+        # be got by view()
+        if dict_combo.hasFocus() or dict_combo.view().hasFocus():
             dict_combo_text = dict_combo.currentText()
             if dict_combo_text == u'本地Mdx词典':
                 field_combos[i].clear()
@@ -152,40 +147,6 @@ def dict_combobox_activated(index):
                         if each == field_text:
                             field_combos[i].setEditText(field_text)
             break
-
-
-def dict_combobox_activated2(index):
-    combos = mw.myWidget.findChildren(QComboBox)
-    dict_combos, field_combos = combos[::2], combos[1::2]
-    assert len(dict_combos) == len(field_combos)
-    # showInfo(str(combo_index))
-    dict_combo, field_combo = dict_combos[
-        combo_index], field_combos[combo_index]
-
-    dict_combo_text = dict_combo.currentText()
-    if dict_combo_text == u'本地Mdx词典':
-        field_combos[i].clear()
-        path = QFileDialog.getOpenFileName(
-            caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
-        if path:
-            field_combos[i].setEditText(path.decode('utf-8'))
-        else:
-            field_combos[i].setEditText("")
-            # field_combos[i].setFocus(1)  # MouseFocusReason
-    elif dict_combo_text == u'Mdx服务器':
-        field_combos[i].clear()
-        field_combos[i].setEditText('http://')
-        field_combos[i].setFocus(1)  # MouseFocusReason
-    else:
-        field_text = field_combos[i].currentText()
-        field_combos[i].clear()
-        current_service = service_manager.get_service(
-            dict_combo.currentText())
-        if current_service and current_service.instance.fields:
-            for each in current_service.instance.fields:
-                field_combos[i].addItem(each)
-                if each == field_text:
-                    field_combos[i].setEditText(field_text)
 
 
 def add_dict_layout(i, **kwargs):
@@ -231,24 +192,24 @@ def add_dict_layout(i, **kwargs):
     # field_combo.setEditable(False)
     # field_combo.activated.connect(combobox_activated)
 
-    mw.myWidget.connect(dict_check, SIGNAL("clicked()"),
+    mw.myDialog.connect(dict_check, SIGNAL("clicked()"),
                         mw.signal_mapper_chk, SLOT("map()"))
-    mw.myWidget.connect(dict_combo, SIGNAL("currentIndexChanged()"),
-                        mw.signal_mapper_combo, SLOT("map()"))
     mw.signal_mapper_chk.setMapping(dict_check, i)
-    mw.signal_mapper_combo.setMapping(dict_combo, i)
     layout.addWidget(dict_check, i, 0)
     layout.addWidget(fldname_label, i, 1)
     layout.addWidget(dict_combo, i, 2)
     layout.addWidget(field_combo, i, 3)
     # layout.addWidget(choose_btn, i, 3)
     mw.myDictsLayout.addLayout(layout)
-    mw.myWidget.setLayout(mw.myMainLayout)
+    mw.myDialog.setLayout(mw.myMainLayout)
+    # for osx
+    # mw.myDialog.activateWindow()
+    # mw.myDialog.raise_()
 
 
 def show_options():
     wquery.read_parameters()
-    mw.myWidget = widget = QWidget()
+    mw.myDialog = dialog = QDialog()
     mw.myMainLayout = main_layout = QVBoxLayout()
     models_layout = QHBoxLayout()
     mw.myScrollArea = scroll_area = QScrollArea()
@@ -257,8 +218,7 @@ def show_options():
     dicts_widget.setLayout(dicts_layout)
     scroll_area.setWidget(dicts_widget)
     scroll_area.setWidgetResizable(True)
-    mw.signal_mapper_chk = QSignalMapper(mw.myWidget)
-    mw.signal_mapper_combo = QSignalMapper(mw.myWidget)
+    mw.signal_mapper_chk = QSignalMapper(mw.myDialog)
     # mw.myModelNameLabel = QLabel(u"笔记类型")
     mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
@@ -276,9 +236,8 @@ def show_options():
     # main_layout.addLayout(dicts_layout)
     main_layout.addWidget(ok_button)
     mw.signal_mapper_chk.mapped.connect(chkbox_state_changed)
-    mw.signal_mapper_combo.mapped.connect(combo_clicked)
-    widget.setLayout(main_layout)
-    widget.show()
-    # for osx
-    widget.activateWindow()
-    widget.raise_()
+    dialog.setLayout(main_layout)
+    dialog.show()
+    dialog.activateWindow()
+    dialog.raise_()
+    dialog.exec_()
