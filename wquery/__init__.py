@@ -97,7 +97,11 @@ def setup_context_menu():
             action = menu.addAction(_("Query"))
             action.triggered.connect(query_from_editor)
             needs_separator = True
-        # menu.addMenu(submenu)
+        else:
+            action = menu.addAction(_("Query Current"))
+            action.triggered.connect(query_from_editor)
+            needs_separator = True
+            # menu.addMenu(submenu)
     anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
     shortcuts = [("Ctrl+Q", query), ]
     anki.hooks.addHook('setupEditorShortcuts', shortcuts)

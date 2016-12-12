@@ -80,21 +80,39 @@ def query_from_editor():
         return
     word = editor.note.fields[0].decode('utf-8')
     c.maps = c.mappings[editor.note.model()['id']]
-    mw.progress.start(immediate=True, label="Querying <b>%s<b>..." % word)
+    mw.progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
-    results = query_all_flds(word)
-    for i, res in results.items():
-        if res == "":
-            if c.update_all:
+    fld_index = editor.currentField
+    if fld_index == 0:
+        results = query_all_flds(word)
+        for i, res in results.items():
+            if res == "":
+                if c.update_all:
+                    editor.note.fields[i] = res
+            else:
                 editor.note.fields[i] = res
-        else:
-            editor.note.fields[i] = res
-    update_progress_label(
-        {'words_number': 1, 'fields_number': len(results)})
-    # editor.note.flush()
+    else:
+        result = query_single_fld(word, fld_index)
+        editor.note.fields[fld_index] = result
+    editor.note.flush()
     mw.progress.finish()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
+
+
+def query_single_fld(word, fld_index):
+    assert fld_index > 0
+    if fld_index > len(c.maps):
+        return ""
+    use_dict = c.maps[fld_index].get('checked', False)
+    dict_type = c.maps[fld_index].get('dict', '').strip()
+    dict_field = c.maps[fld_index].get('dict_field', '').strip()
+    update_progress_label(
+        {'word': word, 'service_name': dict_type, 'field_name': dict_field})
+    if use_dict and dict_type and dict_field:
+        service = service_manager.get_service(dict_type)
+        return service.instance.active(dict_field, word)
+    return ""
 
 
 def query_all_flds(word):
