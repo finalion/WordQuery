@@ -1,5 +1,4 @@
 #-*- coding:utf-8 -*-
-from aqt.utils import shortcut, showInfo, showText, tooltip
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -9,12 +8,14 @@ from aqt import mw
 from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
+from aqt.utils import showInfo, shortcut
 import cPickle
 from collections import defaultdict
 from wquery.ui import show_options
 from wquery.query import query_from_menu, query_from_editor
 import wquery.context as c
 
+have_setup = False
 
 
 def _show_mappings():
@@ -47,7 +48,7 @@ def mode_changed():
 
 def read_parameters():
     try:
-        with open(c.cfgpath, 'rb') as f:
+        with open(c.get_cfgpath(mw), 'rb') as f:
             c.mappings = cPickle.load(f)
             try:
                 c.last_model_id = c.mappings['last']
@@ -112,3 +113,5 @@ def setup_options_menu():
     action = QAction("WordQuery...", mw)
     action.triggered.connect(show_options)
     mw.form.menuTools.addAction(action)
+    global have_setup
+    have_setup = True

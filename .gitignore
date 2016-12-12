@@ -92,4 +92,4 @@ ENV/
 *.html
 test.py
 dicts/
-wqcfg
+*wqcfg
