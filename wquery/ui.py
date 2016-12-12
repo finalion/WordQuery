@@ -41,7 +41,7 @@ def set_parameters():
     c.mappings[c.last_model_id] = c.maps
     # save the last model set to read next time
     c.mappings['last'] = c.last_model_id
-    with open(c.cfgpath, 'wb') as f:
+    with open(c.get_cfgpath(mw), 'wb') as f:
         cPickle.dump(c.mappings, f)
 
 
@@ -67,11 +67,14 @@ def chkbox_state_changed(fld_number):
         dict_checks[fld_number].checkState() != 0)
 
 combo_index = 0
+
+
 def combo_clicked(fld_number):
     global combo_index
     combo_index = fld_number
     showInfo(str(fld_number))
-    
+
+
 def clear_layout(layout):
     if layout is not None:
         while layout.count():
@@ -149,13 +152,16 @@ def dict_combobox_activated(index):
                         if each == field_text:
                             field_combos[i].setEditText(field_text)
             break
+
+
 def dict_combobox_activated2(index):
     combos = mw.myWidget.findChildren(QComboBox)
     dict_combos, field_combos = combos[::2], combos[1::2]
     assert len(dict_combos) == len(field_combos)
     # showInfo(str(combo_index))
-    dict_combo, field_combo = dict_combos[combo_index], field_combos[combo_index]
-    
+    dict_combo, field_combo = dict_combos[
+        combo_index], field_combos[combo_index]
+
     dict_combo_text = dict_combo.currentText()
     if dict_combo_text == u'本地Mdx词典':
         field_combos[i].clear()
@@ -180,6 +186,7 @@ def dict_combobox_activated2(index):
                 field_combos[i].addItem(each)
                 if each == field_text:
                     field_combos[i].setEditText(field_text)
+
 
 def add_dict_layout(i, **kwargs):
     """
