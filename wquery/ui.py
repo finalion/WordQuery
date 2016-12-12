@@ -279,3 +279,6 @@ def show_options():
     mw.signal_mapper_combo.mapped.connect(combo_clicked)
     widget.setLayout(main_layout)
     widget.show()
+    # for osx
+    widget.activateWindow()
+    widget.raise_()
