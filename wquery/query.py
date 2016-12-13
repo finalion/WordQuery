@@ -7,7 +7,7 @@ import os
 import aqt
 from aqt import mw
 from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
-from aqt.utils import showInfo,  tooltip
+from aqt.utils import showInfo,  tooltip, showText
 from collections import defaultdict
 import wquery.context as c
 import sqlite3
@@ -89,15 +89,29 @@ def query_from_editor():
             if res == "":
                 if c.update_all:
                     editor.note.fields[i] = res
-            else:
+            elif isinstance(res, tuple):
+                editor.note.fields[i] = res[0]
+                add_to_tmpl(editor.note, res[1])
+            else:  # webservice
                 editor.note.fields[i] = res
     else:
         result = query_single_fld(word, fld_index)
         editor.note.fields[fld_index] = result
     editor.note.flush()
+    # showText(str(editor.note.model()['tmpls']))
     mw.progress.finish()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
+
+
+def add_to_tmpl(note, adding):
+    # templates
+    '''
+    [{u'name': u'Card 1', u'qfmt': u'{{Front}}\n\n', u'did': None, u'bafmt': u'', u'afmt': u'{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}\n\n{{12}}\n\n{{44}}\n\n', u'ord': 0, u'bqfmt': u''}]
+    '''
+    afmt = note.model()['tmpls'][0]['afmt']
+    if adding not in afmt:
+        note.model()['tmpls'][0]['afmt'] = afmt + adding
 
 
 def query_single_fld(word, fld_index):

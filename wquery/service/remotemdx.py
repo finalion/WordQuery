@@ -9,7 +9,7 @@ from collections import defaultdict
 import aqt
 from aqt import mw
 from aqt.qt import *
-from aqt.utils import showInfo
+from aqt.utils import showInfo, showText
 from mdict.mdict_query import IndexBuilder
 
 from .base import Service, export
@@ -28,11 +28,11 @@ class RemoteMdxService(Service):
         self.word = word
         self.url = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
-        try:
-            req = urllib2.urlopen(self.url + word)
-            return self.convert_media_path(req.read())
-        except:
-            return ""
+        # try:
+        req = urllib2.urlopen(self.url + word)
+        return self.adapt_to_anki(req.read())
+        # except:
+        #     return ""
 
     def download_media_files(self, data):
         diff = data.difference(self.cache[self.url])
@@ -51,9 +51,11 @@ class RemoteMdxService(Service):
                     errors.append(each)
         return errors, styles
 
-    def convert_media_path(self, html):
+    def adapt_to_anki(self, html):
         """
-        convert the media path to actual path in anki's collection media folder.'
+        1. convert the media path to actual path in anki's collection media folder.
+        2. remove the js codes
+        3. import css, to make sure the css file can be synced. TO VALIDATE!
         """
         media_files_set = set()
         mcss = re.findall('href="(\S+?\.css)"', html)
@@ -65,8 +67,10 @@ class RemoteMdxService(Service):
         for each in media_files_set:
             html = html.replace(each, '_' + each.split('/')[-1])
         errors, styles = self.download_media_files(media_files_set)
-        html = '<br>'.join(["<style>@import url('_%s');</style>" %
+        html = '<br>'.join(["<style>@import url('%s');</style>" %
                             style for style in styles if style.endswith('.css')]) + html
-        html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
-                             style for style in styles if style.endswith('.js')])
-        return unicode(html)
+        js = re.findall('<script.*?>.*?</script>', html, re.DOTALL)
+        # for each in js:
+        #     html = html.replace(each, '')
+        # showText(html)
+        return unicode(html), '\n'.join(js)

@@ -210,6 +210,7 @@ def add_dict_layout(i, **kwargs):
 def show_options():
     wquery.read_parameters()
     mw.myDialog = dialog = QDialog()
+    dialog.setWindowTitle(u"Options")
     mw.myMainLayout = main_layout = QVBoxLayout()
     models_layout = QHBoxLayout()
     mw.myScrollArea = scroll_area = QScrollArea()
@@ -219,7 +220,6 @@ def show_options():
     scroll_area.setWidget(dicts_widget)
     scroll_area.setWidgetResizable(True)
     mw.signal_mapper_chk = QSignalMapper(mw.myDialog)
-    # mw.myModelNameLabel = QLabel(u"笔记类型")
     mw.myChooseButton = models_button = QPushButton(u"选择笔记类型")
     models_button.clicked.connect(btn_models_pressed)
     models_layout.addWidget(models_button)

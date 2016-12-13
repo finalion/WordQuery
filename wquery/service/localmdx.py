@@ -8,7 +8,7 @@ from collections import defaultdict
 import aqt
 from aqt import mw
 from aqt.qt import *
-from aqt.utils import showInfo
+from aqt.utils import showInfo, showText
 from mdict.mdict_query import IndexBuilder
 
 from .base import Service, export
@@ -44,14 +44,18 @@ class MdxService(Service):
             self.cache[dict_path]['builder'] = self.index_builder
         result = self.index_builder.mdx_lookup(word)
         if result:
-            ss = self.convert_media_path(result[0])
+            ss = self.adapt_to_anki(result[0])
+            # open('d:\\wmu.html', 'wb').write(ss)
             return ss
-        return ""
+        return "", ""
 
-    def convert_media_path(self, html):
+    def adapt_to_anki(self, html):
         """
-        convert the media path to actual path in anki's collection media folder.'
+        1. convert the media path to actual path in anki's collection media folder.
+        2. remove the js codes (js inside will expires.)
+        3. import css, to make sure the css file can be synced. TO VALIDATE!
         """
+        # convert media path, save media files
         media_files_set = set()
         mcss = re.findall('href="(\S+?\.css)"', html)
         media_files_set.update(set(mcss))
@@ -62,11 +66,15 @@ class MdxService(Service):
         for each in media_files_set:
             html = html.replace(each, '_' + each.split('/')[-1])
         errors, styles = self.save_media_files(media_files_set)
-        html = '<br>'.join(["<style>@import url('_%s');</style>" %
+        # import css
+        html = '<br>'.join(["<style>@import url('%s');</style>" %
                             style for style in styles if style.endswith('.css')]) + html
-        html += '<br>'.join(['<script type="text/javascript" src="_%s"></script>' %
-                             style for style in styles if style.endswith('.js')])
-        return unicode(html)
+        # remove the js codes, send them back to the editor and add them to the template
+        # 插入笔记<div>中不能有js代码，否则会不显示。例如mwu字典
+        js = re.findall('<script.*?>.*?</script>', html, re.DOTALL)
+        # for each in js:
+        #     html = html.replace(each, '')
+        return unicode(html), '\n'.join(js)
 
     def save_media_files(self, data):
         """
