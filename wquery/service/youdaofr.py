@@ -4,7 +4,7 @@ import urllib2
 import re
 from collections import defaultdict
 import xml.etree.ElementTree
-from .base import Service, export, with_css, register
+from .base import Service, export, with_styles
 from aqt.utils import showInfo
 
 youdao_css = '''
@@ -53,7 +53,7 @@ class Youdaofr(Service):
     def fld_explains(self):
         return self.cache[self.word]['explains'] if self.word in self.cache else self._get_from_api(self.word)['explains']
 
-    @with_css(youdao_css)
+    @with_styles(css=youdao_css)
     def _get_singledict(self, single_dict, lang='fr'):
         url = "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (
             self.word, single_dict, lang)

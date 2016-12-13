@@ -4,6 +4,7 @@ reload(sys)
 sys.setdefaultencoding('utf8')
 import re
 import os
+import time
 import aqt
 from aqt import mw
 from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
@@ -13,7 +14,6 @@ import wquery.context as c
 import sqlite3
 from .service import service_manager
 from .utils import Queue, Empty
-import time
 
 
 @pyqtSlot(dict)
@@ -51,12 +51,15 @@ def query_from_menu():
             c.maps = c.mappings[note.model()['id']]
             results = query_all_flds(word)
             for j, res in results.items():
-                if res == "":
-                    if c.update_all:
-                        note.fields[j] = res
-                else:
-                    note.fields[j] = res
-                note.flush()
+                result, js, css = res.result, res.js, res.css
+                # js process: add to template of the note model
+                if js:
+                    add_to_tmpl(editor.note, js=js)
+                # css process: add css directly to the note field, that can ensure there
+                # will not exist css confusion
+                if css:
+                    result = css + result
+                editor.note.fields[i] = result
             fields_number += len(results)
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
@@ -86,17 +89,19 @@ def query_from_editor():
     if fld_index == 0:
         results = query_all_flds(word)
         for i, res in results.items():
-            if res == "":
-                if c.update_all:
-                    editor.note.fields[i] = res
-            elif isinstance(res, tuple):
-                editor.note.fields[i] = res[0]
-                add_to_tmpl(editor.note, res[1])
-            else:  # webservice
-                editor.note.fields[i] = res
+            result, js, css = res.result, res.js, res.css
+            # js process: add to template of the note model
+            if js:
+                add_to_tmpl(editor.note, js=js)
+            # css process: add css directly to the note field, that can ensure there
+            # will not exist css confusion
+            if css:
+                result = css + result
+            editor.note.fields[i] = result
     else:
-        result = query_single_fld(word, fld_index)
-        editor.note.fields[fld_index] = result
+        res = query_single_fld(word, fld_index)
+        editor.note.fields[fld_index] = res.result
+        add_to_tmpl(editor.note, js=res.js)
     editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     mw.progress.finish()
@@ -104,14 +109,20 @@ def query_from_editor():
     editor.saveNow()
 
 
-def add_to_tmpl(note, adding):
+def add_to_tmpl(note, **kwargs):
     # templates
     '''
     [{u'name': u'Card 1', u'qfmt': u'{{Front}}\n\n', u'did': None, u'bafmt': u'', u'afmt': u'{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}\n\n{{12}}\n\n{{44}}\n\n', u'ord': 0, u'bqfmt': u''}]
     '''
     afmt = note.model()['tmpls'][0]['afmt']
-    if adding not in afmt:
-        note.model()['tmpls'][0]['afmt'] = afmt + adding
+    if kwargs:
+        for key, value in kwargs.items():
+            value = value.strip()
+            if key == 'js' and value not in afmt:
+                js = value
+                if not value.startswith('<script') and not value.endswith('/script>'):
+                    js = '<script>%s</script>' % value.strip()
+                note.model()['tmpls'][0]['afmt'] = afmt + js
 
 
 def query_single_fld(word, fld_index):

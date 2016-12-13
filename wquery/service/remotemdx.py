@@ -12,7 +12,7 @@ from aqt.qt import *
 from aqt.utils import showInfo, showText
 from mdict.mdict_query import IndexBuilder
 
-from .base import Service, export
+from .base import Service, export, QueryResult
 
 
 class RemoteMdxService(Service):
@@ -28,11 +28,12 @@ class RemoteMdxService(Service):
         self.word = word
         self.url = dict_path + \
             '/' if not dict_path.endswith('/') else dict_path
-        # try:
-        req = urllib2.urlopen(self.url + word)
-        return self.adapt_to_anki(req.read())
-        # except:
-        #     return ""
+        try:
+            req = urllib2.urlopen(self.url + word)
+            result, js = self.adapt_to_anki(req.read())
+            return QueryResult(result=result, js=js)
+        except:
+            return self.default_result
 
     def download_media_files(self, data):
         diff = data.difference(self.cache[self.url])
@@ -43,7 +44,7 @@ class RemoteMdxService(Service):
             savepath = os.path.join(
                 mw.col.media.dir(), '_' + os.path.basename(each))
             if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
-                styles.append(os.path.basename(each))
+                styles.append('_' + os.path.basename(each))
             if not os.path.exists(savepath):
                 try:
                     urllib.urlretrieve(abs_url, savepath)

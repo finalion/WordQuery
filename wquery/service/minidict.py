@@ -3,7 +3,7 @@ import urllib
 import urllib2
 import re
 from collections import defaultdict
-from .base import Service, export, with_css, register
+from .base import Service, export, with_styles, register
 from aqt.utils import showInfo
 import cookielib
 import json

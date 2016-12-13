@@ -4,6 +4,7 @@ from functools import wraps
 import os
 from wquery.utils import importlib
 from aqt.utils import showInfo
+from wquery.utils import MapDict
 
 
 def singleton(cls, *args, **kw):
@@ -78,6 +79,7 @@ class Service(object):
         self._exporters = self.get_exporters()
         self._fields, self._actions = zip(
             *self._exporters) if self._exporters else (None, None)
+        self.default_result = QueryResult(result="")
 
     @property
     def fields(self):
@@ -97,8 +99,8 @@ class Service(object):
         for each in self.exporters:
             if action_label == each[0]:
                 result = each[1]()
-                return result if result else ""  # avoid return None
-        return ""
+                return result if result else self.default_result  # avoid return None
+        return self.default_result
 
     def get_exporters(self):
         flds = dict()
@@ -112,6 +114,10 @@ class Service(object):
         # label, function
         return [flds[key] for key in sorted_flds]
 
+
+class QueryResult(MapDict):
+    """Query Result structure"""
+    pass
 # define decorators below----------------------------
 
 
@@ -128,16 +134,24 @@ def export(label, index):
     def _with(fld_func):
         @wraps(fld_func)
         def _deco(cls, *args, **kwargs):
-            return fld_func(cls, *args, **kwargs)
+            res = fld_func(cls, *args, **kwargs)
+            return QueryResult(result=res) if not isinstance(res, QueryResult) else res
         _deco.__export_attrs__ = (label, index)
         return _deco
     return _with
 
 
-def with_css(css):
+def with_styles(**styles):
     def _with(fld_func):
         def _deco(cls, *args, **kwargs):
-            return css + fld_func(cls, *args, **kwargs)
+            res = fld_func(cls, *args, **kwargs)
+            if styles:
+                if not isinstance(res, QueryResult):
+                    return QueryResult(result=res, **styles)
+                else:
+                    res.css = css
+                    return res
+            return res
         return _deco
     return _with
 

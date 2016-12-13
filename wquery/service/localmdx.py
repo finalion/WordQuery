@@ -11,7 +11,7 @@ from aqt.qt import *
 from aqt.utils import showInfo, showText
 from mdict.mdict_query import IndexBuilder
 
-from .base import Service, export
+from .base import Service, export, with_styles, QueryResult
 
 
 class MdxService(Service):
@@ -46,8 +46,8 @@ class MdxService(Service):
         if result:
             ss = self.adapt_to_anki(result[0])
             # open('d:\\wmu.html', 'wb').write(ss)
-            return ss
-        return "", ""
+            return QueryResult(result=ss[0], js=ss[1])
+        return self.default_result
 
     def adapt_to_anki(self, html):
         """
