@@ -16,7 +16,7 @@ import wquery
 # import wquery.context as c
 from service import service_manager
 from mdict.mdict_query import IndexBuilder
-from .config import Config
+from .context import Config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
 
@@ -262,6 +262,10 @@ class OptionsDialog(QDialog):
                                 field_combos[i].setEditText(field_text)
                 break
 
+    def set_combo_text(self, cb, text):
+        for i in range(cb.count()):
+            if cb.itemText(i) == text:
+                cb.setCurrentIndex(i)
     def add_dict_layout(self, i, **kwargs):
         """
         kwargs:
@@ -291,7 +295,7 @@ class OptionsDialog(QDialog):
         dict_combo.insertSeparator(dict_combo.count())
         dict_combo.addItems([s.label for s in service_manager.services])
         dict_name = dict_name if service_manager.get_service(dict_name) else ""
-        dict_combo.setEditText(dict_name)
+        self.set_combo_text(dict_combo,dict_name)
         dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
@@ -332,3 +336,6 @@ class OptionsDialog(QDialog):
             cb.addItems(mdx_items)
             cb.insertSeparator(cb.count())
             cb.addItems(web_items)
+
+    def save(self):
+        c.save_options_dialog(self)

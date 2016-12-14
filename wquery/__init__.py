@@ -16,20 +16,7 @@ from wquery.query import query_from_menu, query_from_editor
 import wquery.context as c
 
 have_setup = False
-
-
-def _show_mappings():
-    s = ''
-    for id, maps in c.mappings.items():
-        if id == 'last':
-            continue
-        s += str(id) + ', '
-        for each in maps:
-
-            s += each['fld_name'] + ', '
-        s += '\n--------\n'
-    showText(s)
-
+config = c.Config(mw)
 
 def mode_changed():
     model_id = mw.col.models.current()['id']
@@ -44,20 +31,6 @@ def mode_changed():
         # _show_mappings()
 
 # addHook('currentModelChanged', mode_changed)
-
-
-def read_parameters():
-    try:
-        with open(c.get_cfgpath(mw), 'rb') as f:
-            c.mappings = cPickle.load(f)
-            try:
-                c.last_model_id = c.mappings['last']
-                c.maps = c.mappings[c.last_model_id]
-            except:
-                c.maps, c.last_model_id = list(), 0
-
-    except:
-        c.maps, c.last_model_id = list(), 0
 
 
 def add_query_button(self):
