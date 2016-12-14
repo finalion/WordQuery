@@ -62,10 +62,11 @@ class ServiceManager(object):
             module = importlib.import_module('.%s' % f[:-3], __package__)
             for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
                 if cls is not Service and issubclass(cls, Service):
-                    label = getattr(cls, '__register_label__', name)
-                    sp = ServiceProfile(label, cls)
-                    if sp not in services:
-                        services.append(sp)
+                    label = getattr(cls, '__register_label__', None)
+                    if label:
+                        sp = ServiceProfile(label, cls)
+                        if sp not in services:
+                            services.append(sp)
         return services
         # except ImportError:
         #     showInfo('Import Error')
@@ -113,6 +114,10 @@ class Service(object):
         sorted_flds = sorted(flds)
         # label, function
         return [flds[key] for key in sorted_flds]
+
+
+class WebService(Service):
+    pass
 
 
 class QueryResult(MapDict):

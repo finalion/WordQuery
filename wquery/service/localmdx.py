@@ -15,7 +15,6 @@ from .base import Service, export, with_styles, QueryResult
 
 
 class MdxService(Service):
-    __register_label__ = u'本地Mdx词典'
 
     def __init__(self):
         Service.__init__(self)

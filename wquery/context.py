@@ -21,5 +21,11 @@ def get_cfgpath(mw):
     return cfgpath
 
 
+def get_cfgpath2():
+    cfgpath = os.path.join(os.path.dirname(
+        os.path.realpath(__file__)), '.wqcfg')
+    return cfgpath
+
+
 def get_maps(id):
     return mappings[id]
