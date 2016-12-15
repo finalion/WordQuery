@@ -53,12 +53,13 @@ def query_from_menu():
                 result, js, css = res.result, res.js, res.css
                 # js process: add to template of the note model
                 if js:
-                    add_to_tmpl(editor.note, js=js)
+                    add_to_tmpl(note, js=js)
                 # css process: add css directly to the note field, that can ensure there
                 # will not exist css confusion
                 if css:
                     result = css + result
-                editor.note.fields[i] = result
+                note.fields[j] = result
+                note.flush()
             fields_number += len(results)
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
