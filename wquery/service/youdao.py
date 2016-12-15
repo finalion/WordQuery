@@ -4,7 +4,8 @@ import urllib2
 import re
 from collections import defaultdict
 import xml.etree.ElementTree
-from .base import Service, export, with_styles
+from .base import export, with_styles
+from .webservice import WebService
 from aqt.utils import showInfo
 
 youdao_css = '''
@@ -29,12 +30,12 @@ initVoice();
 '''
 
 
-class Youdao(Service):
+class Youdao(WebService):
 
     __register_label__ = u'有道词典'
 
     def __init__(self):
-        Service.__init__(self)
+        super(Youdao, self).__init__()
         self.cache = defaultdict(str)
 
     def _get_from_api(self, lang='eng'):
@@ -63,7 +64,6 @@ class Youdao(Service):
             result = {'phonetic': phonetics, 'explains': explains}
             if phonetics or explains:
                 self.cache[self.word] = result
-            # showInfo('queried youdao:%s' % str(result))
             return result
 
     @export(u'音标', 0)

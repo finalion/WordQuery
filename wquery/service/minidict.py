@@ -2,19 +2,20 @@
 import urllib
 import urllib2
 import re
-from collections import defaultdict
-from .base import Service, export, with_styles, register
-from aqt.utils import showInfo
 import cookielib
 import json
+from collections import defaultdict
+from .base import export, with_styles
+from .webservice import WebService
+from aqt.utils import showInfo
 
 
-class MiniDict(Service):
+class MiniDict(WebService):
 
     __register_label__ = u'海词迷你词典'
 
     def __init__(self):
-        Service.__init__(self)
+        super(MiniDict, self).__init__()
         self.cache = defaultdict(defaultdict)
         self.encoder = Encoder()
         self.cookie = cookielib.CookieJar()

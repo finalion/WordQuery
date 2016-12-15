@@ -13,30 +13,15 @@ import cPickle
 from collections import defaultdict
 from wquery.ui import show_options
 from wquery.query import query_from_menu, query_from_editor
-import wquery.context as c
+from wquery.context import context, config
 
 have_setup = False
-config = c.Config(mw)
-
-def mode_changed():
-    model_id = mw.col.models.current()['id']
-    if c.mappings.has_key(model_id):
-        c.maps = c.mappings[model_id]
-        # showText(str(c.mappings))
-        # showInfo('having ' + str(c.model_id) + ', ' +
-        #          '\n '.join([each['fld_name'] for each in c.maps]))
-    # else:
-        # showInfo(str(c.model_id))
-        # showInfo('not have %d' % c.model_id)
-        # _show_mappings()
-
-# addHook('currentModelChanged', mode_changed)
 
 
 def add_query_button(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
-    c.context['editor'] = self.editor
+    context['editor'] = self.editor
     self.queryButton = bb.addButton(_(u"Query"), ar)
     self.queryButton.clicked.connect(query_from_editor)
     self.queryButton.setShortcut(QKeySequence("Ctrl+Q"))
@@ -46,7 +31,7 @@ def add_query_button(self):
 def setup_browser_menu():
 
     def on_setup_menus(browser):
-        c.context['browser'] = browser
+        context['browser'] = browser
         menu = QMenu("WordQuery", browser.form.menubar)
         browser.form.menubar.addMenu(menu)
         action_queryselected = QAction("Query Selected", browser)
@@ -65,7 +50,7 @@ def setup_context_menu():
         """
         add context menu to webview
         """
-        c.context['editor'] = web_view.editor
+        context['editor'] = web_view.editor
         if web_view.editor.currentField == 0:  # 只在第一项加右键菜单
             action = menu.addAction(_("Query"))
             action.triggered.connect(query_from_editor)

@@ -1,28 +1,11 @@
 #-*- coding:utf-8 -*-
 import os
 from collections import defaultdict
+from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QLabel
 from .odds import get_model_byId, get_ord_from_fldname
 import cPickle
 from aqt.utils import shortcut, showInfo
-
-# cfgpath = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'wqcfg')
-maps = list()
-# last_model_id  {pm_name:id}
-last_model_id = -1000
-# [model_id: maps]
-mappings = defaultdict(list)
-
-update_all = False
-
-context = defaultdict(int)
-# online dictionary cache to avoid duplicate query
-
-
-def get_maps(id):
-    return mappings[id]
-
-
 
 
 class Config(object):
@@ -32,17 +15,11 @@ class Config(object):
             os.path.realpath(__file__)), '.wqcfg')
         self.window = window
         self.data = dict()
+        self.read()
 
     @property
     def pmname(self):
         return self.window.pm.name
-
-    def save(self, dialog):
-        from .ui import OptionsDialog, MdxManageDialog
-        if isinstance(dialog, OptionsDialog):
-            self.save_options_dialog(dialog)
-        if isinstance(dialog, MdxManageDialog):
-            self.save_mdxmanage_dialog(dialog)
 
     def save_options_dialog(self, dialog):
         checkboxs, comboboxs, labels = dialog.findChildren(
@@ -88,3 +65,17 @@ class Config(object):
 
     def get_dirs(self):
         return self.data.get('dirs', list())
+
+    def get_mdxs(self):
+        return self.data.get('mdxs', list())
+
+maps = list()
+# last_model_id  {pm_name:id}
+last_model_id = -1000
+# [model_id: maps]
+mappings = defaultdict(list)
+
+# action context: editor? browser?
+context = defaultdict(int)
+
+config = Config(mw)

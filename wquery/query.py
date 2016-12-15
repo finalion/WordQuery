@@ -5,14 +5,14 @@ sys.setdefaultencoding('utf8')
 import re
 import os
 import time
+import sqlite3
+from collections import defaultdict
 import aqt
 from aqt import mw
 from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
 from aqt.utils import showInfo,  tooltip, showText
-from collections import defaultdict
-import wquery.context as c
-import sqlite3
-from .service import service_manager
+from .context import context, config
+from .service import web_service_manager, mdx_service_manager
 from .utils import Queue, Empty
 
 
@@ -31,7 +31,7 @@ def update_progress_label(info):
 
 
 def query_from_menu():
-    browser = c.context['browser']
+    browser = context['browser']
     if not browser:
         return
     notes = [browser.mw.col.getNote(note_id)
@@ -39,7 +39,7 @@ def query_from_menu():
     if len(notes) == 0:
         return
     if len(notes) == 1:
-        c.context['editor'] = browser.editor
+        context['editor'] = browser.editor
 
         query_from_editor()
     if len(notes) > 1:
@@ -48,8 +48,7 @@ def query_from_menu():
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
             word = note.fields[0]
-            c.maps = c.mappings[note.model()['id']]
-            results = query_all_flds(word)
+            results = query_all_flds(word, config.get_maps(note.model()['id']))
             for j, res in results.items():
                 result, js, css = res.result, res.js, res.css
                 # js process: add to template of the note model
@@ -78,16 +77,16 @@ def purify_word(word):
 
 
 def query_from_editor():
-    editor = c.context['editor']
+    editor = context['editor']
     if not editor:
         return
     word = editor.note.fields[0].decode('utf-8')
-    c.maps = c.mappings[editor.note.model()['id']]
     mw.progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
     fld_index = editor.currentField
+    maps = config.get_maps(editor.note.model()['id'])
     if fld_index == 0:
-        results = query_all_flds(word)
+        results = query_all_flds(word, maps)
         for i, res in results.items():
             result, js, css = res.result, res.js, res.css
             # js process: add to template of the note model
@@ -99,9 +98,10 @@ def query_from_editor():
                 result = css + result
             editor.note.fields[i] = result
     else:
-        res = query_single_fld(word, fld_index)
+        res = query_single_fld(word, fld_index, maps)
         editor.note.fields[fld_index] = res.result
-        add_to_tmpl(editor.note, js=res.js)
+        if res.js:
+            add_to_tmpl(editor.note, js=res.js)
     editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     mw.progress.finish()
@@ -114,6 +114,7 @@ def add_to_tmpl(note, **kwargs):
     '''
     [{u'name': u'Card 1', u'qfmt': u'{{Front}}\n\n', u'did': None, u'bafmt': u'', u'afmt': u'{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}\n\n{{12}}\n\n{{44}}\n\n', u'ord': 0, u'bqfmt': u''}]
     '''
+    # showInfo(str(kwargs))
     afmt = note.model()['tmpls'][0]['afmt']
     if kwargs:
         for key, value in kwargs.items():
@@ -125,25 +126,25 @@ def add_to_tmpl(note, **kwargs):
                 note.model()['tmpls'][0]['afmt'] = afmt + js
 
 
-def query_single_fld(word, fld_index):
+def query_single_fld(word, fld_index, maps):
     assert fld_index > 0
-    if fld_index > len(c.maps):
+    if fld_index > len(maps):
         return ""
-    use_dict = c.maps[fld_index].get('checked', False)
-    dict_type = c.maps[fld_index].get('dict', '').strip()
-    dict_field = c.maps[fld_index].get('dict_field', '').strip()
+    use_dict = maps[fld_index].get('checked', False)
+    dict_type = maps[fld_index].get('dict', '').strip()
+    dict_field = maps[fld_index].get('dict_field', '').strip()
     update_progress_label(
         {'word': word, 'service_name': dict_type, 'field_name': dict_field})
     if use_dict and dict_type and dict_field:
-        service = service_manager.get_service(dict_type)
+        service = web_service_manager.get_service(dict_type)
         return service.instance.active(dict_field, word)
     return ""
 
 
-def query_all_flds(word):
+def query_all_flds(word, maps):
     handle_results.total = dict()
     purified_word = purify_word(word)
-    for i, each in enumerate(c.maps):
+    for i, each in enumerate(maps):
         use_dict = each.get('checked', False)
         dict_type = each.get('dict', '').strip()
         dict_field = each.get('dict_field', '').strip()
@@ -159,7 +160,6 @@ def query_all_flds(word):
         while not worker.isFinished():
             mw.app.processEvents()
             worker.wait(100)
-
     return handle_results('__query_over__')
 
 
@@ -194,7 +194,7 @@ class QueryWorker(QThread):
         super(QueryWorker, self).__init__()
         self.service_name = service_name
         self.queue = Queue()
-        self.service = service_manager.get_service(service_name)
+        self.service = web_service_manager.get_service(service_name)
         self.result_ready.connect(handle_results)
         self.progress_update.connect(update_progress_label)
 

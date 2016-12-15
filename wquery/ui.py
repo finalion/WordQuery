@@ -10,17 +10,36 @@ from aqt.qt import *
 import aqt.models
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
-# import trackback
-import cPickle
-import wquery
-# import wquery.context as c
-from service import service_manager
+from service import web_service_manager, mdx_service_manager
 from mdict.mdict_query import IndexBuilder
-from .context import Config
+from .context import config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
 
-c = Config(mw)
+
+def index_mdx(paths):
+    mw.progress.start(immediate=True, label="Index building...")
+    index_thread = MdxIndexer(paths)
+    index_thread.start()
+    while not index_thread.isFinished():
+        mw.app.processEvents()
+        index_thread.wait(100)
+    mw.progress.finish()
+    return index_thread.index_builders
+
+
+class MdxIndexer(QThread):
+
+    def __init__(self, paths):
+        QThread.__init__(self)
+        self.paths = paths
+        self.index_builders = list()
+
+    def run(self):
+        for path in self.paths:
+            ib = IndexBuilder(path)
+            self.index_builders.append(
+                MapDict(builder=ib, title=ib._title if ib._title else os.path.basename(path), path=path))
 
 
 class MdxManageDialog(QDialog):
@@ -43,7 +62,7 @@ class MdxManageDialog(QDialog):
         add_btn.clicked.connect(self.add_folder)
         remove_btn.clicked.connect(self.remove_folder)
         self.folders_lst = QListWidget()
-        self.folders_lst.addItems(c.get_dirs())
+        self.folders_lst.addItems(config.get_dirs())
         ok_btn = QPushButton("OK")
         ok_btn.setDefault(True)
         ok_btn.clicked.connect(self.accept)
@@ -81,35 +100,8 @@ class MdxManageDialog(QDialog):
         return [self.folders_lst.item(i).text()
                 for i in range(self.folders_lst.count())]
 
-
-def index_mdx(paths):
-    mw.progress.start(immediate=True, label="Index building...")
-    index_thread = MdxIndexer(paths)
-    index_thread.start()
-    while not index_thread.isFinished():
-        mw.app.processEvents()
-        index_thread.wait(100)
-    mw.progress.finish()
-    return index_thread.index_builders
-
-
-class MdxIndexer(QThread):
-
-    def __init__(self, paths):
-        QThread.__init__(self)
-        self.paths = paths
-        self.index_builders = list()
-
-    def run(self):
-        for path in self.paths:
-            ib = IndexBuilder(path)
-            self.index_builders.append(
-                MapDict(builder=ib, title=ib._title if ib._title else os.path.basename(path), path=path))
-
-
-def show_options():
-    c.read()
-    mw.options_dialog = dialog = OptionsDialog(mw)
+    def save(self):
+        config.save_mdxmanage_dialog(self)
 
 
 class OptionsDialog(QDialog):
@@ -126,7 +118,6 @@ class OptionsDialog(QDialog):
         self.raise_()
 
     def build(self):
-        self.mdxs = index_mdx(c.data.get('mdxs', []))
         self.main_layout = QVBoxLayout()
         models_layout = QHBoxLayout()
         scroll_area = QScrollArea()
@@ -141,8 +132,8 @@ class OptionsDialog(QDialog):
         self.models_button.clicked.connect(self.btn_models_pressed)
         models_layout.addWidget(mdx_button)
         models_layout.addWidget(self.models_button)
-        if c.last_model_id:
-            model = get_model_byId(mw.col.models, c.last_model_id)
+        if config.last_model_id:
+            model = get_model_byId(mw.col.models, config.last_model_id)
             if model:
                 self.models_button.setText(
                     u'选择笔记类型 [当前类型 -- %s]' % model['name'])
@@ -162,14 +153,14 @@ class OptionsDialog(QDialog):
         if mdx_dialog.exec_() == QDialog.Accepted:
             dict_paths = mdx_dialog.dict_paths
             # showInfo(str(dict_paths))
-            index_builders = index_mdx(dict_paths)
-            c.save(mdx_dialog)
-            self.update_dicts_list(index_builders)
+            # index_builders = index_mdx(dict_paths)
+            mdx_dialog.save()
+            mdx_service_manager.update_services()
+            self.update_dicts_list()
 
     def btn_ok_pressed(self):
         self.close()
-        c.save(self)
-        # index_mdx(-1)
+        self.save()
 
     def btn_models_pressed(self):
         model = self.show_models()
@@ -197,7 +188,7 @@ class OptionsDialog(QDialog):
 
     def build_layout(self, model):
         self.clear_layout(self.dicts_layout)
-        maps = c.get_maps(model['id'])
+        maps = config.get_maps(model['id'])
         for i, fld in enumerate(model['flds']):
             ord = fld['ord']
             name = fld['name']
@@ -214,7 +205,7 @@ class OptionsDialog(QDialog):
         self.setLayout(self.main_layout)
 
     def show_models(self):
-        c.save(self)
+        self.save()
         edit = QPushButton(
             _("Manage"), clicked=lambda: aqt.models.Models(mw, self))
         ret = StudyDeck(
@@ -223,7 +214,7 @@ class OptionsDialog(QDialog):
             cancel=True, geomKey="selectModel")
         if ret.name:
             model = mw.col.models.byName(ret.name)
-            c.last_model_id = model['id']
+            config.last_model_id = model['id']
             self.models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
             return model
 
@@ -253,7 +244,7 @@ class OptionsDialog(QDialog):
                 else:
                     field_text = field_combos[i].currentText()
                     field_combos[i].clear()
-                    current_service = service_manager.get_service(
+                    current_service = web_service_manager.get_service(
                         dict_combo.currentText())
                     if current_service and current_service.instance.fields:
                         for each in current_service.instance.fields:
@@ -266,6 +257,7 @@ class OptionsDialog(QDialog):
         for i in range(cb.count()):
             if cb.itemText(i) == text:
                 cb.setCurrentIndex(i)
+
     def add_dict_layout(self, i, **kwargs):
         """
         kwargs:
@@ -291,18 +283,22 @@ class OptionsDialog(QDialog):
         dict_combo.setEnabled(checked)
         # dict_combo.setEditable(True)
         dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
-        dict_combo.addItems([each['title'] for each in self.mdxs])
+        for each in mdx_service_manager.services:
+            # showInfo(each.title)
+            dict_combo.addItem(each.title, userData=each.label)
         dict_combo.insertSeparator(dict_combo.count())
-        dict_combo.addItems([s.label for s in service_manager.services])
-        dict_name = dict_name if service_manager.get_service(dict_name) else ""
-        self.set_combo_text(dict_combo,dict_name)
+        for s in web_service_manager.services:
+            dict_combo.addItem(s.label, userData='webservice')
+        dict_name = dict_name if web_service_manager.get_service(
+            dict_name) else ""
+        self.set_combo_text(dict_combo, dict_name)
         dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
         field_combo.setMinimumSize(100, 0)
         field_combo.setMaximumSize(100, 30)
         field_combo.setEnabled(checked)
-        service = service_manager.get_service(dict_name)
+        service = web_service_manager.get_service(dict_name)
         if service and service.instance.fields:
             field_combo.addItems(service.instance.fields)
         field_combo.setEditable(True)
@@ -325,17 +321,24 @@ class OptionsDialog(QDialog):
         # mw.options_dialog.activateWindow()
         # mw.options_dialog.raise_()
 
-    def update_dicts_list(self, builders):
+    def update_dicts_list(self):
         # mdx_data: path, title
         comboboxs = self.findChildren(QComboBox)
         dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
-        mdx_items = [builder.title for builder in builders]
-        web_items = [s.label for s in service_manager.services]
         for cb in dict_cbs:
+            current_text = cb.currentText()
             cb.clear()
-            cb.addItems(mdx_items)
+            for each in mdx_service_manager.services:
+                cb.addItem(each.title, userData=each.label)
             cb.insertSeparator(cb.count())
-            cb.addItems(web_items)
+            for s in web_service_manager.services:
+                cb.addItem(s.label, userData='webservice')
+            self.set_combo_text(cb, current_text)
 
     def save(self):
-        c.save_options_dialog(self)
+        config.save_options_dialog(self)
+
+
+def show_options():
+    config.read()
+    mw.options_dialog = dialog = OptionsDialog(mw)

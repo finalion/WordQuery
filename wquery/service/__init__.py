@@ -1,6 +1,10 @@
 #-*- coding:utf-8 -*-
 from .youdao import Youdao
-from .base import Service, ServiceManager
+from .webservice import WebServiceManager
+from .mdxservice import MdxServiceManager
 
-service_manager = ServiceManager()
-service_manager.start_all()
+web_service_manager = WebServiceManager()
+web_service_manager.start_all()
+
+mdx_service_manager = MdxServiceManager()
+mdx_service_manager.start_all()

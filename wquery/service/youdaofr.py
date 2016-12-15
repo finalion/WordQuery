@@ -4,7 +4,8 @@ import urllib2
 import re
 from collections import defaultdict
 import xml.etree.ElementTree
-from .base import Service, export, with_styles
+from .base import export, with_styles
+from .webservice import WebService
 from aqt.utils import showInfo
 
 youdao_css = '''
@@ -13,12 +14,12 @@ youdao_css = '''
 '''
 
 
-class Youdaofr(Service):
+class Youdaofr(WebService):
 
     __register_label__ = u'有道词典-法语'
 
     def __init__(self):
-        Service.__init__(self)
+        super(Youdaofr, self).__init__()
         self.cache = defaultdict(str)
 
     def _get_from_api(self, lang='fr'):

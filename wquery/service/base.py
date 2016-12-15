@@ -2,9 +2,10 @@
 import inspect
 from functools import wraps
 import os
-from wquery.utils import importlib
+from aqt import mw
 from aqt.utils import showInfo
 from wquery.utils import MapDict
+from wquery.context import config
 
 
 def singleton(cls, *args, **kw):
@@ -23,19 +24,16 @@ class ServiceProfile(object):
         self.label = label
         self.cls = cls
         self.instance = instance
+        self.title = label
 
 
-@singleton
 class ServiceManager(object):
 
     def __init__(self):
-        self.services = self.get_package_services()
+        self.services = self.get_available_services()
 
     def register(self, service):
         pass
-
-    def start(service):
-        service.cls()
 
     def start_all(self):
         for service in self.services:
@@ -51,30 +49,12 @@ class ServiceManager(object):
             if each.label == label:
                 return each
 
-    def get_package_services(self):
-        services = []
-        mypath = os.path.dirname(os.path.realpath(__file__))
-        files = [f for f in os.listdir(mypath) if f not in (
-            '__init__.py', 'base.py', 'importlib.py') and not f.endswith('.pyc')]
-
-        for f in files:
-            # try:
-            module = importlib.import_module('.%s' % f[:-3], __package__)
-            for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
-                if cls is not Service and issubclass(cls, Service):
-                    label = getattr(cls, '__register_label__', None)
-                    if label:
-                        sp = ServiceProfile(label, cls)
-                        if sp not in services:
-                            services.append(sp)
-        return services
-        # except ImportError:
-        #     showInfo('Import Error')
-        #     pass
-        # showInfo(str(self.services))
+    def get_available_services(self):
+        '''reimplement'''
 
 
 class Service(object):
+    '''service base class'''
 
     def __init__(self):
         self._exporters = self.get_exporters()
@@ -94,15 +74,6 @@ class Service(object):
     def exporters(self):
         return self._exporters
 
-    def active(self, action_label, word):
-        self.word = word
-        # showInfo('service active: %s ##%s##' % (action_label, word))
-        for each in self.exporters:
-            if action_label == each[0]:
-                result = each[1]()
-                return result if result else self.default_result  # avoid return None
-        return self.default_result
-
     def get_exporters(self):
         flds = dict()
         methods = inspect.getmembers(self, predicate=inspect.ismethod)
@@ -115,9 +86,14 @@ class Service(object):
         # label, function
         return [flds[key] for key in sorted_flds]
 
-
-class WebService(Service):
-    pass
+    def active(self, action_label, word):
+        self.word = word
+        # showInfo('service active: %s ##%s##' % (action_label, word))
+        for each in self.exporters:
+            if action_label == each[0]:
+                result = each[1]()
+                return result if result else self.default_result  # avoid return None
+        return self.default_result
 
 
 class QueryResult(MapDict):
