@@ -40,6 +40,8 @@ class ServiceManager(object):
             service.instance = service.cls()
 
     def get_service(self, label):
+        # webservice manager 使用combobox的文本值选择服务
+        # mdxservice manager 使用combox的itemData即字典路径选择服务
         for each in self.services:
             if each.label == label:
                 return each

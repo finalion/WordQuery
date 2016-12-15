@@ -195,8 +195,10 @@ class OptionsDialog(QDialog):
             if maps:
                 for j, each in enumerate(maps):
                     if each.get('fld_ord', -1) == ord:
-                        self.add_dict_layout(j, fld_name=name, checked=each[
-                            'checked'], dict=each['dict'], dict_field=each['dict_field'])
+                        self.add_dict_layout(j, fld_name=name, checked=each['checked'],
+                                             dict=each['dict'], dict_field=each[
+                                                 'dict_field'],
+                                             dict_path=each.get('dict_path', ''))
                         break
                 else:
                     self.add_dict_layout(j, fld_name=name)
@@ -244,8 +246,15 @@ class OptionsDialog(QDialog):
                 else:
                     field_text = field_combos[i].currentText()
                     field_combos[i].clear()
-                    current_service = web_service_manager.get_service(
-                        dict_combo.currentText())
+                    item_data = dict_combo.itemData(index)  # .toString()
+                    current_service = None
+                    if item_data == 'webservice':
+                        current_service = web_service_manager.get_service(
+                            dict_combo.currentText())
+                    elif os.path.isabs(item_data):
+                        current_service = mdx_service_manager.get_service(
+                            item_data)
+                    # problem
                     if current_service and current_service.instance.fields:
                         for each in current_service.instance.fields:
                             field_combos[i].addItem(each)
@@ -284,13 +293,15 @@ class OptionsDialog(QDialog):
         # dict_combo.setEditable(True)
         dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
         for each in mdx_service_manager.services:
-            # showInfo(each.title)
             dict_combo.addItem(each.title, userData=each.label)
+            # dict_name = dict_name if mdx_service_manager.get_service(
+            #     dict_name) else ""
         dict_combo.insertSeparator(dict_combo.count())
         for s in web_service_manager.services:
             dict_combo.addItem(s.label, userData='webservice')
-        dict_name = dict_name if web_service_manager.get_service(
-            dict_name) else ""
+            # dict_name = dict_name if web_service_manager.get_service(
+            #     dict_name) else ""
+        dict_combo.currentIndexChanged.connect(self.set_field_combo)
         self.set_combo_text(dict_combo, dict_name)
         dict_combo.activated.connect(self.dict_combobox_activated)
 
@@ -298,15 +309,14 @@ class OptionsDialog(QDialog):
         field_combo.setMinimumSize(100, 0)
         field_combo.setMaximumSize(100, 30)
         field_combo.setEnabled(checked)
-        service = web_service_manager.get_service(dict_name)
-        if service and service.instance.fields:
-            field_combo.addItems(service.instance.fields)
+        # service = web_service_manager.get_service(dict_name)
+        # if service and service.instance.fields:
+        #     field_combo.addItems(service.instance.fields)
         field_combo.setEditable(True)
         dict_field = dict_field if dict_name else ""
         field_combo.setEditText(dict_field)
         # field_combo.setEditable(False)
         # field_combo.activated.connect(combobox_activated)
-
         self.connect(dict_check, SIGNAL("clicked()"),
                      self.signal_mapper_chk, SLOT("map()"))
         self.signal_mapper_chk.setMapping(dict_check, i)
@@ -320,6 +330,10 @@ class OptionsDialog(QDialog):
         # for osx
         # mw.options_dialog.activateWindow()
         # mw.options_dialog.raise_()
+
+    def set_field_combo(self, dict_text):
+        # showInfo('edit text')
+        pass
 
     def update_dicts_list(self):
         # mdx_data: path, title

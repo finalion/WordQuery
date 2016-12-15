@@ -72,7 +72,8 @@ class MdxServiceManager(ServiceManager):
 class MdxService(Service):
 
     def __init__(self, dict_path):
-        Service.__init__(self)
+        super(MdxService, self).__init__()
+        # showInfo(str(self.exporters))
         self.dict_path = dict_path
         self.builder = None
         self.index()
@@ -88,11 +89,10 @@ class MdxService(Service):
         self.builder = IndexBuilder(self.dict_path)
 
     @export(u"完整解释", 0)
-    def fld_whole(self, dict_field, word):
-        self.word = word
+    def fld_whole(self):
         if not self.builder:
             self.index()
-        result = self.builder.mdx_lookup(word)
+        result = self.builder.mdx_lookup(self.word)
         if result:
             ss = self.adapt_to_anki(result[0])
             # open('d:\\wmu.html', 'wb').write(ss)
