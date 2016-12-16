@@ -71,10 +71,11 @@ def query_from_menu():
 
 
 def purify_word(word):
-    m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
-    if m:
-        return m.group().strip()
-    return ""
+    return word.lower().strip()
+    # m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
+    # if m:
+    #     return m.group().strip()
+    # return ""
 
 
 def query_from_editor():

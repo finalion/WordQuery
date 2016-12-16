@@ -78,7 +78,11 @@ class MdxService(Service):
 
     @property
     def title(self):
-        return self.builder._title if self.builder._title else os.path.basename(self.dict_path)
+        if config.use_mdx_filename():
+            return os.path.basename(self.dict_path)[:-4]
+        else:
+            self.builder._title = self.builder._title.strip()
+            return os.path.basename(self.dict_path)[:-4] if not self.builder._title or self.builder._title.startswith('Title') else self.builder._title
 
     def index(self):
         self.builder = IndexBuilder(self.dict_path)
@@ -108,6 +112,9 @@ class MdxService(Service):
         media_files_set.update(set(mjs))
         msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
+        if config.export_media():
+            msound = re.findall('href="(sound:.*?\.mp3)"', html)
+            media_files_set.update(set(msound))
         for each in media_files_set:
             html = html.replace(each, '_' + each.split('/')[-1])
         errors, styles = self.save_media_files(media_files_set)

@@ -41,6 +41,8 @@ class Config(object):
         # showInfo(str(dialog.dirs))
         self.data['dirs'] = dialog.dirs
         self.data['mdxs'] = dialog.dict_paths
+        self.data['use_mdx_filename'] = dialog.chk_use_filename.isChecked()
+        self.data['export_media'] = dialog.chk_export_media.isChecked()
         with open(self.path, 'wb') as f:
             cPickle.dump(self.data, f)
 
@@ -71,6 +73,12 @@ class Config(object):
 
     def get_mdxs(self):
         return self.data.get('mdxs', list())
+
+    def use_mdx_filename(self):
+        return self.data.get('use_mdx_filename', True)
+
+    def export_media(self):
+        return self.data.get('export_media', False)
 
 maps = list()
 # last_model_id  {pm_name:id}
