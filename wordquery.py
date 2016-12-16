@@ -1,11 +1,11 @@
 #-*- coding:utf-8 -*-
-import wquery
 from anki.hooks import addHook
 # update all fields?
 update_all = False
 
 
 def start_here():
+    import wquery
     wquery.config.read()
     if not wquery.have_setup:
         wquery.setup_options_menu()

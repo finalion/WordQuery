@@ -1,35 +1,29 @@
 #-*- coding:utf-8 -*-
 import os
 import re
-import urllib
-import urlparse
 from collections import defaultdict
-
-import aqt
 from aqt import mw
 from aqt.qt import *
 from aqt.utils import showInfo, showText
 from mdict.mdict_query import IndexBuilder
 from wquery.context import config
-from .base import Service, export, with_styles, QueryResult, ServiceProfile, ServiceManager
+from .base import (QueryResult, Service, ServiceManager, ServiceProfile,
+                   export, with_styles)
 
 
 class MdxServiceManager(ServiceManager):
 
     def __init__(self):
         super(MdxServiceManager, self).__init__()
-        self.index_builders = []
 
-    def index_mdx(self, path=None):
+    def index_all(self):
         mw.progress.start(immediate=True, label="Index building...")
-        paths = path if path else self._dict_paths
-        index_thread = self.MdxIndexer(paths)
+        index_thread = self.MdxIndexer(self, self._dict_paths)
         index_thread.start()
         while not index_thread.isFinished():
             mw.app.processEvents()
             index_thread.wait(100)
         mw.progress.finish()
-        return index_thread.index_builders
 
     class MdxIndexer(QThread):
 
@@ -41,11 +35,12 @@ class MdxServiceManager(ServiceManager):
 
         def run(self):
             for path in self.paths:
-                ib = IndexBuilder(path)
-                self.manager.append(
-                    MapDict(builder=ib, title=ib._title if ib._title else os.path.basename(path), path=path))
+                mw.progress.update(label="Index building...\n%s" %
+                                   os.path.basename(path))
+                IndexBuilder(path)
 
     def start_all(self):
+        self.index_all()
         for service in self.services:
             # showInfo(service.label)
             service.instance = service.cls(service.label)

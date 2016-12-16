@@ -92,6 +92,7 @@ class MDict(object):
     Base class which reads in header and key block.
     It has no public methods and serves only as code sharing base class.
     """
+
     def __init__(self, fname, encoding='', passcode=None):
         self._fname = fname
         self._encoding = encoding.upper()
@@ -135,7 +136,8 @@ class MDict(object):
             assert(key_block_info_compressed[:4] == b'\x02\x00\x00\x00')
             # decrypt if needed
             if self._encrypt & 0x02:
-                key_block_info_compressed = _mdx_decrypt(key_block_info_compressed)
+                key_block_info_compressed = _mdx_decrypt(
+                    key_block_info_compressed)
             # decompress
             key_block_info = zlib.decompress(key_block_info_compressed[8:])
             # adler checksum
@@ -159,10 +161,12 @@ class MDict(object):
 
         while i < len(key_block_info):
             # number of entries in current key block
-            num_entries += unpack(self._number_format, key_block_info[i:i + self._number_width])[0]
+            num_entries += unpack(self._number_format,
+                                  key_block_info[i:i + self._number_width])[0]
             i += self._number_width
             # text head size
-            text_head_size = unpack(byte_format, key_block_info[i:i + byte_width])[0]
+            text_head_size = unpack(byte_format, key_block_info[
+                                    i:i + byte_width])[0]
             i += byte_width
             # text head
             if self._encoding != 'UTF-16':
@@ -170,7 +174,8 @@ class MDict(object):
             else:
                 i += (text_head_size + text_term) * 2
             # text tail size
-            text_tail_size = unpack(byte_format, key_block_info[i:i + byte_width])[0]
+            text_tail_size = unpack(byte_format, key_block_info[
+                                    i:i + byte_width])[0]
             i += byte_width
             # text tail
             if self._encoding != 'UTF-16':
@@ -178,12 +183,15 @@ class MDict(object):
             else:
                 i += (text_tail_size + text_term) * 2
             # key block compressed size
-            key_block_compressed_size = unpack(self._number_format, key_block_info[i:i + self._number_width])[0]
+            key_block_compressed_size = unpack(self._number_format, key_block_info[
+                                               i:i + self._number_width])[0]
             i += self._number_width
             # key block decompressed size
-            key_block_decompressed_size = unpack(self._number_format, key_block_info[i:i + self._number_width])[0]
+            key_block_decompressed_size = unpack(self._number_format, key_block_info[
+                                                 i:i + self._number_width])[0]
             i += self._number_width
-            key_block_info_list += [(key_block_compressed_size, key_block_decompressed_size)]
+            key_block_info_list += [(key_block_compressed_size,
+                                     key_block_decompressed_size)]
 
         assert(num_entries == self._num_entries)
 
@@ -198,7 +206,8 @@ class MDict(object):
             # 4 bytes : compression type
             key_block_type = key_block_compressed[start:start + 4]
             # 4 bytes : adler checksum of decompressed key block
-            adler32 = unpack('>I', key_block_compressed[start + 4:start + 8])[0]
+            adler32 = unpack('>I', key_block_compressed[
+                             start + 4:start + 8])[0]
             if key_block_type == b'\x00\x00\x00\x00':
                 key_block = key_block_compressed[start + 8:end]
             elif key_block_type == b'\x01\x00\x00\x00':
@@ -207,10 +216,12 @@ class MDict(object):
                     break
                 # decompress key block
                 header = b'\xf0' + pack('>I', decompressed_size)
-                key_block = lzo.decompress(key_block_compressed[start + 8:end], initSize = decompressed_size, blockSize=1308672)
+                key_block = lzo.decompress(key_block_compressed[
+                                           start + 8:end], initSize=decompressed_size, blockSize=1308672)
             elif key_block_type == b'\x02\x00\x00\x00':
                 # decompress key block
-                key_block = zlib.decompress(key_block_compressed[start + 8:end])
+                key_block = zlib.decompress(
+                    key_block_compressed[start + 8:end])
             # extract one single key block into a key list
             key_list += self._split_key_block(key_block)
             # notice that adler32 returns signed value
@@ -223,9 +234,11 @@ class MDict(object):
         key_list = []
         key_start_index = 0
         while key_start_index < len(key_block):
-            temp = key_block[key_start_index:key_start_index + self._number_width]
+            temp = key_block[
+                key_start_index:key_start_index + self._number_width]
             # the corresponding record's offset in record block
-            key_id = unpack(self._number_format, key_block[key_start_index:key_start_index + self._number_width])[0]
+            key_id = unpack(self._number_format, key_block[
+                            key_start_index:key_start_index + self._number_width])[0]
             # key text ends with '\x00'
             if self._encoding == 'UTF-16':
                 delimiter = b'\x00\x00'
@@ -268,6 +281,7 @@ class MDict(object):
             if encoding in ['GBK', 'GB2312']:
                 encoding = 'GB18030'
             self._encoding = encoding
+
         # 读取标题和描述
         if b'Title' in header_tag:
             self._title = header_tag[b'Title'].decode('utf-8')
@@ -327,7 +341,8 @@ class MDict(object):
 
         if self._encrypt & 1:
             if self._passcode is None:
-                raise RuntimeError('user identification is needed to read encrypted file')
+                raise RuntimeError(
+                    'user identification is needed to read encrypted file')
             regcode, userid = self._passcode
             if isinstance(userid, unicode):
                 userid = userid.encode('utf8')
@@ -365,7 +380,8 @@ class MDict(object):
         # read key block
         key_block_compressed = f.read(key_block_size)
         # extract key block
-        key_list = self._decode_key_block(key_block_compressed, key_block_info_list)
+        key_list = self._decode_key_block(
+            key_block_compressed, key_block_info_list)
 
         self._record_block_offset = f.tell()
         f.close()
@@ -410,7 +426,8 @@ class MDict(object):
         # read key block
         key_block_compressed = f.read(key_block_size)
         # extract key block
-        key_list = self._decode_key_block(key_block_compressed, key_block_info_list)
+        key_list = self._decode_key_block(
+            key_block_compressed, key_block_info_list)
 
         self._record_block_offset = f.tell()
         f.close()
@@ -428,6 +445,7 @@ class MDD(MDict):
     >>> for filename,content in mdd.items():
     ... print filename, content[:10]
     """
+
     def __init__(self, fname, passcode=None):
         MDict.__init__(self, fname, encoding='UTF-16', passcode=passcode)
 
@@ -474,7 +492,8 @@ class MDD(MDict):
                     break
                 # decompress
                 header = b'\xf0' + pack('>I', decompressed_size)
-                record_block = lzo.decompress(record_block_compressed[start + 8:end], initSize = decompressed_size, blockSize=1308672)
+                record_block = lzo.decompress(record_block_compressed[
+                                              start + 8:end], initSize=decompressed_size, blockSize=1308672)
             elif record_block_type == b'\x02\x00\x00\x00':
                 # decompress
                 record_block = zlib.decompress(record_block_compressed[8:])
@@ -503,16 +522,16 @@ class MDD(MDict):
 
         f.close()
 
-        ### 获取 mdx 文件的索引列表，格式为
-        ###  key_text(关键词，可以由后面的 keylist 得到)
-        ###  file_pos(record_block开始的位置)
-        ###  compressed_size(record_block压缩前的大小)
-        ###  decompressed_size(解压后的大小)
-        ###  record_block_type(record_block 的压缩类型)
-        ###  record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
-        ###  record_end
-        ###  offset
-    def get_index(self, check_block = True):
+        # 获取 mdx 文件的索引列表，格式为
+        # key_text(关键词，可以由后面的 keylist 得到)
+        # file_pos(record_block开始的位置)
+        # compressed_size(record_block压缩前的大小)
+        # decompressed_size(解压后的大小)
+        # record_block_type(record_block 的压缩类型)
+        # record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
+        # record_end
+        # offset
+    def get_index(self, check_block=True):
         f = open(self._fname, 'rb')
         index_dict_list = []
         f.seek(self._record_block_offset)
@@ -557,7 +576,8 @@ class MDD(MDict):
                 # decompress
                 header = b'\xf0' + pack('>I', decompressed_size)
                 if check_block:
-                    record_block = lzo.decompress(record_block_compressed[start + 8:end], initSize = decompressed_size, blockSize=1308672)
+                    record_block = lzo.decompress(record_block_compressed[
+                                                  start + 8:end], initSize=decompressed_size, blockSize=1308672)
             elif record_block_type == b'\x02\x00\x00\x00':
                 # decompress
                 _type = 2
@@ -570,7 +590,7 @@ class MDD(MDict):
                 assert(len(record_block) == decompressed_size)
             # split record block according to the offset info from key block
             while i < len(self._key_list):
-                ### 用来保存索引信息的空字典
+                # 用来保存索引信息的空字典
                 index_dict = {}
                 index_dict['file_pos'] = current_pos
                 index_dict['compressed_size'] = compressed_size
@@ -581,7 +601,7 @@ class MDD(MDict):
                 index_dict['key_text'] = key_text.decode("utf-8")
                 index_dict['offset'] = offset
                 # reach the end of current record block
-                if record_start - offset >= decompressed_size: 
+                if record_start - offset >= decompressed_size:
                     break
                 # record end index
                 if i < len(self._key_list) - 1:
@@ -591,10 +611,11 @@ class MDD(MDict):
                 index_dict['record_end'] = record_end
                 i += 1
                 if check_block:
-                    data = record_block[record_start - offset:record_end - offset]
+                    data = record_block[
+                        record_start - offset:record_end - offset]
                 index_dict_list.append(index_dict)
-                #yield key_text, data
-            offset += decompressed_size 
+                # yield key_text, data
+            offset += decompressed_size
             size_counter += compressed_size
         assert(size_counter == record_block_size)
         f.close()
@@ -610,6 +631,7 @@ class MDX(MDict):
     >>> for key,value in mdx.items():
     ... print key, value[:10]
     """
+
     def __init__(self, fname, encoding='', substyle=False, passcode=None):
         MDict.__init__(self, fname, encoding, passcode)
         self._substyle = substyle
@@ -627,7 +649,8 @@ class MDX(MDict):
         for j, p in enumerate(txt_list[1:]):
             style = self._stylesheet[txt_tag[j][1:-1]]
             if p and p[-1] == '\n':
-                txt_styled = txt_styled + style[0] + p.rstrip() + style[1] + '\r\n'
+                txt_styled = txt_styled + \
+                    style[0] + p.rstrip() + style[1] + '\r\n'
             else:
                 txt_styled = txt_styled + style[0] + p + style[1]
         return txt_styled
@@ -656,20 +679,20 @@ class MDX(MDict):
         offset = 0
         i = 0
         size_counter = 0
-        ###最后的索引表的格式为
-        ###  key_text(关键词，可以由后面的 keylist 得到)
-        ###  file_pos(record_block开始的位置)
-        ###  compressed_size(record_block压缩前的大小)
-        ###  decompressed_size(解压后的大小)
-        ###  record_block_type(record_block 的压缩类型)
-        ###  record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
-        ###  record_end
-        ###  offset
+        # 最后的索引表的格式为
+        # key_text(关键词，可以由后面的 keylist 得到)
+        # file_pos(record_block开始的位置)
+        # compressed_size(record_block压缩前的大小)
+        # decompressed_size(解压后的大小)
+        # record_block_type(record_block 的压缩类型)
+        # record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
+        # record_end
+        # offset
         for compressed_size, decompressed_size in record_block_info_list:
             record_block_compressed = f.read(compressed_size)
-            ###### 要得到 record_block_compressed 需要得到 compressed_size (这个可以直接记录）
-            ###### 另外还需要记录当前 f 对象的位置
-            ###### 使用 f.tell() 命令/ 在建立索引是需要 f.seek()
+            # 要得到 record_block_compressed 需要得到 compressed_size (这个可以直接记录）
+            # 另外还需要记录当前 f 对象的位置
+            # 使用 f.tell() 命令/ 在建立索引是需要 f.seek()
             # 4 bytes indicates block compression type
             record_block_type = record_block_compressed[:4]
             # 4 bytes adler checksum of uncompressed content
@@ -684,15 +707,16 @@ class MDX(MDict):
                     break
                 # decompress
                 header = b'\xf0' + pack('>I', decompressed_size)
-                record_block = lzo.decompress(record_block_compressed[8:], initSize = decompressed_size, blockSize=1308672)
+                record_block = lzo.decompress(record_block_compressed[
+                                              8:], initSize=decompressed_size, blockSize=1308672)
             # zlib compression
             elif record_block_type == b'\x02\x00\x00\x00':
                 # decompress
                 record_block = zlib.decompress(record_block_compressed[8:])
-            ###### 这里比较重要的是先要得到 record_block, 而 record_block 是解压得到的，其中一共有三种解压方法
-            ###### 需要的信息有 record_block_compressed, decompress_size,
-            ###### record_block_type
-            ###### 另外还需要校验信息 adler32
+            # 这里比较重要的是先要得到 record_block, 而 record_block 是解压得到的，其中一共有三种解压方法
+            # 需要的信息有 record_block_compressed, decompress_size,
+            # record_block_type
+            # 另外还需要校验信息 adler32
             # notice that adler32 return signed value
             assert(adler32 == zlib.adler32(record_block) & 0xffffffff)
 
@@ -709,13 +733,15 @@ class MDX(MDict):
                 else:
                     record_end = len(record_block) + offset
                 i += 1
-                #############需要得到 record_block , record_start, record_end,
-                #############offset
-                record = record_block[record_start - offset:record_end - offset]
+                # 需要得到 record_block , record_start, record_end,
+                # offset
+                record = record_block[
+                    record_start - offset:record_end - offset]
                 # convert to utf-8
-                record = record.decode(self._encoding, errors='ignore').strip(u'\x00').encode('utf-8')
+                record = record.decode(self._encoding, errors='ignore').strip(
+                    u'\x00').encode('utf-8')
                 # substitute styles
-                #############是否替换样式表
+                # 是否替换样式表
                 if self._substyle and self._stylesheet:
                     record = self._substitute_stylesheet(record)
 
@@ -726,19 +752,19 @@ class MDX(MDict):
 
         f.close()
 
-    ### 获取 mdx 文件的索引列表，格式为
-        ###  key_text(关键词，可以由后面的 keylist 得到)
-        ###  file_pos(record_block开始的位置)
-        ###  compressed_size(record_block压缩前的大小)
-        ###  decompressed_size(解压后的大小)
-        ###  record_block_type(record_block 的压缩类型)
-        ###  record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
-        ###  record_end
-        ###  offset
-	### 所需 metadata
-	### 
-    def get_index(self, check_block = True):
-        ###  索引列表
+    # 获取 mdx 文件的索引列表，格式为
+        # key_text(关键词，可以由后面的 keylist 得到)
+        # file_pos(record_block开始的位置)
+        # compressed_size(record_block压缩前的大小)
+        # decompressed_size(解压后的大小)
+        # record_block_type(record_block 的压缩类型)
+        # record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
+        # record_end
+        # offset
+        # 所需 metadata
+        ###
+    def get_index(self, check_block=True):
+        # 索引列表
         index_dict_list = []
         f = open(self._fname, 'rb')
         f.seek(self._record_block_offset)
@@ -763,21 +789,21 @@ class MDX(MDict):
         offset = 0
         i = 0
         size_counter = 0
-        ###最后的索引表的格式为
-        ###  key_text(关键词，可以由后面的 keylist 得到)
-        ###  file_pos(record_block开始的位置)
-        ###  compressed_size(record_block压缩前的大小)
-        ###  decompressed_size(解压后的大小)
-        ###  record_block_type(record_block 的压缩类型)
-        ###  record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
-        ###  record_end
-        ###  offset
+        # 最后的索引表的格式为
+        # key_text(关键词，可以由后面的 keylist 得到)
+        # file_pos(record_block开始的位置)
+        # compressed_size(record_block压缩前的大小)
+        # decompressed_size(解压后的大小)
+        # record_block_type(record_block 的压缩类型)
+        # record_start (以下三个为从 record_block 中提取某一调记录需要的参数，可以直接保存）
+        # record_end
+        # offset
         for compressed_size, decompressed_size in record_block_info_list:
             current_pos = f.tell()
             record_block_compressed = f.read(compressed_size)
-            ###### 要得到 record_block_compressed 需要得到 compressed_size (这个可以直接记录）
-            ###### 另外还需要记录当前 f 对象的位置
-            ###### 使用 f.tell() 命令/ 在建立索引是需要 f.seek()
+            # 要得到 record_block_compressed 需要得到 compressed_size (这个可以直接记录）
+            # 另外还需要记录当前 f 对象的位置
+            # 使用 f.tell() 命令/ 在建立索引是需要 f.seek()
             # 4 bytes indicates block compression type
             record_block_type = record_block_compressed[:4]
             # 4 bytes adler checksum of uncompressed content
@@ -795,24 +821,25 @@ class MDX(MDict):
                 # decompress
                 header = b'\xf0' + pack('>I', decompressed_size)
                 if check_block:
-                    record_block = lzo.decompress(record_block_compressed[8:], initSize = decompressed_size, blockSize=1308672)
+                    record_block = lzo.decompress(record_block_compressed[
+                                                  8:], initSize=decompressed_size, blockSize=1308672)
             # zlib compression
             elif record_block_type == b'\x02\x00\x00\x00':
                 # decompress
                 _type = 2
                 if check_block:
                     record_block = zlib.decompress(record_block_compressed[8:])
-            ###### 这里比较重要的是先要得到 record_block, 而 record_block 是解压得到的，其中一共有三种解压方法
-            ###### 需要的信息有 record_block_compressed, decompress_size,
-            ###### record_block_type
-            ###### 另外还需要校验信息 adler32
+            # 这里比较重要的是先要得到 record_block, 而 record_block 是解压得到的，其中一共有三种解压方法
+            # 需要的信息有 record_block_compressed, decompress_size,
+            # record_block_type
+            # 另外还需要校验信息 adler32
             # notice that adler32 return signed value
             if check_block:
                 assert(adler32 == zlib.adler32(record_block) & 0xffffffff)
                 assert(len(record_block) == decompressed_size)
             # split record block according to the offset info from key block
             while i < len(self._key_list):
-                ### 用来保存索引信息的空字典
+                # 用来保存索引信息的空字典
                 index_dict = {}
                 index_dict['file_pos'] = current_pos
                 index_dict['compressed_size'] = compressed_size
@@ -823,7 +850,7 @@ class MDX(MDict):
                 index_dict['key_text'] = key_text.decode('utf-8')
                 index_dict['offset'] = offset
                 # reach the end of current record block
-                if record_start - offset >= decompressed_size: 
+                if record_start - offset >= decompressed_size:
                     break
                 # record end index
                 if i < len(self._key_list) - 1:
@@ -832,31 +859,33 @@ class MDX(MDict):
                     record_end = decompressed_size + offset
                 index_dict['record_end'] = record_end
                 i += 1
-                #############需要得到 record_block , record_start, record_end,
-                #############offset
+                # 需要得到 record_block , record_start, record_end,
+                # offset
                 if check_block:
-                    record = record_block[record_start - offset:record_end - offset]
+                    record = record_block[
+                        record_start - offset:record_end - offset]
                     # convert to utf-8
-                    record = record.decode(self._encoding, errors='ignore').strip(u'\x00').encode('utf-8')
+                    record = record.decode(self._encoding, errors='ignore').strip(
+                        u'\x00').encode('utf-8')
                     # substitute styles
-                    #############是否替换样式表
+                    # 是否替换样式表
                     if self._substyle and self._stylesheet:
                         record = self._substitute_stylesheet(record)
                 index_dict_list.append(index_dict)
 
-            offset += decompressed_size 
+            offset += decompressed_size
             size_counter += compressed_size
-        #todo: 注意！！！
-		#assert(size_counter == record_block_size)
+        # todo: 注意！！！
+            #assert(size_counter == record_block_size)
         f.close
-        #这里比 mdd 部分稍有不同，应该还需要传递编码以及样式表信息
+        # 这里比 mdd 部分稍有不同，应该还需要传递编码以及样式表信息
         meta = {}
         meta['encoding'] = self._encoding
         meta['stylesheet'] = json.dumps(self._stylesheet)
         meta['title'] = self._title
         meta['description'] = self._description
 
-        return {"index_dict_list":index_dict_list, 'meta':meta}
+        return {"index_dict_list": index_dict_list, 'meta': meta}
 if __name__ == '__main__':
     import sys
     import os
@@ -872,7 +901,8 @@ if __name__ == '__main__':
         try:
             regcode = codecs.decode(regcode, 'hex')
         except:
-            raise argparse.ArgumentTypeError("regcode must be a 32 bytes hexadecimal string")
+            raise argparse.ArgumentTypeError(
+                "regcode must be a 32 bytes hexadecimal string")
         return regcode, userid
 
     parser = argparse.ArgumentParser()
@@ -953,7 +983,8 @@ if __name__ == '__main__':
                 sf.close()
         # write out optional data files
         if mdd:
-            datafolder = os.path.join(os.path.dirname(args.filename), args.datafolder)
+            datafolder = os.path.join(
+                os.path.dirname(args.filename), args.datafolder)
             if not os.path.exists(datafolder):
                 os.makedirs(datafolder)
             for key, value in mdd.items():

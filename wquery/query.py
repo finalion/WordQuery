@@ -123,7 +123,7 @@ def add_to_tmpl(note, **kwargs):
             if key == 'js' and value not in afmt:
                 js = value
                 if not value.startswith('<script') and not value.endswith('/script>'):
-                    js = '<script>%s</script>' % value.strip()
+                    js = '<script>%s</script>' % value
                 note.model()['tmpls'][0]['afmt'] = afmt + js
 
 
@@ -139,7 +139,7 @@ def query_single_fld(word, fld_index, maps):
     if use_dict and dict_type and dict_field:
         service = web_service_manager.get_service(dict_type)
         return service.instance.active(dict_field, word)
-    return ""
+    return service.instance.default_result
 
 
 def query_all_flds(word, maps):
@@ -219,7 +219,7 @@ class QueryWorker(QThread):
                 name_info = os.path.basename(self.service_name) if os.path.isabs(
                     self.service_name) else self.service_name
                 self.progress_update.emit(
-                    {'service_name': os.path.basename(self.service_name), 'word': word, 'field_name': name_info})
+                    {'service_name': name_info, 'word': word, 'field_name': service_field})
                 result = self.query(
                     service_field, word) if self.service else ""
                 self.result_ready.emit({index: result})

@@ -5,21 +5,20 @@ import urllib
 import urllib2
 import urlparse
 from collections import defaultdict
-
 import aqt
 from aqt import mw
 from aqt.qt import *
 from aqt.utils import showInfo, showText
-from mdict.mdict_query import IndexBuilder
+from .base import QueryResult
+from .base import export, with_styles
+from .webservice import WebService
 
-from .base import Service, export, QueryResult
 
-
-class RemoteMdxService(Service):
-    __register_label__ = u'Mdx服务器'
+class RemoteMdx(WebService):
+    __register_label__ = u'mdx服务器'
 
     def __init__(self):
-        Service.__init__(self)
+        super(RemoteMdx, self).__init__()
         # key: url
         # value: set of static files
         self.cache = defaultdict(set)

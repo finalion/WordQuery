@@ -230,16 +230,7 @@ class OptionsDialog(QDialog):
             # be got by view()
             if dict_combo.hasFocus() or dict_combo.view().hasFocus():
                 dict_combo_text = dict_combo.currentText()
-                if dict_combo_text == u'本地Mdx词典':
-                    field_combos[i].clear()
-                    path = QFileDialog.getOpenFileName(
-                        caption="select dictionary", directory="", filter="mdx Files(*.mdx)")
-                    if path:
-                        field_combos[i].setEditText(path.decode('utf-8'))
-                    else:
-                        field_combos[i].setEditText("")
-                        # field_combos[i].setFocus(1)  # MouseFocusReason
-                elif dict_combo_text == u'Mdx服务器':
+                if dict_combo_text == u'mdx服务器':
                     field_combos[i].clear()
                     field_combos[i].setEditText('http://')
                     field_combos[i].setFocus(1)  # MouseFocusReason
@@ -299,15 +290,13 @@ class OptionsDialog(QDialog):
         dict_combo.insertSeparator(dict_combo.count())
         for s in web_service_manager.services:
             dict_combo.addItem(s.label, userData='webservice')
-            # dict_name = dict_name if web_service_manager.get_service(
-            #     dict_name) else ""
         dict_combo.currentIndexChanged.connect(self.set_field_combo)
         self.set_combo_text(dict_combo, dict_name)
         dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
-        field_combo.setMinimumSize(100, 0)
-        field_combo.setMaximumSize(100, 30)
+        field_combo.setMinimumSize(120, 0)
+        # field_combo.setMaximumSize(120, 30)
         field_combo.setEnabled(checked)
         # service = web_service_manager.get_service(dict_name)
         # if service and service.instance.fields:

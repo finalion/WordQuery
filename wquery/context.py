@@ -41,6 +41,8 @@ class Config(object):
         # showInfo(str(dialog.dirs))
         self.data['dirs'] = dialog.dirs
         self.data['mdxs'] = dialog.dict_paths
+        with open(self.path, 'wb') as f:
+            cPickle.dump(self.data, f)
 
     def save_mdxs(self):
         # {'mdx': [(dict_path, dict_name), ]}
