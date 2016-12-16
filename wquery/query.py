@@ -14,6 +14,7 @@ from aqt.utils import showInfo,  tooltip, showText
 from .context import context, config
 from .service import web_service_manager, mdx_service_manager
 from .utils import Queue, Empty
+from .service.base import QueryResult
 
 
 @pyqtSlot(dict)
@@ -89,6 +90,7 @@ def query_from_editor():
     maps = config.get_maps(editor.note.model()['id'])
     if fld_index == 0:
         results = query_all_flds(word, maps)
+        # showText(str(results))
         for i, res in results.items():
             result, js, css = res.result, res.js, res.css
             # js process: add to template of the note model
@@ -149,7 +151,7 @@ def query_single_fld(word, fld_index, maps):
 
 
 def query_all_flds(word, maps):
-    handle_results.total = dict()
+    handle_results.total = defaultdict(QueryResult)
     purified_word = purify_word(word)
     for i, each in enumerate(maps):
         use_dict = each.get('checked', False)

@@ -112,11 +112,16 @@ class MdxService(Service):
         media_files_set.update(set(mjs))
         msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
+        msound = re.findall('href="sound:(.*?\.mp3)"', html)
         if config.export_media():
-            msound = re.findall('href="(sound:.*?\.mp3)"', html)
             media_files_set.update(set(msound))
         for each in media_files_set:
             html = html.replace(each, '_' + each.split('/')[-1])
+        # find sounds
+        p = re.compile(
+            '<a[^>]+?href=\"(sound:_.*?\.mp3)\"[^>]*?>(<img.*?>)</a>')
+        html = p.sub("[\\1]\\2", html)
+        # showText(html)
         errors, styles = self.save_media_files(media_files_set)
         # import css
         html = '<br>'.join(["<style>@import url('%s');</style>" %
