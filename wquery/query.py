@@ -113,7 +113,8 @@ def query_from_editor():
 def add_to_tmpl(note, **kwargs):
     # templates
     '''
-    [{u'name': u'Card 1', u'qfmt': u'{{Front}}\n\n', u'did': None, u'bafmt': u'', u'afmt': u'{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}\n\n{{12}}\n\n{{44}}\n\n', u'ord': 0, u'bqfmt': u''}]
+    [{u'name': u'Card 1', u'qfmt': u'{{Front}}\n\n', u'did': None, u'bafmt': u'',
+        u'afmt': u'{{FrontSide}}\n\n<hr id=answer>\n\n{{Back}}\n\n{{12}}\n\n{{44}}\n\n', u'ord': 0, u'bqfmt': u''}]
     '''
     # showInfo(str(kwargs))
     afmt = note.model()['tmpls'][0]['afmt']
@@ -134,10 +135,14 @@ def query_single_fld(word, fld_index, maps):
     use_dict = maps[fld_index].get('checked', False)
     dict_type = maps[fld_index].get('dict', '').strip()
     dict_field = maps[fld_index].get('dict_field', '').strip()
+    dict_path = maps[fld_index].get('dict_path', '').strip()
     update_progress_label(
         {'word': word, 'service_name': dict_type, 'field_name': dict_field})
     if use_dict and dict_type and dict_field:
-        service = web_service_manager.get_service(dict_type)
+        if dict_path == 'webservice':
+            service = web_service_manager.get_service(dict_type)
+        if os.path.isabs(dict_path):
+            service = mdx_service_manager.get_service(dict_path)
         return service.instance.active(dict_field, word)
     return service.instance.default_result
 
