@@ -147,7 +147,7 @@ def query_single_fld(word, fld_index, maps):
         if os.path.isabs(dict_path):
             service = mdx_service_manager.get_service(dict_path)
         return service.instance.active(dict_field, word)
-    return service.instance.default_result
+    return QueryResult()
 
 
 def query_all_flds(word, maps):

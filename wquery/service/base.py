@@ -100,7 +100,10 @@ class Service(object):
 
 class QueryResult(MapDict):
     """Query Result structure"""
-    pass
+
+    def __init__(self, *args, **kwargs):
+        self['result'] = str()
+        super(QueryResult, self).__init__(*args, **kwargs)
 # define decorators below----------------------------
 
 
