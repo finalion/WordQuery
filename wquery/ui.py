@@ -10,36 +10,11 @@ from aqt.qt import *
 import aqt.models
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
-from service import web_service_manager, mdx_service_manager
+from service import web_service_manager, mdx_service_manager, start_services
 from mdict.mdict_query import IndexBuilder
 from .context import config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
-
-
-def index_mdx(paths):
-    mw.progress.start(immediate=True, label="Index building...")
-    index_thread = MdxIndexer(paths)
-    index_thread.start()
-    while not index_thread.isFinished():
-        mw.app.processEvents()
-        index_thread.wait(100)
-    mw.progress.finish()
-    return index_thread.index_builders
-
-
-class MdxIndexer(QThread):
-
-    def __init__(self, paths):
-        QThread.__init__(self)
-        self.paths = paths
-        self.index_builders = list()
-
-    def run(self):
-        for path in self.paths:
-            ib = IndexBuilder(path)
-            self.index_builders.append(
-                MapDict(builder=ib, title=ib._title if ib._title else os.path.basename(path), path=path))
 
 
 class MdxManageDialog(QDialog):
@@ -49,8 +24,6 @@ class MdxManageDialog(QDialog):
         self.parent = parent
         self._dict_paths = []
         self.build()
-        self.activateWindow()
-        self.raise_()
 
     def build(self):
         layout = QVBoxLayout()
@@ -78,8 +51,6 @@ class MdxManageDialog(QDialog):
         layout.addLayout(chk_layout)
         layout.addWidget(ok_btn)
         self.setLayout(layout)
-        self.activateWindow()
-        self.raise_()
 
     def add_folder(self):
         dir_ = QFileDialog.getExistingDirectory(self,
@@ -121,9 +92,6 @@ class OptionsDialog(QDialog):
         self.signal_mapper_chk = QSignalMapper(self)
         # self.accepted.connect(self.parent.update_dicts_list)
         self.build()
-        self.show()
-        self.activateWindow()
-        self.raise_()
 
     def build(self):
         self.main_layout = QVBoxLayout()
@@ -158,13 +126,15 @@ class OptionsDialog(QDialog):
 
     def show_mdx_dialog(self):
         mdx_dialog = MdxManageDialog(self)
+        mdx_dialog.activateWindow()
+        mdx_dialog.raise_()
         if mdx_dialog.exec_() == QDialog.Accepted:
             dict_paths = mdx_dialog.dict_paths
             # showInfo(str(dict_paths))
             # index_builders = index_mdx(dict_paths)
             mdx_dialog.save()
             mdx_service_manager.update_services()
-            self.update_dicts_list()
+            self.update_dicts_combo()
 
     def btn_ok_pressed(self):
         self.close()
@@ -177,8 +147,7 @@ class OptionsDialog(QDialog):
 
     def chkbox_state_changed(self, fld_number):
         dict_checks = self.findChildren(QCheckBox)
-        combos = self.findChildren(QComboBox)
-        dict_combos, field_combos = combos[::2], combos[1::2]
+        dict_combos, field_combos = self.get_combos(2)
         dict_combos[fld_number].setEnabled(
             dict_checks[fld_number].checkState() != 0)
         field_combos[fld_number].setEnabled(
@@ -228,9 +197,8 @@ class OptionsDialog(QDialog):
             self.models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
             return model
 
-    def dict_combobox_activated(self, index):
-        combos = self.findChildren(QComboBox)
-        dict_combos, field_combos = combos[::2], combos[1::2]
+    def dict_combobox_index_changed(self, index):
+        dict_combos, field_combos = self.get_combos(2)
         assert len(dict_combos) == len(field_combos)
         for i, dict_combo in enumerate(dict_combos):
             # in windows and linux: the combo has current focus,
@@ -262,6 +230,7 @@ class OptionsDialog(QDialog):
                 break
 
     def set_combo_text(self, cb, text):
+        cb.setCurrentIndex(0)
         for i in range(cb.count()):
             if cb.itemText(i) == text:
                 cb.setCurrentIndex(i)
@@ -289,26 +258,25 @@ class OptionsDialog(QDialog):
         dict_combo = QComboBox()
         dict_combo.setMinimumSize(140, 0)
         dict_combo.setEnabled(checked)
-        # dict_combo.setEditable(True)
         dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
+        # combo_data = QMap()
+        # combo_data.insert("index", i)
         for each in mdx_service_manager.services:
+            # combo_data.insert("data", each.label)
             dict_combo.addItem(each.title, userData=each.label)
-            # dict_name = dict_name if mdx_service_manager.get_service(
-            #     dict_name) else ""
         dict_combo.insertSeparator(dict_combo.count())
         for s in web_service_manager.services:
-            dict_combo.addItem(s.label, userData='webservice')
-        dict_combo.currentIndexChanged.connect(self.set_field_combo)
+            # combo_data.insert("data", "webservice")
+            dict_combo.addItem(s.label, userData="webservice")
+        dict_combo.currentIndexChanged.connect(
+            self.dict_combobox_index_changed)
         self.set_combo_text(dict_combo, dict_name)
-        dict_combo.activated.connect(self.dict_combobox_activated)
+        # dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
         field_combo.setMinimumSize(120, 0)
         # field_combo.setMaximumSize(120, 30)
         field_combo.setEnabled(checked)
-        # service = web_service_manager.get_service(dict_name)
-        # if service and service.instance.fields:
-        #     field_combo.addItems(service.instance.fields)
         field_combo.setEditable(True)
         dict_field = dict_field if dict_name else ""
         field_combo.setEditText(dict_field)
@@ -328,23 +296,26 @@ class OptionsDialog(QDialog):
         # mw.options_dialog.activateWindow()
         # mw.options_dialog.raise_()
 
-    def set_field_combo(self, dict_text):
-        # showInfo('edit text')
-        pass
-
-    def update_dicts_list(self):
+    def update_dicts_combo(self):
         # mdx_data: path, title
-        comboboxs = self.findChildren(QComboBox)
-        dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
-        for cb in dict_cbs:
+        dict_cbs = self.get_combos(0)
+        for i, cb in enumerate(dict_cbs):
             current_text = cb.currentText()
             cb.clear()
-            for each in mdx_service_manager.services:
-                cb.addItem(each.title, userData=each.label)
+            for mdx_service in mdx_service_manager.services:
+                cb.addItem(mdx_service.title, userData=mdx_service.label)
             cb.insertSeparator(cb.count())
-            for s in web_service_manager.services:
-                cb.addItem(s.label, userData='webservice')
+            for web_service in web_service_manager.services:
+                cb.addItem(web_service.label, userData='webservice')
             self.set_combo_text(cb, current_text)
+
+    def get_combos(self, flag):
+        # 0 : dict_combox, 1:field_combox
+        dict_combos = self.findChildren(QComboBox)
+        if flag in [0, 1]:
+            return dict_combos[flag::2]
+        if flag == 2:
+            return dict_combos[::2], dict_combos[1::2]
 
     def save(self):
         config.save_options_dialog(self)
@@ -352,4 +323,7 @@ class OptionsDialog(QDialog):
 
 def show_options():
     config.read()
-    mw.options_dialog = dialog = OptionsDialog(mw)
+    opt_dialog = OptionsDialog(mw)
+    opt_dialog.exec_()
+    opt_dialog.activateWindow()
+    opt_dialog.raise_()

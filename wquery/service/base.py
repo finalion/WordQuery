@@ -94,6 +94,7 @@ class Service(object):
         for each in self.exporters:
             if action_label == each[0]:
                 result = each[1]()
+                # showInfo("%s %s" % (str(type(result)), str(result)))
                 return result if result else self.default_result  # avoid return None
         return self.default_result
 

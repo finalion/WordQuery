@@ -230,9 +230,8 @@ class QueryWorker(QThread):
                     {'service_name': name_info, 'word': word, 'field_name': service_field})
                 result = self.query(
                     service_field, word) if self.service else ""
+                # showInfo('%d, %s' % (index, str(result)))
                 self.result_ready.emit({index: result})
-                # time.sleep(1)
-                # showInfo("%d:  %s" % (index, result))
             except Empty:
                 break
 

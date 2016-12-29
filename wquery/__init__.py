@@ -11,7 +11,7 @@ from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
 import cPickle
 from collections import defaultdict
-from wquery.ui import show_options
+from wquery.ui import show_options, start_services
 from wquery.query import query_from_menu, query_from_editor
 from wquery.context import context, config
 
