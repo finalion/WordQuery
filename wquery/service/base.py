@@ -105,6 +105,10 @@ class QueryResult(MapDict):
     def __init__(self, *args, **kwargs):
         self['result'] = str()
         super(QueryResult, self).__init__(*args, **kwargs)
+
+    def set_styles(self, **kwargs):
+        for key, value in kwargs.items():
+            self[key] = value
 # define decorators below----------------------------
 
 
@@ -130,13 +134,14 @@ def export(label, index):
 
 def with_styles(**styles):
     def _with(fld_func):
+        @wraps(fld_func)
         def _deco(cls, *args, **kwargs):
             res = fld_func(cls, *args, **kwargs)
             if styles:
                 if not isinstance(res, QueryResult):
                     return QueryResult(result=res, **styles)
                 else:
-                    res.css = css
+                    res.set_styles(**styles)
                     return res
             return res
         return _deco
