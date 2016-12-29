@@ -15,6 +15,7 @@ from mdict.mdict_query import IndexBuilder
 from .context import config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
+from lang import _
 
 
 class MdxManageDialog(QDialog):
@@ -36,8 +37,8 @@ class MdxManageDialog(QDialog):
         remove_btn.clicked.connect(self.remove_folder)
         self.folders_lst = QListWidget()
         self.folders_lst.addItems(config.get_dirs())
-        self.chk_use_filename = QCheckBox(u'使用文件名作为标签')
-        self.chk_export_media = QCheckBox(u'导出媒体文件')
+        self.chk_use_filename = QCheckBox(_('CHECK_FILENAME_LABEL'))
+        self.chk_export_media = QCheckBox(_('EXPORT_MEDIA'))
         self.chk_use_filename.setChecked(config.use_mdx_filename())
         self.chk_export_media.setChecked(config.export_media())
         chk_layout = QHBoxLayout()
@@ -102,9 +103,9 @@ class OptionsDialog(QDialog):
         dicts_widget.setLayout(self.dicts_layout)
         scroll_area.setWidget(dicts_widget)
         scroll_area.setWidgetResizable(True)
-        mdx_button = QPushButton(u"mdx文件夹")
+        mdx_button = QPushButton(_('DICTS_FOLDERS'))
         mdx_button.clicked.connect(self.show_mdx_dialog)
-        self.models_button = QPushButton(u"选择笔记类型")
+        self.models_button = QPushButton(_('CHOOSE_NOTE_TYPES'))
         self.models_button.clicked.connect(self.btn_models_pressed)
         models_layout.addWidget(mdx_button)
         models_layout.addWidget(self.models_button)
@@ -112,7 +113,7 @@ class OptionsDialog(QDialog):
             model = get_model_byId(mw.col.models, config.last_model_id)
             if model:
                 self.models_button.setText(
-                    u'选择笔记类型 [当前类型 -- %s]' % model['name'])
+                    u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  model['name']))
                 # build fields -- dicts layout
                 self.build_layout(model)
         ok_button = QPushButton(u"OK")
@@ -186,15 +187,16 @@ class OptionsDialog(QDialog):
     def show_models(self):
         self.save()
         edit = QPushButton(
-            _("Manage"), clicked=lambda: aqt.models.Models(mw, self))
+            anki.lang._("Manage"), clicked=lambda: aqt.models.Models(mw, self))
         ret = StudyDeck(
-            mw, names=lambda: sorted(mw.col.models.allNames()), accept=_("Choose"), title=_("Choose Note Type"),
+            mw, names=lambda: sorted(mw.col.models.allNames()), accept=anki.lang._("Choose"), title=anki.lang._("Choose Note Type"),
             help="_notes", parent=self, buttons=[edit],
             cancel=True, geomKey="selectModel")
         if ret.name:
             model = mw.col.models.byName(ret.name)
             config.last_model_id = model['id']
-            self.models_button.setText(u'选择笔记类型 [当前类型 -- %s]' % ret.name)
+            self.models_button.setText(
+                u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'), ret.name))
             return model
 
     def dict_combobox_index_changed(self, index):
@@ -206,7 +208,7 @@ class OptionsDialog(QDialog):
             # be got by view()
             if dict_combo.hasFocus() or dict_combo.view().hasFocus():
                 dict_combo_text = dict_combo.currentText()
-                if dict_combo_text == u'mdx服务器':
+                if dict_combo_text == _('MDX_SERVER'):
                     field_combos[i].clear()
                     field_combos[i].setEditText('http://')
                     field_combos[i].setFocus(1)  # MouseFocusReason
@@ -243,7 +245,7 @@ class OptionsDialog(QDialog):
         checked, dict_name, fld_name, dict_field = kwargs.get('checked', False), kwargs.get(
             'dict', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
         layout = QGridLayout()
-        dict_check = QCheckBox(u"使用字典")
+        dict_check = QCheckBox(_('USE_DICTIONARY'))
         if i == 0:
             checked, dict_name = False, ""
             dict_check.setEnabled(False)

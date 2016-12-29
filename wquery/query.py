@@ -15,6 +15,7 @@ from .context import context, config
 from .service import web_service_manager, mdx_service_manager
 from .utils import Queue, Empty
 from .service.base import QueryResult
+from lang import _
 
 
 @pyqtSlot(dict)
@@ -22,8 +23,8 @@ def update_progress_label(info):
     update_progress_label.kwargs.update(info)
     words_number, fields_number = update_progress_label.kwargs.get(
         'words_number', 0), update_progress_label.kwargs.get('fields_number', 0)
-    number_info = '<br>已查询%d个单词, %d个字段' % (
-        words_number, fields_number) if words_number and fields_number else ""
+    number_info = '<br>%s %d %s, %d %s' % (_('QUERIED'), words_number, _(
+        'WORDS'), fields_number, _('FIELDS')) if words_number and fields_number else ""
     mw.progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
         update_progress_label.kwargs[
             'word'], update_progress_label.kwargs['service_name'],
@@ -41,7 +42,6 @@ def query_from_menu():
         return
     if len(notes) == 1:
         context['editor'] = browser.editor
-
         query_from_editor()
     if len(notes) > 1:
         fields_number = 0
@@ -51,6 +51,8 @@ def query_from_menu():
             word = note.fields[0]
             results = query_all_flds(word, config.get_maps(note.model()['id']))
             for j, res in results.items():
+                if not isinstance(res, QueryResult):
+                    continue
                 result, js, css = res.result, res.js, res.css
                 # js process: add to template of the note model
                 if js:
@@ -60,7 +62,7 @@ def query_from_menu():
                 if css:
                     result = css + result
                 note.fields[j] = result
-                note.flush()
+                # note.flush()
             fields_number += len(results)
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
@@ -68,7 +70,7 @@ def query_from_menu():
         mw.progress.finish()
         # browser.model.reset()
         # browser.endReset()
-        tooltip(u'共更新 %d 张卡片' % len(notes))
+        tooltip(u'%s %d %s' % (_('UPDATED'), len(notes), _('CARDS')))
 
 
 def purify_word(word):
@@ -92,6 +94,8 @@ def query_from_editor():
         results = query_all_flds(word, maps)
         # showText(str(results))
         for i, res in results.items():
+            if not isinstance(res, QueryResult):
+                continue
             result, js, css = res.result, res.js, res.css
             # js process: add to template of the note model
             if js:

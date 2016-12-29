@@ -15,7 +15,7 @@ from .webservice import WebService
 
 
 class RemoteMdx(WebService):
-    __register_label__ = u'mdx服务器'
+    __register_label__ = 'MDX server'
 
     def __init__(self):
         super(RemoteMdx, self).__init__()
