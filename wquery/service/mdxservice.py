@@ -119,7 +119,7 @@ class MdxService(Service):
             html = html.replace(each, '_' + each.split('/')[-1])
         # find sounds
         p = re.compile(
-            '<a[^>]+?href=\"(sound:_.*?\.mp3)\"[^>]*?>(<img.*?>)</a>')
+            '<a[^>]+?href=\"(sound:_.*?\.(?:mp3|wav))\"[^>]*?>(.*?)</a>')
         html = p.sub("[\\1]\\2", html)
         # showText(html)
         errors, styles = self.save_media_files(media_files_set)
