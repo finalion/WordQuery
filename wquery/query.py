@@ -53,6 +53,7 @@ def query_from_menu():
             for j, res in results.items():
                 if not isinstance(res, QueryResult):
                     continue
+                # showInfo(res.result)
                 result, js, css = res.result, res.js, res.css
                 # js process: add to template of the note model
                 if js:
@@ -62,7 +63,7 @@ def query_from_menu():
                 if css:
                     result = css + result
                 note.fields[j] = result
-                # note.flush()
+                note.flush()
             fields_number += len(results)
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
