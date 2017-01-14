@@ -39,7 +39,7 @@ class Vocabulary(WebService):
         self.cache = defaultdict(defaultdict)
 
     def _get_content(self):
-        url = "https://www.vocabulary.com/dictionary/%s" % self.word
+        url = "https://www.vocabulary.com/dictionary/definition.ajax?search=%s" % self.word
         try:
             result = urllib2.urlopen(url, timeout=5).read()
             self.cache[self.word] = {'short': '', 'long': '',
@@ -60,7 +60,8 @@ class Vocabulary(WebService):
             if m:
                 self.cache[self.word][
                     'full'] = '<div class="wordPage vocab blurbed clearfloat content-wrapper"><div class="section definition">' + ''.join(m) + '</div></div>'
-        except:
+        except Exception as e:
+            showInfo(str(e))
             pass
 
     @export(u'Short Description', 2)

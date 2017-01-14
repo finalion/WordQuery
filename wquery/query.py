@@ -48,7 +48,9 @@ def query_from_menu():
         update_progress_label.kwargs = defaultdict(str)
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
-            word = note.fields[0]
+            word = purify_word(note.fields[0])
+            if not word:
+                continue
             results = query_all_flds(word, config.get_maps(note.model()['id']))
             for j, res in results.items():
                 if not isinstance(res, QueryResult):
@@ -75,7 +77,7 @@ def query_from_menu():
 
 
 def purify_word(word):
-    return word.lower().strip()
+    return word.lower().strip() if word else ''
     # m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
     # if m:
     #     return m.group().strip()
@@ -87,6 +89,9 @@ def query_from_editor():
     if not editor:
         return
     word = editor.note.fields[0].decode('utf-8')
+    word = purify_word(word)
+    if not word:
+        return
     mw.progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
     fld_index = editor.currentField
@@ -157,7 +162,6 @@ def query_single_fld(word, fld_index, maps):
 
 def query_all_flds(word, maps):
     handle_results.total = defaultdict(QueryResult)
-    purified_word = purify_word(word)
     for i, each in enumerate(maps):
         use_dict = each.get('checked', False)
         dict_type = each.get('dict', '').strip()
@@ -174,7 +178,7 @@ def query_all_flds(word, maps):
                     worker = work_manager.get_worker(dict_type, 'web')
                 if os.path.isabs(dict_path):
                     worker = work_manager.get_worker(dict_path, 'mdx')
-                worker.target(i, dict_field, purified_word)
+                worker.target(i, dict_field, word)
                 worker.start()
     for name, worker in work_manager.workers.items():
         while not worker.isFinished():
