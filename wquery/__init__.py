@@ -56,7 +56,7 @@ def setup_context_menu():
             action.triggered.connect(query_from_editor)
             needs_separator = True
         else:
-            action = menu.addAction(_("Query Current"))
+            action = menu.addAction(_("Query"))
             action.triggered.connect(query_from_editor)
             needs_separator = True
             # menu.addMenu(submenu)

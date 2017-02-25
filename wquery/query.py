@@ -88,21 +88,28 @@ def query_from_editor():
     editor = context['editor']
     if not editor:
         return
-    word = editor.note.fields[0].decode('utf-8')
-    word = purify_word(word)
-    if not word:
-        return
+    word, word_ord = None, 0
     mw.progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
     fld_index = editor.currentField
     maps = config.get_maps(editor.note.model()['id'])
-    if fld_index == 0:
-        results = query_all_flds(word, maps)
+    for i, m in enumerate(maps):
+        if m.get('word_checked', False):
+            word_ord = i
+            break
+    else:
+        word_ord = 0
+    word = editor.note.fields[i].decode('utf-8')
+    word = purify_word(word)
+    if not word:
+        return
+    if fld_index == word_ord:
+        results = query_all_flds(word_ord, word, maps)
         # showText(str(results))
-        for i, res in results.items():
-            if not isinstance(res, QueryResult):
+        for i, q in results.items():
+            if not isinstance(q, QueryResult):
                 continue
-            result, js, css = res.result, res.js, res.css
+            result, js, css = q.result, q.js, q.css
             # js process: add to template of the note model
             if js:
                 add_to_tmpl(editor.note, js=js)
@@ -112,10 +119,19 @@ def query_from_editor():
                 result = css + result
             editor.note.fields[i] = result
     else:
-        res = query_single_fld(word, fld_index, maps)
-        editor.note.fields[fld_index] = res.result
-        if res.js:
-            add_to_tmpl(editor.note, js=res.js)
+        q = query_single_fld(word, fld_index, maps)
+        if not isinstance(q, QueryResult):
+            return
+        result, js, css = q.result, q.js, q.css
+        # js process: add to template of the note model
+        if js:
+            add_to_tmpl(editor.note, js=js)
+        # css process: add css directly to the note field, that can ensure there
+        # will not exist css confusion
+        if css:
+            result = css + result
+        editor.note.fields[fld_index] = result
+
     editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     mw.progress.finish()
@@ -145,13 +161,12 @@ def query_single_fld(word, fld_index, maps):
     assert fld_index > 0
     if fld_index > len(maps):
         return ""
-    use_dict = maps[fld_index].get('checked', False)
     dict_type = maps[fld_index].get('dict', '').strip()
     dict_field = maps[fld_index].get('dict_field', '').strip()
     dict_path = maps[fld_index].get('dict_path', '').strip()
     update_progress_label(
         {'word': word, 'service_name': dict_type, 'field_name': dict_field})
-    if use_dict and dict_type and dict_field:
+    if dict_type and dict_field:
         if dict_path == 'webservice':
             service = web_service_manager.get_service(dict_type)
         if os.path.isabs(dict_path):
@@ -160,26 +175,23 @@ def query_single_fld(word, fld_index, maps):
     return QueryResult()
 
 
-def query_all_flds(word, maps):
+def query_all_flds(word_ord, word, maps):
     handle_results.total = defaultdict(QueryResult)
     for i, each in enumerate(maps):
-        use_dict = each.get('checked', False)
+        if i == word_ord:
+            continue
         dict_type = each.get('dict', '').strip()
         dict_field = each.get('dict_field', '').strip()
         dict_path = each.get('dict_path', '').strip()
-        res = ""
-        if i == 0:
-            res = word
-        else:
-            # webservice manager 使用combobox的文本值选择服务
-            # mdxservice manager 使用combox的itemData即字典路径选择服务
-            if use_dict and dict_type and dict_field:
-                if dict_path == 'webservice':
-                    worker = work_manager.get_worker(dict_type, 'web')
-                if os.path.isabs(dict_path):
-                    worker = work_manager.get_worker(dict_path, 'mdx')
-                worker.target(i, dict_field, word)
-                worker.start()
+        # webservice manager 使用combobox的文本值选择服务
+        # mdxservice manager 使用combox的itemData即字典路径选择服务
+        if dict_type and dict_field:
+            if dict_path == 'webservice':
+                worker = work_manager.get_worker(dict_type, 'web')
+            if os.path.isabs(dict_path):
+                worker = work_manager.get_worker(dict_path, 'mdx')
+            worker.target(i, dict_field, word)
+            worker.start()
     for name, worker in work_manager.workers.items():
         while not worker.isFinished():
             mw.app.processEvents()

@@ -23,6 +23,7 @@ class MdxManageDialog(QDialog):
     def __init__(self, parent=0):
         QDialog.__init__(self, parent)
         self.parent = parent
+        self.setWindowTitle(u"Set Dicts")
         self._dict_paths = []
         self.build()
 
@@ -44,13 +45,12 @@ class MdxManageDialog(QDialog):
         chk_layout = QHBoxLayout()
         chk_layout.addWidget(self.chk_use_filename)
         chk_layout.addWidget(self.chk_export_media)
-        ok_btn = QPushButton("OK")
-        ok_btn.setDefault(True)
-        ok_btn.clicked.connect(self.accept)
+        btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
+        btnbox.accepted.connect(self.accept)
         layout.addLayout(btn_layout)
         layout.addWidget(self.folders_lst)
         layout.addLayout(chk_layout)
-        layout.addWidget(ok_btn)
+        layout.addWidget(btnbox)
         self.setLayout(layout)
 
     def add_folder(self):
@@ -87,7 +87,9 @@ class MdxManageDialog(QDialog):
 class OptionsDialog(QDialog):
 
     def __init__(self, parent=0):
-        QDialog.__init__(self, parent)
+        super(OptionsDialog, self).__init__()
+        self.setWindowFlags(Qt.CustomizeWindowHint |
+                            Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinMaxButtonsHint)
         self.parent = parent
         self.setWindowTitle(u"Options")
         self.signal_mapper_chk = QSignalMapper(self)
@@ -97,18 +99,33 @@ class OptionsDialog(QDialog):
     def build(self):
         self.main_layout = QVBoxLayout()
         models_layout = QHBoxLayout()
-        scroll_area = QScrollArea()
-        dicts_widget = QWidget()
-        self.dicts_layout = QVBoxLayout(scroll_area)
-        dicts_widget.setLayout(self.dicts_layout)
-        scroll_area.setWidget(dicts_widget)
-        scroll_area.setWidgetResizable(True)
+        # add buttons
         mdx_button = QPushButton(_('DICTS_FOLDERS'))
         mdx_button.clicked.connect(self.show_mdx_dialog)
         self.models_button = QPushButton(_('CHOOSE_NOTE_TYPES'))
         self.models_button.clicked.connect(self.btn_models_pressed)
         models_layout.addWidget(mdx_button)
         models_layout.addWidget(self.models_button)
+        self.main_layout.addLayout(models_layout)
+        # add dicts mapping
+        dicts_widget = QWidget()
+        self.dicts_layout = QGridLayout()
+        self.dicts_layout.setSizeConstraint(QLayout.SetMinAndMaxSize)
+        dicts_widget.setLayout(self.dicts_layout)
+
+        scroll_area = QScrollArea()
+        scroll_area.setWidgetResizable(True)
+        scroll_area.setWidget(dicts_widget)
+
+        self.main_layout.addWidget(scroll_area)
+        # add ok button
+        btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
+        btnbox.accepted.connect(self.accept)
+        self.main_layout.addWidget(btnbox)
+        # self.signal_mapper_chk.mapped.connect(self.chkbox_state_changed)
+        self.setLayout(self.main_layout)
+
+        # init saved data
         if config.last_model_id:
             model = get_model_byId(mw.col.models, config.last_model_id)
             if model:
@@ -116,14 +133,6 @@ class OptionsDialog(QDialog):
                     u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  model['name']))
                 # build fields -- dicts layout
                 self.build_layout(model)
-        ok_button = QPushButton(u"OK")
-        ok_button.clicked.connect(self.btn_ok_pressed)
-        self.main_layout.addLayout(models_layout)
-        self.main_layout.addWidget(scroll_area)
-        # main_layout.addLayout(dicts_layout)
-        self.main_layout.addWidget(ok_button)
-        self.signal_mapper_chk.mapped.connect(self.chkbox_state_changed)
-        self.setLayout(self.main_layout)
 
     def show_mdx_dialog(self):
         mdx_dialog = MdxManageDialog(self)
@@ -137,22 +146,22 @@ class OptionsDialog(QDialog):
             mdx_service_manager.update_services()
             self.update_dicts_combo()
 
-    def btn_ok_pressed(self):
-        self.close()
+    def accept(self):
         self.save()
+        self.close()
 
     def btn_models_pressed(self):
         model = self.show_models()
         if model:
             self.build_layout(model)
 
-    def chkbox_state_changed(self, fld_number):
-        dict_checks = self.findChildren(QCheckBox)
-        dict_combos, field_combos = self.get_combos(2)
-        dict_combos[fld_number].setEnabled(
-            dict_checks[fld_number].checkState() != 0)
-        field_combos[fld_number].setEnabled(
-            dict_checks[fld_number].checkState() != 0)
+    # def chkbox_state_changed(self, fld_number):
+    #     dict_checks = self.findChildren(QCheckBox)
+    #     dict_combos, field_combos = self._get_combos(2)
+    #     dict_combos[fld_number].setEnabled(
+    #         dict_checks[fld_number].checkState() != 0)
+    #     field_combos[fld_number].setEnabled(
+    #         dict_checks[fld_number].checkState() != 0)
 
     def clear_layout(self, layout):
         if layout is not None:
@@ -166,6 +175,15 @@ class OptionsDialog(QDialog):
 
     def build_layout(self, model):
         self.clear_layout(self.dicts_layout)
+        label1 = QLabel("")
+        label1.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        label2 = QLabel(_("DICTS"))
+        label2.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        label3 = QLabel(_("DICT_FIELDS"))
+        label3.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
+        self.dicts_layout.addWidget(label1, 0, 0)
+        self.dicts_layout.addWidget(label2, 0, 1)
+        self.dicts_layout.addWidget(label3, 0, 2)
         maps = config.get_maps(model['id'])
         for i, fld in enumerate(model['flds']):
             ord = fld['ord']
@@ -173,7 +191,7 @@ class OptionsDialog(QDialog):
             if maps:
                 for j, each in enumerate(maps):
                     if each.get('fld_ord', -1) == ord:
-                        self.add_dict_layout(j, fld_name=name, checked=each['checked'],
+                        self.add_dict_layout(j, fld_name=name, word_checked=each['word_checked'],
                                              dict=each['dict'], dict_field=each[
                                                  'dict_field'],
                                              dict_path=each.get('dict_path', ''))
@@ -200,69 +218,29 @@ class OptionsDialog(QDialog):
             return model
 
     def dict_combobox_index_changed(self, index):
-        dict_combos, field_combos = self.get_combos(2)
+        # showInfo("combo index changed")
+        dict_combos, field_combos = self._get_combos(2)
         assert len(dict_combos) == len(field_combos)
         for i, dict_combo in enumerate(dict_combos):
             # in windows and linux: the combo has current focus,
             # in mac: the combo's listview has current focus, and the listview can
             # be got by view()
+            # showInfo('to check focus')
             if dict_combo.hasFocus() or dict_combo.view().hasFocus():
-                dict_combo_text = dict_combo.currentText()
-                if dict_combo_text == _('MDX_SERVER'):
-                    field_combos[i].clear()
-                    field_combos[i].setEditText('http://')
-                    field_combos[i].setFocus(1)  # MouseFocusReason
-                else:
-                    field_text = field_combos[i].currentText()
-                    field_combos[i].clear()
-                    item_data = dict_combo.itemData(index)  # .toString()
-                    current_service = None
-                    if item_data == 'webservice':
-                        current_service = web_service_manager.get_service(
-                            dict_combo.currentText())
-                    elif os.path.isabs(item_data):
-                        current_service = mdx_service_manager.get_service(
-                            item_data)
-                    # problem
-                    if current_service and current_service.instance.fields:
-                        for each in current_service.instance.fields:
-                            field_combos[i].addItem(each)
-                            if each == field_text:
-                                field_combos[i].setEditText(field_text)
+                self.fill_field_combo_options(
+                    field_combos[i], dict_combo.currentText(), dict_combo.itemData(index))
                 break
 
-    def set_combo_text(self, cb, text):
-        cb.setCurrentIndex(0)
+    def set_combo_options(self, cb, text):
+        cb.setCurrentIndex(-1)
         for i in range(cb.count()):
             if cb.itemText(i) == text:
                 cb.setCurrentIndex(i)
 
-    def add_dict_layout(self, i, **kwargs):
-        """
-        kwargs:
-        checked  dict  fld_name dict_field
-        """
-        checked, dict_name, fld_name, dict_field = kwargs.get('checked', False), kwargs.get(
-            'dict', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
-        layout = QGridLayout()
-        dict_check = QCheckBox(_('USE_DICTIONARY'))
-        if i == 0:
-            checked, dict_name = False, ""
-            dict_check.setEnabled(False)
-        dict_check.setChecked(checked)
-        dict_check.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        fldname_label = QLabel(fld_name)
-        fldname_label.setMinimumSize(80, 0)
-        fldname_label.setMaximumSize(80, 30)
-        fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-
-        dict_combo = QComboBox()
-        dict_combo.setMinimumSize(140, 0)
-        dict_combo.setEnabled(checked)
-        dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
-        # combo_data = QMap()
-        # combo_data.insert("index", i)
+    def fill_dict_combo_options(self, dict_combo):
+        dict_combo.clear()
+        dict_combo.addItem(_('NOT_DICT_FIELD'))
+        dict_combo.insertSeparator(dict_combo.count())
         for each in mdx_service_manager.services:
             # combo_data.insert("data", each.label)
             dict_combo.addItem(each.title, userData=each.label)
@@ -270,48 +248,97 @@ class OptionsDialog(QDialog):
         for s in web_service_manager.services:
             # combo_data.insert("data", "webservice")
             dict_combo.addItem(s.label, userData="webservice")
+
+    def fill_field_combo_options(self, field_combo, dict_combo_text, dict_combo_itemdata):
+        field_combo.clear()
+        field_combo.setEnabled(True)
+        if dict_combo_text == _('NOT_DICT_FIELD'):
+            field_combo.setEnabled(False)
+        elif dict_combo_text == _('MDX_SERVER'):
+            field_combo.setEditText('http://')
+            field_combo.setFocus(1)  # MouseFocusReason
+        else:
+            field_text = field_combo.currentText()
+            current_service = None
+            if dict_combo_itemdata == 'webservice':
+                current_service = web_service_manager.get_service(
+                    dict_combo_text)
+            elif os.path.isabs(dict_combo_itemdata):
+                current_service = mdx_service_manager.get_service(
+                    dict_combo_itemdata)
+            # problem
+            if current_service and current_service.instance.fields:
+                for each in current_service.instance.fields:
+                    field_combo.addItem(each)
+                    if each == field_text:
+                        field_combo.setEditText(field_text)
+
+    def update_dicts_combo(self):
+        # mdx_data: path, title
+        dict_cbs = self._get_combos(0)
+        for i, cb in enumerate(dict_cbs):
+            current_text = cb.currentText()
+            self.fill_dict_combo_options(cb)
+            self.set_combo_options(cb, current_text)
+
+    def radio_btn_checked(self):
+        rbs = self.findChildren(QRadioButton)
+        dict_cbs, fld_cbs = self._get_combos(2)
+        for i, rb in enumerate(rbs):
+            dict_cbs[i].setEnabled(not rb.isChecked())
+            fld_cbs[i].setEnabled(
+                (dict_cbs[i].currentText() != _('NOT_DICT_FIELD')) and (not rb.isChecked()))
+
+    def add_dict_layout(self, i, **kwargs):
+        """
+        kwargs:
+        word_checked  dict  fld_name dict_field
+        """
+        word_checked, dict_name, dict_path, fld_name, dict_field = kwargs.get('word_checked', False), kwargs.get(
+            'dict', _('NOT_DICT_FIELD')), kwargs.get('dict_path', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
+        # if i == 0:
+        #     checked, dict_name = False, ""
+
+        fldname_label = QRadioButton(fld_name)
+        fldname_label.setMinimumSize(100, 0)
+        fldname_label.setMaximumSize(100, 30)
+        fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        fldname_label.clicked.connect(self.radio_btn_checked)
+        fldname_label.setChecked(word_checked)
+
+        dict_combo = QComboBox()
+        dict_combo.setMinimumSize(130, 0)
+        dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
+        dict_combo.setEnabled(not word_checked)
         dict_combo.currentIndexChanged.connect(
             self.dict_combobox_index_changed)
-        self.set_combo_text(dict_combo, dict_name)
+        self.fill_dict_combo_options(dict_combo)
+        self.set_combo_options(dict_combo, dict_name)
         # dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
-        field_combo.setMinimumSize(120, 0)
-        # field_combo.setMaximumSize(120, 30)
-        field_combo.setEnabled(checked)
-        field_combo.setEditable(True)
-        dict_field = dict_field if dict_name else ""
-        field_combo.setEditText(dict_field)
-        # field_combo.setEditable(False)
-        # field_combo.activated.connect(combobox_activated)
-        self.connect(dict_check, SIGNAL("clicked()"),
-                     self.signal_mapper_chk, SLOT("map()"))
-        self.signal_mapper_chk.setMapping(dict_check, i)
-        layout.addWidget(dict_check, i, 0)
-        layout.addWidget(fldname_label, i, 1)
-        layout.addWidget(dict_combo, i, 2)
-        layout.addWidget(field_combo, i, 3)
-        # layout.addWidget(choose_btn, i, 3)
-        self.dicts_layout.addLayout(layout)
+        field_combo.setMinimumSize(130, 0)
+        # field_combo.setMaximumSize(130, 30)
+        field_combo.setEnabled((not word_checked) and (
+            dict_name != _('NOT_DICT_FIELD')))
+        # field_combo.setEditable(True)
+        # field_combo.setEditText(dict_field if dict_name else "")
+        self.fill_field_combo_options(field_combo, dict_name, dict_path)
+
+        # self.connect(dict_check, SIGNAL("clicked()"),
+        #              self.signal_mapper_chk, SLOT("map()"))
+        # self.signal_mapper_chk.setMapping(dict_check, i)
+        # self.dicts_layout.addWidget(dict_check, i, 0)
+        self.dicts_layout.addWidget(fldname_label, i + 1, 0)
+        self.dicts_layout.addWidget(dict_combo, i + 1, 1)
+        self.dicts_layout.addWidget(field_combo, i + 1, 2)
+
         self.setLayout(self.main_layout)
         # for osx
         # mw.options_dialog.activateWindow()
         # mw.options_dialog.raise_()
 
-    def update_dicts_combo(self):
-        # mdx_data: path, title
-        dict_cbs = self.get_combos(0)
-        for i, cb in enumerate(dict_cbs):
-            current_text = cb.currentText()
-            cb.clear()
-            for mdx_service in mdx_service_manager.services:
-                cb.addItem(mdx_service.title, userData=mdx_service.label)
-            cb.insertSeparator(cb.count())
-            for web_service in web_service_manager.services:
-                cb.addItem(web_service.label, userData='webservice')
-            self.set_combo_text(cb, current_text)
-
-    def get_combos(self, flag):
+    def _get_combos(self, flag):
         # 0 : dict_combox, 1:field_combox
         dict_combos = self.findChildren(QComboBox)
         if flag in [0, 1]:

@@ -14,6 +14,10 @@ trans = {
     'QUERIED': {'zh_CN': u'查询', 'en': 'Queried'},
     'FIELDS': {'zh_CN': u'字段', 'en': 'Fields'},
     'WORDS': {'zh_CN': u'单词', 'en': 'Words'},
+    'NOT_DICT_FIELD': {'zh_CN': u'不是字典字段', 'en': 'Not dict field'},
+    'NOTE_TYPE_FIELDS': {'zh_CN': u'<b>笔记字段</b>', 'en': '<b>Note fields</b>'},
+    'DICTS': {'zh_CN': u'<b>字典</b>', 'en': '<b>Dict</b>'},
+    'DICT_FIELDS': {'zh_CN': u'<b>字典字段</b>', 'en': '<b>Dict fields</b>'},
 }
 
 

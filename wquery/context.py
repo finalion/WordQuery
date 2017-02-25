@@ -2,10 +2,13 @@
 import os
 from collections import defaultdict
 from aqt import mw
-from aqt.qt import QCheckBox, QComboBox, QLabel
+from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from .odds import get_model_byId, get_ord_from_fldname
 import cPickle
 from aqt.utils import shortcut, showInfo
+from lang import _
+
+VERSION = '20170225000'
 
 
 class Config(object):
@@ -15,6 +18,7 @@ class Config(object):
             os.path.realpath(__file__)), '.wqcfg')
         self.window = window
         self.data = dict()
+        self.version = '0'
         self.read()
 
     @property
@@ -22,19 +26,21 @@ class Config(object):
         return self.window.pm.name
 
     def save_options_dialog(self, dialog):
-        checkboxs, comboboxs, labels = dialog.findChildren(
-            QCheckBox), dialog.findChildren(QComboBox), dialog.findChildren(QLabel)
+        comboboxs, labels = dialog.findChildren(
+            QComboBox), dialog.findChildren(QRadioButton)
         dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
         model = get_model_byId(self.window.col.models, self.last_model_id)
-        maps = [{"checked": checkbox.isChecked(), "dict": dict_cb.currentText().strip(),
+        maps = [{"word_checked": label.isChecked(), "dict": dict_cb.currentText().strip(),
                  "dict_path": dict_cb.itemData(dict_cb.currentIndex()) if dict_cb.itemData(dict_cb.currentIndex()) else "",
                  "dict_field": field_cb.currentText().strip(), "fld_ord": get_ord_from_fldname(model, label.text())}
-                for (checkbox, dict_cb, field_cb, label) in zip(checkboxs, dict_cbs, field_cbs, labels)]
+                for (dict_cb, field_cb, label) in zip(dict_cbs, field_cbs, labels)]
         # profilename: {'last':last_model_id, '..model_id..':[..maps..]}
         self.data[self.last_model_id] = maps
         self.data['%s_last' % self.pmname] = self.last_model_id
+        self.data['version'] = VERSION
         with open(self.path, 'wb') as f:
             cPickle.dump(self.data, f)
+        # showInfo(str([label.text() for label in labels[3:]]))
 
     def save_mdxmanage_dialog(self, dialog):
         # {'dirs': []}
@@ -58,11 +64,18 @@ class Config(object):
                     self.last_model_id = self.data['%s_last' % self.pmname]
                     self.maps = self.data[self.last_model_id]
                     self.dirs = self.data.get('dirs', [])
-                except:
-                    self.maps, self.last_model_id, self.dirs = list(), 0, list()
+                    self.version = self.data.get('version')
+                    if VERSION != self.version:
+                        showInfo(VERSION + self.version)
+
+                        self.maps, self.last_model_id, self.dirs = list(),  0, list()
+                except Exception as e:
+                    showInfo(str(e))
+                    self.maps, self.last_model_id, self.dirs = list(),  0, list()
 
         except:
-            self.maps, self.last_model_id, self.dirs = list(), 0, list()
+            self.maps, self.last_model_id, self.dirs = list(),  0, list()
+        # showInfo(str(self.maps))
 
     def get_maps(self, model_id):
         # showInfo(str(self.data[self.pmname]))
