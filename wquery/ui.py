@@ -259,7 +259,7 @@ class OptionsDialog(QDialog):
         field_combo.setEnabled(True)
         if dict_combo_text == u'不是字典字段' or dict_combo_text == 'Not dict field':
             field_combo.setEnabled(False)
-        elif dict_combo_text == _('MDX_SERVER'):
+        elif dict_combo_text == u'MDX服务器' or dict_combo_text == u'MDX server':
             field_combo.setEditText('http://')
             field_combo.setFocus(1)  # MouseFocusReason
         else:

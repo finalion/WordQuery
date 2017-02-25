@@ -1,9 +1,8 @@
 #-*- coding:utf-8 -*-
 import os
 import inspect
-
+from collections import defaultdict
 from wquery.utils import importlib
-
 from .base import Service, QueryResult, ServiceProfile, ServiceManager
 
 
@@ -40,3 +39,14 @@ class WebService(Service):
 
     def __init__(self):
         super(WebService, self).__init__()
+        self.cache = defaultdict(defaultdict)
+
+    def cache_this(self, result):
+        self.cache[self.word].update(result)
+        return result
+
+    def cached(self, key):
+        return (self.word in self.cache) and self.cache[self.word].has_key(key)
+
+    def cache_result(self, key):
+        return self.cache[self.word].get(key, '')
