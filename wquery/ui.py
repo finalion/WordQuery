@@ -118,10 +118,13 @@ class OptionsDialog(QDialog):
         scroll_area.setWidget(dicts_widget)
 
         self.main_layout.addWidget(scroll_area)
-        # add ok button
+        # add description of radio buttons AND ok button
+        bottom_layout = QHBoxLayout()
         btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         btnbox.accepted.connect(self.accept)
-        self.main_layout.addWidget(btnbox)
+        bottom_layout.addWidget(QLabel(_("RADIOS_DESC")))
+        bottom_layout.addWidget(btnbox)
+        self.main_layout.addLayout(bottom_layout)
         # self.signal_mapper_chk.mapped.connect(self.chkbox_state_changed)
         self.setLayout(self.main_layout)
 
@@ -234,6 +237,8 @@ class OptionsDialog(QDialog):
     def set_combo_options(self, cb, text):
         cb.setCurrentIndex(-1)
         for i in range(cb.count()):
+            if text == u'不是字典字段' or text == 'Not dict field':
+                cb.setCurrentIndex(0)
             if cb.itemText(i) == text:
                 cb.setCurrentIndex(i)
 
@@ -252,7 +257,7 @@ class OptionsDialog(QDialog):
     def fill_field_combo_options(self, field_combo, dict_combo_text, dict_combo_itemdata):
         field_combo.clear()
         field_combo.setEnabled(True)
-        if dict_combo_text == _('NOT_DICT_FIELD'):
+        if dict_combo_text == u'不是字典字段' or dict_combo_text == 'Not dict field':
             field_combo.setEnabled(False)
         elif dict_combo_text == _('MDX_SERVER'):
             field_combo.setEditText('http://')
@@ -296,13 +301,12 @@ class OptionsDialog(QDialog):
         """
         word_checked, dict_name, dict_path, fld_name, dict_field = kwargs.get('word_checked', False), kwargs.get(
             'dict', _('NOT_DICT_FIELD')), kwargs.get('dict_path', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
-        # if i == 0:
-        #     checked, dict_name = False, ""
 
         fldname_label = QRadioButton(fld_name)
         fldname_label.setMinimumSize(100, 0)
         fldname_label.setMaximumSize(100, 30)
         fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        fldname_label.setCheckable(True)
         fldname_label.clicked.connect(self.radio_btn_checked)
         fldname_label.setChecked(word_checked)
 
@@ -321,8 +325,8 @@ class OptionsDialog(QDialog):
         # field_combo.setMaximumSize(130, 30)
         field_combo.setEnabled((not word_checked) and (
             dict_name != _('NOT_DICT_FIELD')))
-        # field_combo.setEditable(True)
-        # field_combo.setEditText(dict_field if dict_name else "")
+        field_combo.setEditable(True)
+        field_combo.setEditText(dict_field)
         self.fill_field_combo_options(field_combo, dict_name, dict_path)
 
         # self.connect(dict_check, SIGNAL("clicked()"),

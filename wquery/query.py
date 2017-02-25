@@ -32,6 +32,34 @@ def update_progress_label(info):
 # update_progress_label.kwargs = defaultdict(str)
 
 
+def inspect_note(note):
+    '''
+    inspect the note, and get necessary input parameters
+    return word_ord: field index of the word in current note
+    return word: the word
+    return maps: dicts map of current note
+    '''
+    maps = config.get_maps(note.model()['id'])
+    for i, m in enumerate(maps):
+        if m.get('word_checked', False):
+            word_ord = i
+            break
+    else:
+        # if no field is checked to be the word field, default the
+        # first one.
+        word_ord = 0
+
+    def purify_word(word):
+        return word.lower().strip() if word else ''
+        # m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
+        # if m:
+        #     return m.group().strip()
+        # return ""
+
+    word = purify_word(note.fields[word_ord].decode('utf-8'))
+    return word_ord, word, maps
+
+
 def query_from_menu():
     browser = context['browser']
     if not browser:
@@ -48,24 +76,15 @@ def query_from_menu():
         update_progress_label.kwargs = defaultdict(str)
         mw.progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
-            word = purify_word(note.fields[0])
+            word_ord, word, maps = inspect_note(note)
             if not word:
                 continue
-            results = query_all_flds(word, config.get_maps(note.model()['id']))
-            for j, res in results.items():
-                if not isinstance(res, QueryResult):
+            results = query_all_flds(word_ord, word, maps)
+            for j, q in results.items():
+                if not isinstance(q, QueryResult):
                     continue
-                # showInfo(res.result)
-                result, js, css = res.result, res.js, res.css
-                # js process: add to template of the note model
-                if js:
-                    add_to_tmpl(note, js=js)
-                # css process: add css directly to the note field, that can ensure there
-                # will not exist css confusion
-                if css:
-                    result = css + result
-                note.fields[j] = result
-                note.flush()
+                update_note_field(note, j, q)
+                # note.flush()
             fields_number += len(results)
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
@@ -76,12 +95,17 @@ def query_from_menu():
         tooltip(u'%s %d %s' % (_('UPDATED'), len(notes), _('CARDS')))
 
 
-def purify_word(word):
-    return word.lower().strip() if word else ''
-    # m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
-    # if m:
-    #     return m.group().strip()
-    # return ""
+def update_note_field(note, fld_index, content):
+    content, js, css = content.result, content.js, content.css
+    # js process: add to template of the note model
+    if js:
+        add_to_tmpl(note, js=js)
+    # css process: add css directly to the note field, that can ensure there
+    # will not exist css confusion
+    if css:
+        content = css + content
+    note.fields[fld_index] = content
+    note.flush()
 
 
 def query_from_editor():
@@ -92,47 +116,25 @@ def query_from_editor():
     mw.progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
     fld_index = editor.currentField
-    maps = config.get_maps(editor.note.model()['id'])
-    for i, m in enumerate(maps):
-        if m.get('word_checked', False):
-            word_ord = i
-            break
-    else:
-        word_ord = 0
-    word = editor.note.fields[i].decode('utf-8')
-    word = purify_word(word)
+    word_ord, word, maps = inspect_note(editor.note)
     if not word:
         return
+    # if the focus falls into the word field, then query all note fields,
+    # else only query the current focused field.
     if fld_index == word_ord:
         results = query_all_flds(word_ord, word, maps)
         # showText(str(results))
         for i, q in results.items():
             if not isinstance(q, QueryResult):
                 continue
-            result, js, css = q.result, q.js, q.css
-            # js process: add to template of the note model
-            if js:
-                add_to_tmpl(editor.note, js=js)
-            # css process: add css directly to the note field, that can ensure there
-            # will not exist css confusion
-            if css:
-                result = css + result
-            editor.note.fields[i] = result
+            update_note_field(editor.note, i, q)
     else:
         q = query_single_fld(word, fld_index, maps)
         if not isinstance(q, QueryResult):
             return
-        result, js, css = q.result, q.js, q.css
-        # js process: add to template of the note model
-        if js:
-            add_to_tmpl(editor.note, js=js)
-        # css process: add css directly to the note field, that can ensure there
-        # will not exist css confusion
-        if css:
-            result = css + result
-        editor.note.fields[fld_index] = result
+        update_note_field(editor.note, fld_index, q)
 
-    editor.note.flush()
+    # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     mw.progress.finish()
     editor.setNote(editor.note, focus=True)
