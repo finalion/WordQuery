@@ -19,6 +19,7 @@ trans = {
     'DICTS': {'zh_CN': u'<b>字典</b>', 'en': '<b>Dict</b>'},
     'DICT_FIELDS': {'zh_CN': u'<b>字典字段</b>', 'en': '<b>Dict fields</b>'},
     'RADIOS_DESC': {'zh_CN': u'<b>单选框选中为待查询单词字段</b>', 'en': '<b>Word field needs to be selected.</b>'},
+    'NO_QUERY_WORD': {'zh_CN': u'查询字段无单词', 'en': 'Not word found in query field'}
 }
 
 

@@ -113,12 +113,13 @@ def query_from_editor():
     if not editor:
         return
     word, word_ord = None, 0
-    mw.progress.start(immediate=True, label="Querying...")
-    update_progress_label.kwargs = defaultdict(str)
     fld_index = editor.currentField
     word_ord, word, maps = inspect_note(editor.note)
     if not word:
+        showInfo(_("NO_QUERY_WORD"))
         return
+    mw.progress.start(immediate=True, label="Querying...")
+    update_progress_label.kwargs = defaultdict(str)
     # if the focus falls into the word field, then query all note fields,
     # else only query the current focused field.
     if fld_index == word_ord:
@@ -160,15 +161,15 @@ def add_to_tmpl(note, **kwargs):
 
 
 def query_single_fld(word, fld_index, maps):
-    assert fld_index > 0
-    if fld_index > len(maps):
-        return ""
+    # assert fld_index > 0
+    if fld_index >= len(maps):
+        return QueryResult()
     dict_type = maps[fld_index].get('dict', '').strip()
     dict_field = maps[fld_index].get('dict_field', '').strip()
     dict_path = maps[fld_index].get('dict_path', '').strip()
     update_progress_label(
         {'word': word, 'service_name': dict_type, 'field_name': dict_field})
-    if dict_type and dict_field:
+    if dict_type and dict_type != u'不是字典字段' and dict_type != 'Not dict field' and dict_field:
         if dict_path == 'webservice':
             service = web_service_manager.get_service(dict_type)
         if os.path.isabs(dict_path):
@@ -187,7 +188,7 @@ def query_all_flds(word_ord, word, maps):
         dict_path = each.get('dict_path', '').strip()
         # webservice manager 使用combobox的文本值选择服务
         # mdxservice manager 使用combox的itemData即字典路径选择服务
-        if dict_type and dict_field:
+        if dict_type and dict_type != u'不是字典字段' and dict_type != 'Not dict field' and dict_field:
             if dict_path == 'webservice':
                 worker = work_manager.get_worker(dict_type, 'web')
             if os.path.isabs(dict_path):

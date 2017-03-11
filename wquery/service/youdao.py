@@ -57,18 +57,17 @@ class Youdao(WebService):
             # fetch explanations
             explains = '<br>'.join([node.text for node in doc.findall(
                 ".//custom-translation/translation/content")])
-        except:
-            pass
-        finally:
             return self.cache_this({'phonetic': phonetics, 'explains': explains})
+        except:
+            return {'phonetic': phonetics, 'explains': explains}
 
     @export(u'音标', 0)
     def fld_phonetic(self):
-        return self.cache_result('phonetic') if self.cached('phonetic') else self._get_from_api(self.word)['phonetic']
+        return self.cache_result('phonetic') if self.cached('phonetic') else self._get_from_api()['phonetic']
 
     @export(u'基本释义', 1)
     def fld_explains(self):
-        return self.cache_result('explains') if self.cached('explains') else self._get_from_api(self.word)['explains']
+        return self.cache_result('explains') if self.cached('explains') else self._get_from_api()['explains']
 
     @with_styles(css=youdao_css, js=js)
     def _get_singledict(self, single_dict, lang='eng'):
