@@ -11,7 +11,6 @@ import aqt.models
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
 from service import web_service_manager, mdx_service_manager, start_services
-from mdict.mdict_query import IndexBuilder
 from .context import config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
@@ -40,7 +39,7 @@ class MdxManageDialog(QDialog):
         self.folders_lst.addItems(config.get_dirs())
         self.chk_use_filename = QCheckBox(_('CHECK_FILENAME_LABEL'))
         self.chk_export_media = QCheckBox(_('EXPORT_MEDIA'))
-        self.chk_use_filename.setChecked(config.use_mdx_filename())
+        self.chk_use_filename.setChecked(config.use_filename())
         self.chk_export_media.setChecked(config.export_media())
         chk_layout = QHBoxLayout()
         chk_layout.addWidget(self.chk_use_filename)

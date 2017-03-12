@@ -87,7 +87,7 @@ class Config(object):
     def get_mdxs(self):
         return self.data.get('mdxs', list())
 
-    def use_mdx_filename(self):
+    def use_filename(self):
         return self.data.get('use_mdx_filename', True)
 
     def export_media(self):

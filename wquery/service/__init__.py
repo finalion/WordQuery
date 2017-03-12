@@ -1,10 +1,10 @@
 #-*- coding:utf-8 -*-
 from .youdao import Youdao
 from .webservice import WebServiceManager
-from .mdxservice import MdxServiceManager
+from .localservice import LocalServiceManager
 
 web_service_manager = WebServiceManager()
-mdx_service_manager = MdxServiceManager()
+mdx_service_manager = LocalServiceManager()
 
 
 def start_services():
