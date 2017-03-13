@@ -199,7 +199,7 @@ class OptionsDialog(QDialog):
                                              dict_path=each.get('dict_path', ''))
                         break
                 else:
-                    self.add_dict_layout(j, fld_name=name)
+                    self.add_dict_layout(i, fld_name=name)
             else:
                 self.add_dict_layout(i, fld_name=name)
         self.setLayout(self.main_layout)
