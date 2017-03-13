@@ -210,5 +210,8 @@ class StardictService(LocalService):
     def fld_whole(self):
         if not self.builder:
             self.index()
-        result = self.builder[self.word]
-        return QueryResult(result=result) if result else self.default_result
+        try:
+            result = self.builder[self.word]
+            return QueryResult(result=result) if result else self.default_result
+        except:
+            return self.default_result
