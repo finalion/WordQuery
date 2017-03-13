@@ -131,9 +131,8 @@ def query_from_editor():
             update_note_field(editor.note, i, q)
     else:
         q = query_single_fld(word, fld_index, maps)
-        if not isinstance(q, QueryResult):
-            return
-        update_note_field(editor.note, fld_index, q)
+        if isinstance(q, QueryResult):
+            update_note_field(editor.note, fld_index, q)
 
     # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
@@ -175,7 +174,6 @@ def query_single_fld(word, fld_index, maps):
         if os.path.isabs(dict_path):
             service = mdx_service_manager.get_service(dict_path)
         return service.instance.active(dict_field, word)
-    return QueryResult()
 
 
 def query_all_flds(word_ord, word, maps):
