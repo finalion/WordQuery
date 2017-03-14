@@ -212,6 +212,10 @@ class StardictService(LocalService):
             self.index()
         try:
             result = self.builder[self.word]
+            result = result.strip()\
+                           .replace('\r\n', '<br />')\
+                           .replace('\r', '<br />')\
+                           .replace('\n', '<br />')
             return QueryResult(result=result) if result else self.default_result
         except:
             return self.default_result
