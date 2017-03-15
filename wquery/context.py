@@ -64,10 +64,9 @@ class Config(object):
                     self.last_model_id = self.data['%s_last' % self.pmname]
                     self.maps = self.data[self.last_model_id]
                     self.dirs = self.data.get('dirs', [])
-                    self.version = self.data.get('version')
+                    self.version = self.data.get('version', '0')
                     if VERSION != self.version:
-                        showInfo(VERSION + self.version)
-
+                        # showInfo(VERSION + self.version)
                         self.maps, self.last_model_id, self.dirs = list(),  0, list()
                 except Exception as e:
                     showInfo(str(e))
