@@ -108,9 +108,14 @@ class MdxService(LocalService):
             self.index()
         result = self.builder.mdx_lookup(self.word)
         if result:
-            ss = self.adapt_to_anki(result[0])
-            # open('d:\\wmu.html', 'wb').write(ss)
-            return QueryResult(result=ss[0], js=ss[1])
+            if result[0].upper().find("@@@LINK") > -1:
+                # redirect to a new word behind the equal symol.
+                self.word = result[0][8:].strip()
+                return self.fld_whole()
+            else:
+                ss = self.adapt_to_anki(result[0])
+                # open('d:\\wmu.html', 'wb').write(ss)
+                return QueryResult(result=ss[0], js=ss[1])
         return self.default_result
 
     def adapt_to_anki(self, html):
