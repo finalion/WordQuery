@@ -17,7 +17,7 @@ class Baicizhan(WebService):
     def __init__(self):
         super(Baicizhan, self).__init__()
 
-    def _get_from_api(self, lang='eng'):
+    def _get_from_api(self):
         url = "http://mall.baicizhan.com/ws/search?w={word}".format(
             word=self.word)
         try:
@@ -39,28 +39,32 @@ class Baicizhan(WebService):
 
     @export(u'音标', 1)
     def fld_explains(self):
-        return self.cache_result('accent') if self.cached('accent') else self._get_from_api(self.word)['accent']
+        return self.cache_result('accent') if self.cached('accent') else self._get_from_api()['accent']
 
     @export(u'图片', 2)
     def fld_img(self):
-        return self.cache_result('img') if self.cached('img') else self._get_from_api(self.word)['img']
+        url = self.cache_result('img') if self.cached(
+            'img') else self._get_from_api().get('img', '')
+        return '<img src="{}">'.format(url)
 
     @export(u'象形', 3)
     def fld_df(self):
-        return self.cache_result('df') if self.cached('df') else self._get_from_api(self.word)['df']
+        return self.cache_result('df') if self.cached('df') else self._get_from_api().get('df', '')
 
     @export(u'中文释义', 6)
     def fld_mean(self):
-        return self.cache_result('mean_cn') if self.cached('mean_cn') else self._get_from_api(self.word)['mean_cn']
+        return self.cache_result('mean_cn') if self.cached('mean_cn') else self._get_from_api().get('mean_cn', '')
 
     @export(u'英文例句', 4)
     def fld_st(self):
-        return self.cache_result('st') if self.cached('st') else self._get_from_api(self.word)['st']
+        return self.cache_result('st') if self.cached('st') else self._get_from_api().get('st', '')
 
     @export(u'例句翻译', 5)
     def fld_sttr(self):
-        return self.cache_result('sttr') if self.cached('sttr') else self._get_from_api(self.word)['sttr']
+        return self.cache_result('sttr') if self.cached('sttr') else self._get_from_api().get('sttr', '')
 
     @export(u'单词tv', 7)
     def fld_tv_url(self):
-        return self.cache_result('tv') if self.cached('tv') else self._get_from_api(self.word)['tv']
+        url = self.cache_result('tv') if self.cached(
+            'tv') else self._get_from_api().get('tv', '')
+        return '<video controls="controls" width="100%" height="auto" src={}></video>'.format(url)
