@@ -3,6 +3,7 @@ import urllib
 import urllib2
 import re
 import json
+import os
 from collections import defaultdict
 import xml.etree.ElementTree
 from .base import export, with_styles
@@ -32,14 +33,22 @@ class Baicizhan(WebService):
             word=self.word)
         audio_name = 'bcz_{word}.mp3'.format(word=self.word)
         try:
-            urllib.urlretrieve(url, 'bcz_{word}.mp3'.format(word=self.word))
+            urllib.urlretrieve(url, audio_name)
+            error = False
+            with open(audio_name, 'rb') as f:
+                if f.read().strip() == '{"error":"Document not found"}':
+                    # showInfo(os.path.abspath(audio_name))
+                    error = True
+            if error:
+                os.remove(audio_name)
+                return ''
             return '[sound: %s]' % audio_name
         except:
-            return url
+            return ''
 
     @export(u'音标', 1)
     def fld_explains(self):
-        return self.cache_result('accent') if self.cached('accent') else self._get_from_api()['accent']
+        return self.cache_result('accent') if self.cached('accent') else self._get_from_api().get('accent', '')
 
     @export(u'图片', 2)
     def fld_img(self):
