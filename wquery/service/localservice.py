@@ -108,9 +108,9 @@ class MdxService(LocalService):
             self.index()
         result = self.builder.mdx_lookup(self.word)
         if result:
-            if result[0].upper().find("@@@LINK") > -1:
+            if result[0].upper().find("@@@LINK=") > -1:
                 # redirect to a new word behind the equal symol.
-                self.word = result[0][8:].strip()
+                self.word = result[0][len("@@@LINK="):].strip()
                 return self.fld_whole()
             else:
                 ss = self.adapt_to_anki(result[0])
