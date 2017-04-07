@@ -42,13 +42,9 @@ class Youdaofr(WebService):
             # fetch explanations
             explains = '<br>'.join([node.text for node in doc.findall(
                 ".//custom-translation/translation/content")])
+            return self.cache_this({'phonetic': phonetics, 'explains': explains})
         except:
-            pass
-        finally:
-            result = {'phonetic': phonetics, 'explains': explains}
-            if phonetics or explains:
-                self.cache[self.word] = result
-            return result
+            return {'phonetic': phonetics, 'explains': explains}
 
     @export(u'基本释义', 1)
     def fld_explains(self):
@@ -60,7 +56,7 @@ class Youdaofr(WebService):
             self.word, single_dict, lang)
         try:
             result = urllib2.urlopen(url, timeout=5).read()
-            return '<div id="%s_contentWrp" class="content-wrp dict-container"><div id="%s" class="trans-container %s ">%s</div></div>' % (single_dict, single_dict, single_dict, result)
+            return '<div id="%s_contentWrp" class="content-wrp dict-container"><div id="%s" class="trans-container %s ">%s</div></div><div id="outer"><audio id="dictVoice" style="display: none"></audio></div>' % (single_dict, single_dict, single_dict, result)
         except:
             return ''
 

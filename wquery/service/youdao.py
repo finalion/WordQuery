@@ -72,7 +72,7 @@ class Youdao(WebService):
     @with_styles(css=youdao_css, js=js)
     def _get_singledict(self, single_dict, lang='eng'):
         url = "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (
-            self.word, single_dict, 'eng')
+            self.word, single_dict, lang)
         try:
             result = urllib2.urlopen(url, timeout=5).read()
             # replace <b></b> to <wb></wb>, avoiding style conflicts with the
