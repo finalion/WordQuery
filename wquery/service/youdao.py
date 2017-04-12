@@ -38,7 +38,7 @@ class Youdao(WebService):
         super(Youdao, self).__init__()
 
     def _get_from_api(self, lang='eng'):
-        url = "http://dict.youdao.com/fsearch?le=%s&q=%s" % (
+        url = "http://dict.youdao.com/fsearch?client=deskdict&keyfrom=chrome.extension&pos=-1&doctype=xml&xmlVersion=3.2&dogVersion=1.0&vendor=unknown&appVer=3.1.17.4208&le=%s&q=%s" % (
             lang, self.word)
         phonetics, explains = '', ''
         try:
@@ -49,7 +49,7 @@ class Youdao(WebService):
             symbol, uk_symbol, us_symbol = doc.findtext(".//phonetic-symbol"), doc.findtext(
                 ".//uk-phonetic-symbol"), doc.findtext(".//us-phonetic-symbol")
             if uk_symbol and us_symbol:
-                phonetics = 'UK [%s] US [%s]' % (uk_symbol, us_symbol)
+                phonetics = 'UK [%s]   US [%s]' % (uk_symbol, us_symbol)
             elif symbol:
                 phonetics = '[%s]' % symbol
             else:

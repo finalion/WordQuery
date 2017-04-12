@@ -62,7 +62,6 @@ class Service(object):
         self._exporters = self.get_exporters()
         self._fields, self._actions = zip(
             *self._exporters) if self._exporters else (None, None)
-        self.default_result = QueryResult(result="")
 
     @property
     def fields(self):
@@ -95,8 +94,8 @@ class Service(object):
             if action_label == each[0]:
                 result = each[1]()
                 # showInfo("%s %s" % (str(type(result)), str(result)))
-                return result if result else self.default_result  # avoid return None
-        return self.default_result
+                return result if result else QueryResult.default()  # avoid return None
+        return QueryResult.default()
 
 
 class QueryResult(MapDict):
@@ -109,7 +108,10 @@ class QueryResult(MapDict):
     def set_styles(self, **kwargs):
         for key, value in kwargs.items():
             self[key] = value
-# define decorators below----------------------------
+
+    @classmethod
+    def default(cls):
+        return QueryResult(result="")
 
 
 def register(label):

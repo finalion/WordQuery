@@ -23,6 +23,7 @@ trans = {
 }
 
 
-def _(key):
-    lang = 'zh_CN' if currentLang == 'zh_CN' else 'en'
+def _(key, lang=currentLang):
+    if lang != 'zh_CN':
+        lang = 'en'
     return trans[key][lang]

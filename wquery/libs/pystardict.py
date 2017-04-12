@@ -49,12 +49,9 @@ class _StarDictIfo(object):
     def __init__(self, dict_prefix, container):
 
         ifo_filename = '%s.ifo' % dict_prefix
-
         try:
             _file = open(ifo_filename)
         except IOError:
-            from aqt.utils import showInfo, showText
-            showInfo(ifo_filename)
             raise Exception('.ifo file does not exists')
 
         _file.readline()
@@ -134,7 +131,7 @@ class _StarDictIdx(object):
         try:
             file = open_file(idx_filename, idx_filename_gz)
         except Exception as e:
-            warn(e.message)
+            # warn(e.message)
             raise Exception('.idx file does not exists')
 
         self._file = file.read()
@@ -429,7 +426,7 @@ class Dictionary(dict):
 
     def __init__(self, filename, in_memory=False):
         """
-        filename_prefix: path to dictionary files without files extensions
+        filename: path to dictionary files, '.ifo' file
 
         initializes new StarDictDict instance from stardict dictionary files
         provided by filename_prefix
@@ -437,7 +434,7 @@ class Dictionary(dict):
 
         self.in_memory = in_memory
 
-        filename_prefix = Dictionary.get_filename_prefix(filename)
+        filename_prefix = os.path.splitext(filename)[0]
         # reading somedict.ifo
         self.ifo = _StarDictIfo(dict_prefix=filename_prefix, container=self)
 
@@ -456,8 +453,6 @@ class Dictionary(dict):
 
     @staticmethod
     def get_filename_prefix(path):
-        if os.path.splitext(path)[1] == ".gz":
-            path = os.path.splitext(path)[0]
         return os.path.splitext(path)[0]
 
     def __cmp__(self, y):
@@ -661,5 +656,5 @@ def open_file(regular, gz):
         try:
             return gzip.open(gz, 'rb')
         except IOError:
-            warn(e.message)
+            # warn(e.message)
             raise ValueError('Neither regular nor gz file exists')

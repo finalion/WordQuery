@@ -1,6 +1,6 @@
 # WordQuery 插件(anki)
 
-[Introduction in English](introduction.md) *contributed by Li Tan*.
+[Introduction in English](docs/introduction.md) *contributed by Li Tan*.
 
 ## 安装方式
      

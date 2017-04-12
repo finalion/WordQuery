@@ -32,7 +32,7 @@ class RemoteMdx(WebService):
             result, js = self.adapt_to_anki(req.read())
             return QueryResult(result=result, js=js)
         except:
-            return self.default_result
+            return QueryResult.default()
 
     def download_media_files(self, data):
         diff = data.difference(self.cache[self.url])

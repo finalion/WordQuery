@@ -16,6 +16,8 @@ from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
 from lang import _
 
+DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
+
 
 class MdxManageDialog(QDialog):
 
@@ -221,7 +223,7 @@ class OptionsDialog(QDialog):
 
     def dict_combobox_index_changed(self, index):
         # showInfo("combo index changed")
-        dict_combos, field_combos = self._get_combos(2)
+        dict_combos, field_combos = self._get_combos(ALL_COMBOS)
         assert len(dict_combos) == len(field_combos)
         for i, dict_combo in enumerate(dict_combos):
             # in windows and linux: the combo has current focus,
@@ -236,7 +238,7 @@ class OptionsDialog(QDialog):
     def set_combo_options(self, cb, text):
         cb.setCurrentIndex(-1)
         for i in range(cb.count()):
-            if text == u'不是字典字段' or text == 'Not dict field':
+            if text == _('NOT_DICT_FIELD', 'zh_CN') or text == _('NOT_DICT_FIELD', 'en'):
                 cb.setCurrentIndex(0)
             if cb.itemText(i) == text:
                 cb.setCurrentIndex(i)
@@ -256,9 +258,9 @@ class OptionsDialog(QDialog):
     def fill_field_combo_options(self, field_combo, dict_combo_text, dict_combo_itemdata):
         field_combo.clear()
         field_combo.setEnabled(True)
-        if dict_combo_text == u'不是字典字段' or dict_combo_text == 'Not dict field':
+        if dict_combo_text == _('NOT_DICT_FIELD', 'zh_CN') or dict_combo_text == _('NOT_DICT_FIELD', 'en'):
             field_combo.setEnabled(False)
-        elif dict_combo_text == u'MDX服务器' or dict_combo_text == u'MDX server':
+        elif dict_combo_text == _('MDX_SERVER', 'zh_CN') or dict_combo_text == _('MDX_SERVER', 'en'):
             field_combo.setEditText('http://')
             field_combo.setFocus(1)  # MouseFocusReason
         else:
@@ -279,7 +281,7 @@ class OptionsDialog(QDialog):
 
     def update_dicts_combo(self):
         # mdx_data: path, title
-        dict_cbs = self._get_combos(0)
+        dict_cbs = self._get_combos(DICT_COMBOS)
         for i, cb in enumerate(dict_cbs):
             current_text = cb.currentText()
             self.fill_dict_combo_options(cb)
@@ -287,7 +289,7 @@ class OptionsDialog(QDialog):
 
     def radio_btn_checked(self):
         rbs = self.findChildren(QRadioButton)
-        dict_cbs, fld_cbs = self._get_combos(2)
+        dict_cbs, fld_cbs = self._get_combos(ALL_COMBOS)
         for i, rb in enumerate(rbs):
             dict_cbs[i].setEnabled(not rb.isChecked())
             fld_cbs[i].setEnabled(
@@ -311,7 +313,8 @@ class OptionsDialog(QDialog):
 
         dict_combo = QComboBox()
         dict_combo.setMinimumSize(130, 0)
-        dict_combo.setFocusPolicy(0x1 | 0x2 | 0x8 | 0x4)
+        dict_combo.setFocusPolicy(
+            Qt.TabFocus | Qt.ClickFocus | Qt.StrongFocus | Qt.WheelFocus)
         dict_combo.setEnabled(not word_checked)
         dict_combo.currentIndexChanged.connect(
             self.dict_combobox_index_changed)
@@ -344,9 +347,9 @@ class OptionsDialog(QDialog):
     def _get_combos(self, flag):
         # 0 : dict_combox, 1:field_combox
         dict_combos = self.findChildren(QComboBox)
-        if flag in [0, 1]:
+        if flag in [DICT_COMBOS, DICT_FILED_COMBOS]:
             return dict_combos[flag::2]
-        if flag == 2:
+        if flag == ALL_COMBOS:
             return dict_combos[::2], dict_combos[1::2]
 
     def save(self):

@@ -23,11 +23,12 @@ def update_progress_label(info):
     update_progress_label.kwargs.update(info)
     words_number, fields_number = update_progress_label.kwargs.get(
         'words_number', 0), update_progress_label.kwargs.get('fields_number', 0)
-    number_info = '<br>%s %d %s, %d %s' % (_('QUERIED'), words_number, _(
-        'WORDS'), fields_number, _('FIELDS')) if words_number and fields_number else ""
+    number_info = '<br>%s %d %s, %d %s' % (_('QUERIED'), words_number,
+                                           _('WORDS'), fields_number, _('FIELDS')) \
+        if words_number and fields_number else ""
     mw.progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
-        update_progress_label.kwargs[
-            'word'], update_progress_label.kwargs['service_name'],
+        update_progress_label.kwargs['word'],
+        update_progress_label.kwargs['service_name'],
         update_progress_label.kwargs['field_name'], number_info))
 # update_progress_label.kwargs = defaultdict(str)
 
@@ -81,8 +82,7 @@ def query_from_menu():
                 continue
             results = query_all_flds(word_ord, word, maps)
             for j, q in results.items():
-                if not isinstance(q, QueryResult):
-                    continue
+                # showInfo("%s\n%s" % (word, q.result))
                 update_note_field(note, j, q)
                 # note.flush()
             fields_number += len(results)
@@ -96,6 +96,8 @@ def query_from_menu():
 
 
 def update_note_field(note, fld_index, content):
+    if not isinstance(content, QueryResult):
+        return
     content, js, css = content.result, content.js, content.css
     # js process: add to template of the note model
     if js:
@@ -126,13 +128,10 @@ def query_from_editor():
         results = query_all_flds(word_ord, word, maps)
         # showText(str(results))
         for i, q in results.items():
-            if not isinstance(q, QueryResult):
-                continue
             update_note_field(editor.note, i, q)
     else:
         q = query_single_fld(word, fld_index, maps)
-        if isinstance(q, QueryResult):
-            update_note_field(editor.note, fld_index, q)
+        update_note_field(editor.note, fld_index, q)
 
     # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))

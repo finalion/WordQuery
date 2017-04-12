@@ -26,12 +26,6 @@ class LocalServiceManager(ServiceManager):
             index_thread.wait(100)
         mw.progress.finish()
 
-    def get_service_cls(self, path):
-        if path.endswith('.mdx'):
-            return MdxService
-        if path.endswith('.idx') or path.endswith('.idx.gz'):
-            return StardictService
-
     class MdxIndexer(QThread):
 
         def __init__(self, manager, paths):
@@ -44,10 +38,8 @@ class LocalServiceManager(ServiceManager):
             for path in self.paths:
                 mw.progress.update(label="Index building...\n%s" %
                                    os.path.basename(path))
-                if path.endswith('.mdx'):
+                if MdxService.support(path):
                     IndexBuilder(path)
-                if path.endswith('.idx') or path.endswith('.idx.gz'):
-                    Dictionary(path, in_memory=True)
 
     def start_all(self):
         self.index_all()
@@ -59,13 +51,19 @@ class LocalServiceManager(ServiceManager):
     def get_available_services(self):
         self._dict_paths = []
         mdx_paths = config.get_dirs()
+        services = []
         for each in mdx_paths:
             for dirpath, dirnames, filenames in os.walk(each):
-                self._dict_paths.extend([os.path.join(dirpath, filename)
-                                         for filename in filenames if filename.endswith('.mdx') or filename.endswith('.idx') or filename.endswith('.idx.gz')])
+                for filename in filenames:
+                    dict_path = os.path.join(dirpath, filename)
+                    if MdxService.support(dict_path):
+                        services.append(ServiceProfile(dict_path, MdxService))
+                    if StardictService.support(dict_path):
+                        services.append(ServiceProfile(
+                            dict_path, StardictService))
                 # support mdx dictionary and stardict format dictionary
-        self._dict_paths = list(set(self._dict_paths))
-        return [ServiceProfile(dict_path, self.get_service_cls(dict_path)) for dict_path in self._dict_paths]
+        self._dict_paths = [service.label for service in services]
+        return services
 
     def update_services(self):
         '''
@@ -91,13 +89,18 @@ class MdxService(LocalService):
         #  {'builder':builder, 'files':[...static files list...]}
         self.cache = defaultdict(set)
 
+    @staticmethod
+    def support(dict_path):
+        if dict_path.endswith('.mdx'):
+            return True
+
     @property
     def title(self):
         if config.use_filename():
-            return os.path.basename(self.dict_path)[:-4]
+            return os.path.splitext(os.path.basename(self.dict_path))[0]
         else:
             self.builder._title = self.builder._title.strip().decode('utf-8')
-            return os.path.basename(self.dict_path)[:-4] if not self.builder._title or self.builder._title.startswith('Title') else self.builder._title
+            return os.path.splitext(os.path.basename(self.dict_path))[0] if not self.builder._title or self.builder._title.startswith('Title') else self.builder._title
 
     def index(self):
         self.builder = IndexBuilder(self.dict_path)
@@ -116,7 +119,7 @@ class MdxService(LocalService):
                 ss = self.adapt_to_anki(result[0])
                 # open('d:\\wmu.html', 'wb').write(ss)
                 return QueryResult(result=ss[0], js=ss[1])
-        return self.default_result
+        return QueryResult.default()
 
     def adapt_to_anki(self, html):
         """
@@ -201,26 +204,36 @@ class StardictService(LocalService):
         self.builder = None
         self.index()
 
+    @staticmethod
+    def support(dict_path):
+        if dict_path.endswith('.ifo'):
+            return True
+
     @property
     def title(self):
         if config.use_filename():
-            return os.path.basename(self.dict_path)[:-4]
-        else:
+            return os.path.splitext(os.path.basename(self.dict_path))[0]
+        elif self.builder:
             return self.builder.ifo.bookname.decode('utf-8')
+        else:
+            return ''
 
     def index(self):
-        self.builder = Dictionary(self.dict_path, in_memory=True)
+        try:
+            self.builder = Dictionary(self.dict_path, in_memory=True)
+        except:
+            pass
 
     @export(u"default", 0)
     def fld_whole(self):
         if not self.builder:
-            self.index()
+            return
         try:
             result = self.builder[self.word]
             result = result.strip()\
                            .replace('\r\n', '<br />')\
                            .replace('\r', '<br />')\
                            .replace('\n', '<br />')
-            return QueryResult(result=result) if result else self.default_result
+            return QueryResult(result=result) if result else QueryResult.default()
         except:
-            return self.default_result
+            return QueryResult.default()

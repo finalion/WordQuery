@@ -14,6 +14,7 @@ from BeautifulSoup import BeautifulSoup
 
 css = ''
 
+
 class Frdic(WebService):
 
     __register_label__ = u'法语助手'
@@ -28,26 +29,38 @@ class Frdic(WebService):
             result = {}
             html = urllib2.urlopen(url, timeout=5).read()
             soup = BeautifulSoup(html)
-            
+
             def _get_from_element(dict, key, soup, tag, id=None, class_=None):
                 baseURL = 'https://frdic.com/'
-                #element = soup.find(tag, id=id, class_=class_)  # bs4
-                if id: element = soup.find(tag, {"id": id})
-                if class_: element = soup.find(tag, {"class": class_})
-                if element: dict[key] = str(element)
-                if element: dict[key] = re.sub(r'href="/', 'href="' + baseURL, dict[key])
-                if element: dict[key] = re.sub(r'声明：.*。', '', dict[key])
+                # element = soup.find(tag, id=id, class_=class_)  # bs4
+                if id:
+                    element = soup.find(tag, {"id": id})
+                if class_:
+                    element = soup.find(tag, {"class": class_})
+                if element:
+                    dict[key] = str(element)
+                if element:
+                    dict[key] = re.sub(
+                        r'href="/', 'href="' + baseURL, dict[key])
+                if element:
+                    dict[key] = re.sub(r'声明：.*。', '', dict[key])
                 return dict
-                
+
             # '<span class="Phonitic">[bɔ̃ʒur]</span>'
-            result = _get_from_element(result, 'phonitic', soup, 'span', class_='Phonitic')
+            result = _get_from_element(
+                result, 'phonitic', soup, 'span', class_='Phonitic')
             # '<div id='FCChild'  class='expDiv'>'
-            result = _get_from_element(result, 'fccf', soup, 'div', id='FCChild') # 法汉-汉法词典
-            result = _get_from_element(result, 'example', soup, 'div', id='LJChild') # 法语例句库
-            result = _get_from_element(result, 'syn', soup, 'div', id='SYNChild') # 近义、反义、派生词典
-            result = _get_from_element(result, 'ff', soup, 'div', id='FFChild') # 法法词典
-            result = _get_from_element(result, 'fe', soup, 'div', id='FEChild') # 法英词典
-            
+            result = _get_from_element(
+                result, 'fccf', soup, 'div', id='FCChild')  # 法汉-汉法词典
+            result = _get_from_element(
+                result, 'example', soup, 'div', id='LJChild')  # 法语例句库
+            result = _get_from_element(
+                result, 'syn', soup, 'div', id='SYNChild')  # 近义、反义、派生词典
+            result = _get_from_element(
+                result, 'ff', soup, 'div', id='FFChild')  # 法法词典
+            result = _get_from_element(
+                result, 'fe', soup, 'div', id='FEChild')  # 法英词典
+
             return self.cache_this(result)
         except Exception as e:
             return {}

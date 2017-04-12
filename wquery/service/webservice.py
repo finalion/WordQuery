@@ -14,24 +14,21 @@ class WebServiceManager(ServiceManager):
     def get_available_services(self):
         services = []
         mypath = os.path.dirname(os.path.realpath(__file__))
-        files = [f for f in os.listdir(mypath) if f not in (
-            '__init__.py', 'base.py', 'importlib.py') and not f.endswith('.pyc')]
+        files = [f for f in os.listdir(mypath)
+                 if f not in ('__init__.py', 'base.py', 'remotemdx.py', 'localservice.py', 'webservice.py')
+                 and not f.endswith('.pyc')]
 
         for f in files:
             # try:
-            module = importlib.import_module('.%s' % f[:-3], __package__)
+            module = importlib.import_module(
+                '.%s' % os.path.splitext(f)[0], __package__)
             for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
-                if issubclass(cls, WebService):
-                    label = getattr(cls, '__register_label__', None)
-                    if label:
-                        sp = ServiceProfile(label, cls)
-                        if sp not in services:
-                            services.append(sp)
+                if issubclass(cls, WebService) and cls is not WebService:
+                    label = getattr(cls, '__register_label__', cls.__name__)
+                    sp = ServiceProfile(label, cls)
+                    if sp not in services:
+                        services.append(sp)
         return services
-        # except ImportError:
-        #     showInfo('Import Error')
-        #     pass
-        # showInfo(str(self.services))
 
 
 class WebService(Service):

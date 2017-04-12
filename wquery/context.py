@@ -5,7 +5,7 @@ from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from .odds import get_model_byId, get_ord_from_fldname
 import cPickle
-from aqt.utils import shortcut, showInfo
+from aqt.utils import shortcut, showInfo, showText
 from lang import _
 
 VERSION = '20170225000'
