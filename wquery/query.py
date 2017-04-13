@@ -12,7 +12,7 @@ from aqt import mw
 from aqt.qt import QObject, pyqtSignal, pyqtSlot, QThread
 from aqt.utils import showInfo,  tooltip, showText
 from .context import context, config
-from .service import web_service_manager, mdx_service_manager
+from .service import web_service_manager, local_service_manager
 from .utils import Queue, Empty
 from .service.base import QueryResult
 from lang import _
@@ -171,7 +171,7 @@ def query_single_fld(word, fld_index, maps):
         if dict_path == 'webservice':
             service = web_service_manager.get_service(dict_type)
         if os.path.isabs(dict_path):
-            service = mdx_service_manager.get_service(dict_path)
+            service = local_service_manager.get_service(dict_path)
         return service.instance.active(dict_field, word)
 
 
@@ -233,7 +233,7 @@ class QueryWorker(QThread):
         if type == 'web':
             self.service = web_service_manager.get_service(service_name)
         if type == 'mdx':
-            self.service = mdx_service_manager.get_service(service_name)
+            self.service = local_service_manager.get_service(service_name)
         self.result_ready.connect(handle_results)
         self.progress_update.connect(update_progress_label)
 

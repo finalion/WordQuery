@@ -1,7 +1,13 @@
 #-*- coding:utf-8 -*-
 from anki.hooks import addHook
-# update all fields?
+from aqt.utils import shortcut, showInfo
+
+############## other config here ##################
+# update all fields ignoring the original field content
 update_all = False
+# shortcut
+shortcut = 'Ctrl+Q'
+###################################################
 
 
 def start_here():
@@ -13,5 +19,6 @@ def start_here():
         wquery.setup_browser_menu()
         wquery.setup_context_menu()
     wquery.start_services()
+    wquery.set_shortcut(shortcut)
 
 addHook("profileLoaded", start_here)

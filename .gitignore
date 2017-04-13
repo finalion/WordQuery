@@ -93,5 +93,4 @@ ENV/
 test.py
 dicts/
 *wqcfg
-bing.py
 .vscode/

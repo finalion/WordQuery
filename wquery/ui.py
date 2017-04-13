@@ -10,7 +10,7 @@ from aqt.qt import *
 import aqt.models
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
-from service import web_service_manager, mdx_service_manager, start_services
+from service import web_service_manager, local_service_manager, start_services
 from .context import config
 from .odds import get_model_byId, get_ord_from_fldname
 from utils import MapDict
@@ -19,7 +19,7 @@ from lang import _
 DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
 
 
-class MdxManageDialog(QDialog):
+class FoldersManageDialog(QDialog):
 
     def __init__(self, parent=0):
         QDialog.__init__(self, parent)
@@ -82,7 +82,7 @@ class MdxManageDialog(QDialog):
                 for i in range(self.folders_lst.count())]
 
     def save(self):
-        config.save_mdxmanage_dialog(self)
+        config.save_fm_dialog(self)
 
 
 class OptionsDialog(QDialog):
@@ -102,7 +102,7 @@ class OptionsDialog(QDialog):
         models_layout = QHBoxLayout()
         # add buttons
         mdx_button = QPushButton(_('DICTS_FOLDERS'))
-        mdx_button.clicked.connect(self.show_mdx_dialog)
+        mdx_button.clicked.connect(self.show_fm_dialog)
         self.models_button = QPushButton(_('CHOOSE_NOTE_TYPES'))
         self.models_button.clicked.connect(self.btn_models_pressed)
         models_layout.addWidget(mdx_button)
@@ -138,16 +138,16 @@ class OptionsDialog(QDialog):
                 # build fields -- dicts layout
                 self.build_layout(model)
 
-    def show_mdx_dialog(self):
-        mdx_dialog = MdxManageDialog(self)
-        mdx_dialog.activateWindow()
-        mdx_dialog.raise_()
-        if mdx_dialog.exec_() == QDialog.Accepted:
-            dict_paths = mdx_dialog.dict_paths
+    def show_fm_dialog(self):
+        fm_dialog = FoldersManageDialog(self)
+        fm_dialog.activateWindow()
+        fm_dialog.raise_()
+        if fm_dialog.exec_() == QDialog.Accepted:
+            dict_paths = fm_dialog.dict_paths
             # showInfo(str(dict_paths))
             # index_builders = index_mdx(dict_paths)
-            mdx_dialog.save()
-            mdx_service_manager.update_services()
+            fm_dialog.save()
+            local_service_manager.update_services()
             self.update_dicts_combo()
 
     def accept(self):
@@ -158,14 +158,6 @@ class OptionsDialog(QDialog):
         model = self.show_models()
         if model:
             self.build_layout(model)
-
-    # def chkbox_state_changed(self, fld_number):
-    #     dict_checks = self.findChildren(QCheckBox)
-    #     dict_combos, field_combos = self._get_combos(2)
-    #     dict_combos[fld_number].setEnabled(
-    #         dict_checks[fld_number].checkState() != 0)
-    #     field_combos[fld_number].setEnabled(
-    #         dict_checks[fld_number].checkState() != 0)
 
     def clear_layout(self, layout):
         if layout is not None:
@@ -195,10 +187,12 @@ class OptionsDialog(QDialog):
             if maps:
                 for j, each in enumerate(maps):
                     if each.get('fld_ord', -1) == ord:
-                        self.add_dict_layout(j, fld_name=name, word_checked=each['word_checked'],
-                                             dict=each['dict'], dict_field=each[
-                                                 'dict_field'],
-                                             dict_path=each.get('dict_path', ''))
+                        self.add_dict_layout(j, fld_name=name,
+                                             word_checked=each['word_checked'],
+                                             dict=each['dict'],
+                                             dict_field=each['dict_field'],
+                                             dict_path=each['dict_path']
+                                             )
                         break
                 else:
                     self.add_dict_layout(i, fld_name=name)
@@ -247,7 +241,7 @@ class OptionsDialog(QDialog):
         dict_combo.clear()
         dict_combo.addItem(_('NOT_DICT_FIELD'))
         dict_combo.insertSeparator(dict_combo.count())
-        for each in mdx_service_manager.services:
+        for each in local_service_manager.services:
             # combo_data.insert("data", each.label)
             dict_combo.addItem(each.title, userData=each.label)
         dict_combo.insertSeparator(dict_combo.count())
@@ -270,7 +264,7 @@ class OptionsDialog(QDialog):
                 current_service = web_service_manager.get_service(
                     dict_combo_text)
             elif os.path.isabs(dict_combo_itemdata):
-                current_service = mdx_service_manager.get_service(
+                current_service = local_service_manager.get_service(
                     dict_combo_itemdata)
             # problem
             if current_service and current_service.instance.fields:

@@ -1,23 +1,25 @@
 #-*- coding:utf-8 -*-
 import os
+import cPickle
 from collections import defaultdict
 from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QRadioButton
-from .odds import get_model_byId, get_ord_from_fldname
-import cPickle
 from aqt.utils import shortcut, showInfo, showText
+from wquery.utils import MapDict
+from .odds import get_model_byId, get_ord_from_fldname
 from lang import _
 
 VERSION = '20170225000'
+CONFIG_FILENAME = '.wqcfg'
 
 
 class Config(object):
 
     def __init__(self, window):
         self.path = os.path.join(os.path.dirname(
-            os.path.realpath(__file__)), '.wqcfg')
+            os.path.realpath(__file__)), CONFIG_FILENAME)
         self.window = window
-        self.data = dict()
+        self.data = MapDict()
         self.version = '0'
         self.read()
 
@@ -40,21 +42,13 @@ class Config(object):
         self.data['version'] = VERSION
         with open(self.path, 'wb') as f:
             cPickle.dump(self.data, f)
-        # showInfo(str([label.text() for label in labels[3:]]))
 
-    def save_mdxmanage_dialog(self, dialog):
-        # {'dirs': []}
-        # showInfo(str(dialog.dirs))
+    def save_fm_dialog(self, dialog):
         self.data['dirs'] = dialog.dirs
-        self.data['mdxs'] = dialog.dict_paths
-        self.data['use_mdx_filename'] = dialog.chk_use_filename.isChecked()
+        self.data['use_filename'] = dialog.chk_use_filename.isChecked()
         self.data['export_media'] = dialog.chk_export_media.isChecked()
         with open(self.path, 'wb') as f:
             cPickle.dump(self.data, f)
-
-    def save_mdxs(self):
-        # {'mdx': [(dict_path, dict_name), ]}
-        pass
 
     def read(self):
         try:
@@ -62,43 +56,30 @@ class Config(object):
                 self.data = cPickle.load(f)
                 try:
                     self.last_model_id = self.data['%s_last' % self.pmname]
-                    self.maps = self.data[self.last_model_id]
+                    self.last_model_maps = self.data[self.last_model_id]
                     self.dirs = self.data.get('dirs', [])
                     self.version = self.data.get('version', '0')
                     if VERSION != self.version:
                         # showInfo(VERSION + self.version)
-                        self.maps, self.last_model_id, self.dirs = list(),  0, list()
+                        self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
                 except Exception as e:
                     showInfo(str(e))
-                    self.maps, self.last_model_id, self.dirs = list(),  0, list()
-
+                    self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
         except:
-            self.maps, self.last_model_id, self.dirs = list(),  0, list()
-        # showInfo(str(self.maps))
+            self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
 
     def get_maps(self, model_id):
-        # showInfo(str(self.data[self.pmname]))
         return self.data.get(model_id, list())
 
     def get_dirs(self):
         return self.data.get('dirs', list())
 
-    def get_mdxs(self):
-        return self.data.get('mdxs', list())
-
     def use_filename(self):
-        return self.data.get('use_mdx_filename', True)
+        return self.data.get('use_filename', True)
 
     def export_media(self):
         return self.data.get('export_media', False)
 
-maps = list()
-# last_model_id  {pm_name:id}
-last_model_id = -1000
-# [model_id: maps]
-mappings = defaultdict(list)
-
 # action context: editor? browser?
 context = defaultdict(int)
-
 config = Config(mw)

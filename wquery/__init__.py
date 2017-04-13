@@ -9,13 +9,18 @@ from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
-import cPickle
-from collections import defaultdict
 from wquery.ui import show_options, start_services
 from wquery.query import query_from_menu, query_from_editor
 from wquery.context import context, config
 
+
 have_setup = False
+my_shortcut = ''
+
+
+def set_shortcut(key_sequence):
+    global my_shortcut
+    my_shortcut = key_sequence
 
 
 def add_query_button(self):
@@ -24,8 +29,9 @@ def add_query_button(self):
     context['editor'] = self.editor
     self.queryButton = bb.addButton(_(u"Query"), ar)
     self.queryButton.clicked.connect(query_from_editor)
-    self.queryButton.setShortcut(QKeySequence("Ctrl+Q"))
-    self.queryButton.setToolTip(shortcut(_(u"Query (shortcut: ctrl+q)")))
+    self.queryButton.setShortcut(QKeySequence(my_shortcut))
+    self.queryButton.setToolTip(
+        shortcut(_(u"Query (shortcut: %s)" % my_shortcut)))
 
 
 def setup_browser_menu():
@@ -36,7 +42,7 @@ def setup_browser_menu():
         browser.form.menubar.addMenu(menu)
         action_queryselected = QAction("Query Selected", browser)
         action_queryselected.triggered.connect(query_from_menu)
-        action_queryselected.setShortcut(QKeySequence("Ctrl+Q"))
+        action_queryselected.setShortcut(QKeySequence(my_shortcut))
         action_options = QAction("Options", browser)
         action_options.triggered.connect(show_options)
         menu.addAction(action_queryselected)
@@ -61,7 +67,7 @@ def setup_context_menu():
             needs_separator = True
             # menu.addMenu(submenu)
     anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
-    shortcuts = [("Ctrl+Q", query), ]
+    shortcuts = [(my_shortcut, query), ]
     anki.hooks.addHook('setupEditorShortcuts', shortcuts)
 
 
