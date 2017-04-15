@@ -5,7 +5,6 @@ from collections import defaultdict
 from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from aqt.utils import shortcut, showInfo, showText
-from wquery.utils import MapDict
 from .odds import get_model_byId, get_ord_from_fldname
 from lang import _
 
@@ -19,7 +18,7 @@ class Config(object):
         self.path = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), CONFIG_FILENAME)
         self.window = window
-        self.data = MapDict()
+        self.data = dict()
         self.version = '0'
         self.read()
 
