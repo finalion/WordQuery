@@ -5,13 +5,13 @@ import urllib
 import urllib2
 import urlparse
 from collections import defaultdict
+
 import aqt
 from aqt import mw
 from aqt.qt import *
 from aqt.utils import showInfo, showText
-from .base import QueryResult
-from .base import export, with_styles
-from .webservice import WebService
+
+from .base import QueryResult, WebService, export, with_styles
 
 
 class RemoteMdx(WebService):

@@ -1,13 +1,14 @@
 #-*- coding:utf-8 -*-
+import json
+import re
 import urllib
 import urllib2
-import re
-import cookielib
-import json
 from collections import defaultdict
-from .base import export, with_styles
-from .webservice import WebService
+
+import cookielib
 from aqt.utils import showInfo, showText
+
+from .base import WebService, export, with_styles
 
 
 class MiniDict(WebService):

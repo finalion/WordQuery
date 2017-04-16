@@ -1,14 +1,15 @@
 #-*- coding:utf-8 -*-
-import urllib
-import urllib2
-import re
 import json
 import os
-from collections import defaultdict
+import re
+import urllib
+import urllib2
 import xml.etree.ElementTree
-from .base import export, with_styles
-from .webservice import WebService
+from collections import defaultdict
+
 from aqt.utils import showInfo
+
+from .base import WebService, export, with_styles
 
 
 class Baicizhan(WebService):

@@ -1,7 +1,6 @@
 #-*- coding:utf-8 -*-
 from anki.lang import currentLang
 trans = {
-
     'CHECK_FILENAME_LABEL': {'zh_CN': u'使用文件名作为标签', 'en': u'Use filename as dict label', 'fr': r"Utiliser le nom de fichier en tant qu'étiquette de dico"},
     'EXPORT_MEDIA': {'zh_CN': u'导出媒体文件', 'en': u'Export media files', 'fr': u'Exporter les fichiers multimédias'},
     'DICTS_FOLDERS': {'zh_CN': u'字典文件夹', 'en': u'Dict folders', 'fr': u'Dossiers dico'},
@@ -27,3 +26,7 @@ def _(key, lang=currentLang):
     if lang != 'zh_CN' and lang != 'en' and lang != 'fr':
         lang = 'en' # fallback
     return trans[key][lang]
+
+
+def _sl(key):
+    return trans[key].values()

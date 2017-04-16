@@ -1,13 +1,14 @@
 #-*- coding:utf-8 -*-
+import re
 import urllib
 import urllib2
-import re
 from collections import defaultdict
-from .base import export, with_styles
-from .webservice import WebService
+
 from aqt.utils import showInfo
-from cookielib import CookieJar
 from BeautifulSoup import BeautifulSoup
+from cookielib import CookieJar
+
+from .base import WebService, export, with_styles
 
 
 class Bing(WebService):

@@ -1,15 +1,16 @@
 #-*- coding:utf-8 -*-
-import os
 import cPickle
+import os
 from collections import defaultdict
+
 from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from aqt.utils import shortcut, showInfo, showText
-from wquery.utils import MapDict
-from .odds import get_model_byId, get_ord_from_fldname
-from lang import _
 
-VERSION = '20170225000'
+from .lang import _
+from .odds import get_model_byId, get_ord_from_fldname
+
+VERSION = '20170416001'
 CONFIG_FILENAME = '.wqcfg'
 
 
@@ -19,7 +20,7 @@ class Config(object):
         self.path = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), CONFIG_FILENAME)
         self.window = window
-        self.data = MapDict()
+        self.data = dict()
         self.version = '0'
         self.read()
 
@@ -32,9 +33,12 @@ class Config(object):
             QComboBox), dialog.findChildren(QRadioButton)
         dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
         model = get_model_byId(self.window.col.models, self.last_model_id)
-        maps = [{"word_checked": label.isChecked(), "dict": dict_cb.currentText().strip(),
-                 "dict_path": dict_cb.itemData(dict_cb.currentIndex()) if dict_cb.itemData(dict_cb.currentIndex()) else "",
-                 "dict_field": field_cb.currentText().strip(), "fld_ord": get_ord_from_fldname(model, label.text())}
+        maps = [{"word_checked": label.isChecked(),
+                 "dict": dict_cb.currentText().strip(),
+                 "dict_unique": dict_cb.itemData(dict_cb.currentIndex()) if dict_cb.itemData(dict_cb.currentIndex()) else "",
+                 "dict_field": field_cb.currentText().strip(),
+                 "fld_ord": get_ord_from_fldname(model, label.text()
+                                                 )}
                 for (dict_cb, field_cb, label) in zip(dict_cbs, field_cbs, labels)]
         # profilename: {'last':last_model_id, '..model_id..':[..maps..]}
         self.data[self.last_model_id] = maps

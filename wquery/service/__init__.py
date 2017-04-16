@@ -1,12 +1,8 @@
 #-*- coding:utf-8 -*-
-from .youdao import Youdao
-from .webservice import WebServiceManager
-from .localservice import LocalServiceManager
+from .manager import ServiceManager
 
-web_service_manager = WebServiceManager()
-local_service_manager = LocalServiceManager()
+service_manager = ServiceManager()
 
 
 def start_services():
-    web_service_manager.start_all()
-    local_service_manager.start_all()
+    service_manager.start_all()
