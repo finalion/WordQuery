@@ -1,12 +1,14 @@
 #-*- coding:utf-8 -*-
+import re
 import urllib
 import urllib2
-import re
-from collections import defaultdict
 import xml.etree.ElementTree
-from .base import export, with_styles
-from .webservice import WebService
+from collections import defaultdict
+
 from aqt.utils import showInfo
+
+from .base import WebService, export, with_styles
+
 
 youdao_css = '''
     <style type="text/css">

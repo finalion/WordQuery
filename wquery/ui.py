@@ -1,20 +1,23 @@
 #-*- coding:utf-8 -*-
-import sys
-reload(sys)
-sys.setdefaultencoding('utf8')
 import os
+import sys
+
 import anki
 import aqt
+import aqt.models
 from aqt import mw
 from aqt.qt import *
-import aqt.models
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
-from service import web_service_manager, local_service_manager, start_services
+
 from .context import config
+from .lang import _, _sl
 from .odds import get_model_byId, get_ord_from_fldname
-from utils import MapDict
-from lang import _
+from .service import service_manager
+from .utils import MapDict
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
 
@@ -128,15 +131,14 @@ class OptionsDialog(QDialog):
         self.main_layout.addLayout(bottom_layout)
         # self.signal_mapper_chk.mapped.connect(self.chkbox_state_changed)
         self.setLayout(self.main_layout)
-
-        # init saved data
+        # init from saved data
         if config.last_model_id:
             model = get_model_byId(mw.col.models, config.last_model_id)
             if model:
                 self.models_button.setText(
                     u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  model['name']))
                 # build fields -- dicts layout
-                self.build_layout(model)
+                self.build_mappings_layout(model)
 
     def show_fm_dialog(self):
         fm_dialog = FoldersManageDialog(self)
@@ -144,11 +146,14 @@ class OptionsDialog(QDialog):
         fm_dialog.raise_()
         if fm_dialog.exec_() == QDialog.Accepted:
             dict_paths = fm_dialog.dict_paths
-            # showInfo(str(dict_paths))
-            # index_builders = index_mdx(dict_paths)
             fm_dialog.save()
-            local_service_manager.update_services()
-            self.update_dicts_combo()
+            # update local services
+            service_manager.update_services()
+            # update_dicts_combo
+            dict_cbs = self._get_combos(DICT_COMBOS)
+            for i, cb in enumerate(dict_cbs):
+                current_text = cb.currentText()
+                self.fill_dict_combo_options(cb, current_text)
 
     def accept(self):
         self.save()
@@ -157,7 +162,7 @@ class OptionsDialog(QDialog):
     def btn_models_pressed(self):
         model = self.show_models()
         if model:
-            self.build_layout(model)
+            self.build_mappings_layout(model)
 
     def clear_layout(self, layout):
         if layout is not None:
@@ -169,7 +174,7 @@ class OptionsDialog(QDialog):
                 else:
                     self.clear_layout(item.layout())
 
-    def build_layout(self, model):
+    def build_mappings_layout(self, model):
         self.clear_layout(self.dicts_layout)
         label1 = QLabel("")
         label1.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
@@ -191,7 +196,7 @@ class OptionsDialog(QDialog):
                                              word_checked=each['word_checked'],
                                              dict=each['dict'],
                                              dict_field=each['dict_field'],
-                                             dict_path=each['dict_path']
+                                             dict_unique=each['dict_unique']
                                              )
                         break
                 else:
@@ -229,57 +234,49 @@ class OptionsDialog(QDialog):
                     field_combos[i], dict_combo.currentText(), dict_combo.itemData(index))
                 break
 
-    def set_combo_options(self, cb, text):
-        cb.setCurrentIndex(-1)
-        for i in range(cb.count()):
-            if text == _('NOT_DICT_FIELD', 'zh_CN') or text == _('NOT_DICT_FIELD', 'en'):
-                cb.setCurrentIndex(0)
-            if cb.itemText(i) == text:
-                cb.setCurrentIndex(i)
-
-    def fill_dict_combo_options(self, dict_combo):
+    def fill_dict_combo_options(self, dict_combo, current_text):
         dict_combo.clear()
         dict_combo.addItem(_('NOT_DICT_FIELD'))
         dict_combo.insertSeparator(dict_combo.count())
-        for each in local_service_manager.services:
+        for service in service_manager.local_services:
             # combo_data.insert("data", each.label)
-            dict_combo.addItem(each.title, userData=each.label)
+            dict_combo.addItem(
+                service.title, userData=service.unique)
         dict_combo.insertSeparator(dict_combo.count())
-        for s in web_service_manager.services:
-            # combo_data.insert("data", "webservice")
-            dict_combo.addItem(s.label, userData="webservice")
+        for service in service_manager.web_services:
+            dict_combo.addItem(
+                service.title, userData=service.unique)
+
+        def set_dict_combo_index():
+            dict_combo.setCurrentIndex(-1)
+            for i in range(dict_combo.count()):
+                if current_text in _sl('NOT_DICT_FIELD'):
+                    dict_combo.setCurrentIndex(0)
+                if dict_combo.itemText(i) == current_text:
+                    dict_combo.setCurrentIndex(i)
+
+        set_dict_combo_index()
 
     def fill_field_combo_options(self, field_combo, dict_combo_text, dict_combo_itemdata):
         field_combo.clear()
         field_combo.setEnabled(True)
-        if dict_combo_text == _('NOT_DICT_FIELD', 'zh_CN') or dict_combo_text == _('NOT_DICT_FIELD', 'en'):
+        if dict_combo_text in _sl('NOT_DICT_FIELD'):
             field_combo.setEnabled(False)
-        elif dict_combo_text == _('MDX_SERVER', 'zh_CN') or dict_combo_text == _('MDX_SERVER', 'en'):
+        elif dict_combo_text in _sl('MDX_SERVER'):
             field_combo.setEditText('http://')
-            field_combo.setFocus(1)  # MouseFocusReason
+            field_combo.setFocus(Qt.MouseFocusReason)  # MouseFocusReason
         else:
             field_text = field_combo.currentText()
             current_service = None
-            if dict_combo_itemdata == 'webservice':
-                current_service = web_service_manager.get_service(
-                    dict_combo_text)
-            elif os.path.isabs(dict_combo_itemdata):
-                current_service = local_service_manager.get_service(
-                    dict_combo_itemdata)
+            service_unique = dict_combo_itemdata
+            current_service = service_manager.get_service(service_unique)
+
             # problem
-            if current_service and current_service.instance.fields:
-                for each in current_service.instance.fields:
+            if current_service and current_service.fields:
+                for each in current_service.fields:
                     field_combo.addItem(each)
                     if each == field_text:
                         field_combo.setEditText(field_text)
-
-    def update_dicts_combo(self):
-        # mdx_data: path, title
-        dict_cbs = self._get_combos(DICT_COMBOS)
-        for i, cb in enumerate(dict_cbs):
-            current_text = cb.currentText()
-            self.fill_dict_combo_options(cb)
-            self.set_combo_options(cb, current_text)
 
     def radio_btn_checked(self):
         rbs = self.findChildren(QRadioButton)
@@ -294,8 +291,12 @@ class OptionsDialog(QDialog):
         kwargs:
         word_checked  dict  fld_name dict_field
         """
-        word_checked, dict_name, dict_path, fld_name, dict_field = kwargs.get('word_checked', False), kwargs.get(
-            'dict', _('NOT_DICT_FIELD')), kwargs.get('dict_path', ''), kwargs.get('fld_name', ''),  kwargs.get('dict_field', '')
+        word_checked, dict_name, dict_unique, fld_name, dict_field =\
+            kwargs.get('word_checked', False), \
+            kwargs.get('dict', _('NOT_DICT_FIELD')), \
+            kwargs.get('dict_unique', ''),\
+            kwargs.get('fld_name', ''), \
+            kwargs.get('dict_field', '')
 
         fldname_label = QRadioButton(fld_name)
         fldname_label.setMinimumSize(100, 0)
@@ -312,8 +313,7 @@ class OptionsDialog(QDialog):
         dict_combo.setEnabled(not word_checked)
         dict_combo.currentIndexChanged.connect(
             self.dict_combobox_index_changed)
-        self.fill_dict_combo_options(dict_combo)
-        self.set_combo_options(dict_combo, dict_name)
+        self.fill_dict_combo_options(dict_combo, dict_name)
         # dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
@@ -323,12 +323,11 @@ class OptionsDialog(QDialog):
             dict_name != _('NOT_DICT_FIELD')))
         field_combo.setEditable(True)
         field_combo.setEditText(dict_field)
-        self.fill_field_combo_options(field_combo, dict_name, dict_path)
+        self.fill_field_combo_options(field_combo, dict_name, dict_unique)
 
         # self.connect(dict_check, SIGNAL("clicked()"),
         #              self.signal_mapper_chk, SLOT("map()"))
         # self.signal_mapper_chk.setMapping(dict_check, i)
-        # self.dicts_layout.addWidget(dict_check, i, 0)
         self.dicts_layout.addWidget(fldname_label, i + 1, 0)
         self.dicts_layout.addWidget(dict_combo, i + 1, 1)
         self.dicts_layout.addWidget(field_combo, i + 1, 2)

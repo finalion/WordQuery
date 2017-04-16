@@ -1,14 +1,15 @@
 #-*- coding:utf-8 -*-
+import base64
+import re
 import urllib
 import urllib2
-import re
 from collections import defaultdict
-from .base import export, with_styles
-from .webservice import WebService
-from aqt.utils import showInfo
 
-import base64
+from aqt.utils import showInfo
 from BeautifulSoup import BeautifulSoup
+
+from .base import WebService, export, with_styles
+
 # Anki buit-in BeautifulSoup is bs3 not bs4
 
 

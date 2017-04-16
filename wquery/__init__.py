@@ -9,9 +9,10 @@ from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
-from wquery.ui import show_options, start_services
+from wquery.ui import show_options
 from wquery.query import query_from_menu, query_from_editor
 from wquery.context import context, config
+from wquery.service import start_services
 
 
 have_setup = False
