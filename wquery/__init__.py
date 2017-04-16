@@ -10,7 +10,7 @@ from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
 from wquery.ui import show_options
-from wquery.query import query_from_menu, query_from_editor
+from wquery.query import query_from_browser, query_from_editor
 from wquery.context import context, config
 from wquery.service import start_services
 
@@ -42,7 +42,7 @@ def setup_browser_menu():
         menu = QMenu("WordQuery", browser.form.menubar)
         browser.form.menubar.addMenu(menu)
         action_queryselected = QAction("Query Selected", browser)
-        action_queryselected.triggered.connect(query_from_menu)
+        action_queryselected.triggered.connect(query_from_browser)
         action_queryselected.setShortcut(QKeySequence(my_shortcut))
         action_options = QAction("Options", browser)
         action_options.triggered.connect(show_options)

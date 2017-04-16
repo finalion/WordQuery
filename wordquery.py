@@ -1,6 +1,5 @@
 #-*- coding:utf-8 -*-
 from anki.hooks import addHook
-from aqt.utils import shortcut, showInfo
 
 ############## other config here ##################
 # update all fields ignoring the original field content

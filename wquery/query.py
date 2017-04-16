@@ -33,7 +33,6 @@ def update_progress_label(info):
         update_progress_label.kwargs['word'],
         update_progress_label.kwargs['service_name'],
         update_progress_label.kwargs['field_name'], number_info))
-# update_progress_label.kwargs = defaultdict(str)
 
 
 def inspect_note(note):
@@ -64,7 +63,7 @@ def inspect_note(note):
     return word_ord, word, maps
 
 
-def query_from_menu():
+def query_from_browser():
     browser = context['browser']
     if not browser:
         return
@@ -85,7 +84,6 @@ def query_from_menu():
                 continue
             results = query_all_flds(word_ord, word, maps)
             for j, q in results.items():
-                # showInfo("%s\n%s" % (word, q.result))
                 update_note_field(note, j, q)
                 # note.flush()
             fields_number += len(results)
@@ -172,11 +170,7 @@ def query_single_fld(word, fld_index, maps):
         worker = work_manager.get_worker(dict_unique)
         worker.target(fld_index, dict_field, word)
         worker.start()
-    for name, worker in work_manager.workers.items():
-        while not worker.isFinished():
-            mw.app.processEvents()
-            worker.wait(100)
-    return handle_results('__query_over__')
+    return join_result()
 
 
 def query_all_flds(word_ord, word, maps):
@@ -193,6 +187,10 @@ def query_all_flds(word_ord, word, maps):
             worker = work_manager.get_worker(dict_unique)
             worker.target(i, dict_field, word)
             worker.start()
+    return join_result()
+
+
+def join_result():
     for name, worker in work_manager.workers.items():
         while not worker.isFinished():
             mw.app.processEvents()
@@ -226,7 +224,6 @@ class QueryWorker(QThread):
 
     result_ready = pyqtSignal(dict)
     progress_update = pyqtSignal(dict)
-    WEB, LOCAL = (0, 1)
 
     def __init__(self, service_unique):
         super(QueryWorker, self).__init__()
@@ -251,8 +248,9 @@ class QueryWorker(QThread):
                 })
                 result = self.query(
                     service_field, word) if self.service else ""
-                # showInfo('%d, %s' % (index, str(result)))
                 self.result_ready.emit({index: result})
+                # delay interval
+                time.sleep(self.service.query_interval)
             except Empty:
                 break
 

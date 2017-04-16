@@ -43,11 +43,14 @@ def with_styles(**styles):
 
 class Service(object):
     '''service base class'''
+    Web, Mdx, Stardict = 0, 1, 2
 
     def __init__(self):
         self._exporters = self.get_exporters()
         self._fields, self._actions = zip(
             *self._exporters) if self._exporters else (None, None)
+        # query interval: default 500ms
+        self.query_interval = 0.5
 
     @property
     def fields(self):
@@ -70,16 +73,13 @@ class Service(object):
                 label, index = export_attrs
                 flds.update({int(index): (label, method[1])})
         sorted_flds = sorted(flds)
-        # label, function
         return [flds[key] for key in sorted_flds]
 
     def active(self, action_label, word):
         self.word = word
-        # showInfo('service active: %s ##%s##' % (action_label, word))
         for each in self.exporters:
             if action_label == each[0]:
                 result = each[1]()
-                # showInfo("%s %s" % (str(type(result)), str(result)))
                 return result if result else QueryResult.default()  # avoid return None
         return QueryResult.default()
 
@@ -90,6 +90,7 @@ class WebService(Service):
     def __init__(self):
         super(WebService, self).__init__()
         self.cache = defaultdict(defaultdict)
+        self.query_interval = 1
 
     def cache_this(self, result):
         self.cache[self.word].update(result)
@@ -130,6 +131,7 @@ class MdxService(LocalService):
         # cache all the static files queried, cache builder
         #  {'builder':builder, 'files':[...static files list...]}
         self.cache = defaultdict(set)
+        self.query_interval = 0.01
 
     @staticmethod
     def support(dict_path):
@@ -147,7 +149,7 @@ class MdxService(LocalService):
     def index(self):
         self.builder = IndexBuilder(self.dict_path)
 
-    @export(u"完整解释", 0)
+    @export(u"default", 0)
     def fld_whole(self):
         if not self.builder:
             self.index()
@@ -213,7 +215,6 @@ class MdxService(LocalService):
                 if not keys:
                     errors.append(each)
                 lst.extend(keys)
-            # showInfo(str(errors))
             for each in lst:
                 try:
                     bytes_list = self.builder.mdd_lookup(each)
@@ -241,7 +242,7 @@ class StardictService(LocalService):
 
     def __init__(self, dict_path):
         super(StardictService, self).__init__(dict_path)
-        # self.index()
+        self.query_interval = 0.05
 
     @staticmethod
     def support(dict_path):
@@ -259,7 +260,7 @@ class StardictService(LocalService):
 
     def index(self):
         try:
-            self.builder = Dictionary(self.dict_path, in_memory=True)
+            self.builder = Dictionary(self.dict_path, in_memory=False)
         except:
             pass
 
@@ -270,11 +271,11 @@ class StardictService(LocalService):
         try:
             result = self.builder[self.word]
             result = result.strip()\
-                           .replace('\r\n', '<br />')\
-                           .replace('\r', '<br />')\
-                           .replace('\n', '<br />')
-            return QueryResult(result=result) if result else QueryResult.default()
-        except:
+                .replace('\r\n', '<br />')\
+                .replace('\r', '<br />')\
+                .replace('\n', '<br />')
+            return QueryResult(result=result)
+        except KeyError:
             return QueryResult.default()
 
 
