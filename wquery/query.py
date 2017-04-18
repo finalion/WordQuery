@@ -16,6 +16,7 @@ from .lang import _, _sl
 from .service import service_manager
 from .service.base import QueryResult
 from .utils import Empty, Queue
+from .progress import ProgressManager
 
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -29,7 +30,7 @@ def update_progress_label(info):
     number_info = '<br>%s %d %s, %d %s' % (_('QUERIED'), words_number,
                                            _('WORDS'), fields_number, _('FIELDS')) \
         if words_number and fields_number else ""
-    mw.progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
+    progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
         update_progress_label.kwargs['word'],
         update_progress_label.kwargs['service_name'],
         update_progress_label.kwargs['field_name'], number_info))
@@ -54,16 +55,13 @@ def inspect_note(note):
 
     def purify_word(word):
         return word.lower().strip() if word else ''
-        # m = re.search('\s*[a-zA-Z]+[a-zA-Z -]*', word)
-        # if m:
-        #     return m.group().strip()
-        # return ""
 
     word = purify_word(note.fields[word_ord].decode('utf-8'))
     return word_ord, word, maps
 
 
 def query_from_browser():
+    work_manager.reset_query_counts()
     browser = context['browser']
     if not browser:
         return
@@ -77,8 +75,11 @@ def query_from_browser():
     if len(notes) > 1:
         fields_number = 0
         update_progress_label.kwargs = defaultdict(str)
-        mw.progress.start(immediate=True, label="Querying...")
+        progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
+            # user cancels the progress
+            if progress.abort():
+                break
             word_ord, word, maps = inspect_note(note)
             if not word:
                 continue
@@ -90,13 +91,16 @@ def query_from_browser():
             update_progress_label(
                 {'words_number': i + 1, 'fields_number': fields_number})
         browser.model.reset()
-        mw.progress.finish()
+        progress.finish()
         # browser.model.reset()
         # browser.endReset()
-        tooltip(u'%s %d %s' % (_('UPDATED'), len(notes), _('CARDS')))
+        tooltip(u'%s %d %s' % (_('UPDATED'),
+                               work_manager.completed_query_counts(),
+                               _('CARDS')))
 
 
 def query_from_editor():
+    work_manager.reset_query_counts()
     editor = context['editor']
     if not editor:
         return
@@ -106,7 +110,7 @@ def query_from_editor():
     if not word:
         showInfo(_("NO_QUERY_WORD"))
         return
-    mw.progress.start(immediate=True, label="Querying...")
+    progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
     # if the focus falls into the word field, then query all note fields,
     # else only query the current focused field.
@@ -118,7 +122,7 @@ def query_from_editor():
         update_note_field(editor.note, i, q)
     # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
-    mw.progress.finish()
+    progress.finish()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
 
@@ -169,7 +173,7 @@ def query_single_fld(word, fld_index, maps):
     if dict_name and dict_name not in _sl('NOT_DICT_FIELD') and dict_field:
         worker = work_manager.get_worker(dict_unique)
         worker.target(fld_index, dict_field, word)
-        worker.start()
+    work_manager.start_all_workers()
     return join_result()
 
 
@@ -186,7 +190,7 @@ def query_all_flds(word_ord, word, maps):
         if dict_name and dict_name not in _sl('NOT_DICT_FIELD') and dict_field:
             worker = work_manager.get_worker(dict_unique)
             worker.target(i, dict_field, word)
-            worker.start()
+    work_manager.start_all_workers()
     return join_result()
 
 
@@ -219,6 +223,17 @@ class QueryWorkerManager(object):
             worker = self.workers[service_unique]
         return worker
 
+    def start_all_workers(self):
+        for worker in self.workers.values():
+            worker.start()
+
+    def reset_query_counts(self):
+        for worker in self.workers.values():
+            worker.completed_counts = 0
+
+    def completed_query_counts(self):
+        return sum([worker.completed_counts for worker in self.workers.values()])
+
 
 class QueryWorker(QThread):
 
@@ -229,6 +244,7 @@ class QueryWorker(QThread):
         super(QueryWorker, self).__init__()
         self.service_unique = service_unique
         self.service = service_manager.get_service(service_unique)
+        self.completed_counts = 0
         self.queue = Queue()
         self.result_ready.connect(handle_results)
         self.progress_update.connect(update_progress_label)
@@ -237,7 +253,7 @@ class QueryWorker(QThread):
         self.queue.put((index, service_field, word))
 
     def run(self):
-        # try:
+        # self.completed_counts = 0
         while True:
             try:
                 index, service_field, word = self.queue.get(timeout=0.1)
@@ -246,15 +262,21 @@ class QueryWorker(QThread):
                     'word': word,
                     'field_name': service_field
                 })
-                result = self.query(
-                    service_field, word) if self.service else ""
+                result = self.query(service_field, word)
                 self.result_ready.emit({index: result})
-                # delay interval
-                time.sleep(self.service.query_interval)
+                self.completed_counts += 1
+                # rest a moment
+                self.rest()
             except Empty:
                 break
 
+    def rest(self):
+        time.sleep(self.service.query_interval)
+
     def query(self, service_field, word):
         return self.service.active(service_field, word)
+
+
+progress = ProgressManager(mw)
 
 work_manager = QueryWorkerManager()
