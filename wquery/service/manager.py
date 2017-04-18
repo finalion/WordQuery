@@ -18,7 +18,10 @@ class ServiceManager(object):
     def __init__(self):
         self.web_services = self.get_available_web_services()
         self.local_services = self.get_available_local_services()
-        self.services = self.web_services + self.local_services
+
+    @property
+    def services(self):
+        return self.web_services + self.local_services
 
     def register(self, service):
         pass
@@ -27,12 +30,13 @@ class ServiceManager(object):
         self.index_all_mdxs()
         # make all local services available
         for service in self.local_services:
-            service.index()
+            if not service.index():
+                # showInfo(service.dict_path)
+                self.local_services.remove(service)
 
     def update_services(self):
         self.web_services = self.get_available_web_services()
         self.local_services = self.get_available_local_services()
-        self.services = self.web_services + self.local_services
         self.start_all()
 
     def get_service(self, unique):

@@ -140,14 +140,22 @@ class MdxService(LocalService):
 
     @property
     def title(self):
-        if config.use_filename():
-            return os.path.splitext(os.path.basename(self.dict_path))[0]
+        if self.builder:
+            if config.use_filename() or not self.builder._title or self.builder._title.startswith('Title'):
+                return os.path.splitext(os.path.basename(self.dict_path))[0]
+            else:
+                return self.builder._title
         else:
-            self.builder._title = self.builder._title.strip().decode('utf-8')
-            return os.path.splitext(os.path.basename(self.dict_path))[0] if not self.builder._title or self.builder._title.startswith('Title') else self.builder._title
+            return os.path.splitext(os.path.basename(self.dict_path))[0]
 
     def index(self):
-        self.builder = IndexBuilder(self.dict_path)
+        try:
+            self.builder = IndexBuilder(self.dict_path)
+            if self.builder:
+                return True
+            return False
+        except:
+            return False
 
     @export(u"default", 0)
     def fld_whole(self):
@@ -251,18 +259,19 @@ class StardictService(LocalService):
 
     @property
     def title(self):
-        if config.use_filename():
+        if config.use_filename() or not self.builder.ifo.bookname:
             return os.path.splitext(os.path.basename(self.dict_path))[0]
-        elif self.builder:
-            return self.builder.ifo.bookname.decode('utf-8')
         else:
-            return ''
+            return self.builder.ifo.bookname.decode('utf-8')
 
     def index(self):
         try:
             self.builder = Dictionary(self.dict_path, in_memory=False)
+            if self.builder:
+                return True
+            return False
         except:
-            pass
+            return False
 
     @export(u"default", 0)
     def fld_whole(self):
