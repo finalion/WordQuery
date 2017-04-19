@@ -223,6 +223,9 @@ class QueryWorkerManager(object):
             worker = self.workers[service_unique]
         return worker
 
+    def start_worker(self, worker):
+        worker.start()
+
     def start_all_workers(self):
         for worker in self.workers.values():
             worker.start()
