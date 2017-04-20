@@ -1,4 +1,22 @@
 #-*- coding:utf-8 -*-
+#
+# Copyright © 2016–2017 Liang Feng <finalion@gmail.com>
+#
+# Support: Report an issue at https://github.com/finalion/WordQuery/issues
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version; http://www.gnu.org/copyleft/gpl.html.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import sys
 reload(sys)
 sys.setdefaultencoding('utf8')
@@ -10,7 +28,7 @@ from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
 from wquery.ui import show_options
-from wquery.query import query_from_browser, query_from_editor
+from wquery.query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
 from wquery.context import context, config
 from wquery.service import start_services
 
@@ -29,7 +47,7 @@ def add_query_button(self):
     ar = QDialogButtonBox.ActionRole
     context['editor'] = self.editor
     self.queryButton = bb.addButton(_(u"Query"), ar)
-    self.queryButton.clicked.connect(query_from_editor)
+    self.queryButton.clicked.connect(query_from_editor_all_fields)
     self.queryButton.setShortcut(QKeySequence(my_shortcut))
     self.queryButton.setToolTip(
         shortcut(_(u"Query (shortcut: %s)" % my_shortcut)))
@@ -58,15 +76,15 @@ def setup_context_menu():
         add context menu to webview
         """
         context['editor'] = web_view.editor
-        if web_view.editor.currentField == 0:  # 只在第一项加右键菜单
-            action = menu.addAction(_("Query"))
-            action.triggered.connect(query_from_editor)
-            needs_separator = True
-        else:
-            action = menu.addAction(_("Query"))
-            action.triggered.connect(query_from_editor)
-            needs_separator = True
-            # menu.addMenu(submenu)
+        wqmenu = menu.addMenu('Word Query')
+        action1 = wqmenu.addAction('Query All Fields')
+        action2 = wqmenu.addAction('Query Current Field')
+        action3 = wqmenu.addAction('Options')
+        action1.triggered.connect(query_from_editor_all_fields)
+        action2.triggered.connect(query_from_editor_current_field)
+        action3.triggered.connect(show_options)
+        needs_separator = True
+        # menu.addMenu(submenu)
     anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
     shortcuts = [(my_shortcut, query), ]
     anki.hooks.addHook('setupEditorShortcuts', shortcuts)

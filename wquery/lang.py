@@ -1,4 +1,22 @@
 #-*- coding:utf-8 -*-
+#
+# Copyright © 2016–2017 Liang Feng <finalion@gmail.com>
+#
+# Support: Report an issue at https://github.com/finalion/WordQuery/issues
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version; http://www.gnu.org/copyleft/gpl.html.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 from anki.lang import currentLang
 trans = {
     'CHECK_FILENAME_LABEL': {'zh_CN': u'使用文件名作为标签', 'en': u'Use filename as dict label', 'fr': r"Utiliser le nom de fichier en tant qu'étiquette de dico"},
@@ -24,7 +42,7 @@ trans = {
 
 def _(key, lang=currentLang):
     if lang != 'zh_CN' and lang != 'en' and lang != 'fr':
-        lang = 'en' # fallback
+        lang = 'en'  # fallback
     return trans[key][lang]
 
 

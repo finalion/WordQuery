@@ -1,4 +1,22 @@
 #-*- coding:utf-8 -*-
+#
+# Copyright © 2016–2017 Liang Feng <finalion@gmail.com>
+#
+# Support: Report an issue at https://github.com/finalion/WordQuery/issues
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version; http://www.gnu.org/copyleft/gpl.html.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import re
 import sqlite3
@@ -71,7 +89,7 @@ def query_from_browser():
         return
     if len(notes) == 1:
         context['editor'] = browser.editor
-        query_from_editor()
+        query_from_editor_all_fields()
     if len(notes) > 1:
         fields_number = 0
         update_progress_label.kwargs = defaultdict(str)
@@ -80,46 +98,61 @@ def query_from_browser():
             # user cancels the progress
             if progress.abort():
                 break
-            word_ord, word, maps = inspect_note(note)
-            if not word:
-                continue
-            results = query_all_flds(word_ord, word, maps)
-            for j, q in results.items():
-                update_note_field(note, j, q)
-                # note.flush()
-            fields_number += len(results)
-            update_progress_label(
-                {'words_number': i + 1, 'fields_number': fields_number})
+            try:
+                results = query_all_flds(note)
+                update_note_fields(note, results)
+                fields_number += len(results)
+                update_progress_label(
+                    {'words_number': i + 1, 'fields_number': fields_number})
+            except InvalidWordException:
+                showInfo(_("NO_QUERY_WORD"))
         browser.model.reset()
         progress.finish()
         # browser.model.reset()
         # browser.endReset()
-        tooltip(u'%s %d %s' % (_('UPDATED'),
-                               work_manager.completed_query_counts(),
-                               _('CARDS')))
+        tooltip(u'%s %d %s, %d %s' % (_('UPDATED'),
+                                      i + 1,
+                                      _('CARDS'),
+                                      work_manager.completed_query_counts(),
+                                      _('FIELDS')))
 
 
-def query_from_editor():
+def query_from_editor_all_fields():
     work_manager.reset_query_counts()
     editor = context['editor']
     if not editor:
         return
-    word, word_ord = None, 0
-    fld_index = editor.currentField
-    word_ord, word, maps = inspect_note(editor.note)
-    if not word:
-        showInfo(_("NO_QUERY_WORD"))
-        return
-    progress.start(immediate=True, label="Querying...")
     update_progress_label.kwargs = defaultdict(str)
+    progress.start(immediate=True, label="Querying...")
+    try:
+        results = query_all_flds(editor.note)
+        update_note_fields(editor.note, results)
+    except InvalidWordException:
+        showInfo(_("NO_QUERY_WORD"))
+    progress.finish()
+    editor.setNote(editor.note, focus=True)
+    editor.saveNow()
+
+
+def query_from_editor_current_field():
+    work_manager.reset_query_counts()
+    editor = context['editor']
+    if not editor:
+        return
+    update_progress_label.kwargs = defaultdict(str)
+    progress.start(immediate=True, label="Querying...")
     # if the focus falls into the word field, then query all note fields,
     # else only query the current focused field.
-    if fld_index == word_ord:
-        results = query_all_flds(word_ord, word, maps)
-    else:
-        results = query_single_fld(word, fld_index, maps)
-    for i, q in results.items():
-        update_note_field(editor.note, i, q)
+    fld_index = editor.currentField
+    word_ord = inspect_note(editor.note)[0]
+    try:
+        if fld_index == word_ord:
+            results = query_all_flds(editor.note)
+        else:
+            results = query_single_fld(editor.note, fld_index)
+        update_note_fields(editor.note, results)
+    except InvalidWordException:
+        showInfo(_("NO_QUERY_WORD"))
     # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     progress.finish()
@@ -127,18 +160,22 @@ def query_from_editor():
     editor.saveNow()
 
 
-def update_note_field(note, fld_index, content):
-    if not isinstance(content, QueryResult):
-        return
-    content, js, css = content.result, content.js, content.css
+def update_note_fields(note, results):
+    for i, q in results.items():
+        if isinstance(q, QueryResult):
+            update_note_field(note, i, q)
+
+
+def update_note_field(note, fld_index, fld_result):
+    result, js, css = fld_result.result, fld_result.js, fld_result.css
     # js process: add to template of the note model
     if js:
         add_to_tmpl(note, js=js)
     # css process: add css directly to the note field, that can ensure there
     # will not exist css confusion
     if css:
-        content = css + content
-    note.fields[fld_index] = content
+        result = css + result
+    note.fields[fld_index] = result
     note.flush()
 
 
@@ -160,11 +197,48 @@ def add_to_tmpl(note, **kwargs):
                 note.model()['tmpls'][0]['afmt'] = afmt + js
 
 
-def query_single_fld(word, fld_index, maps):
+class InvalidWordException(Exception):
+    """Invalid word exception"""
+
+
+def join_result(query_func):
+    def wrap(*args, **kwargs):
+        query_func(*args, **kwargs)
+        for name, worker in work_manager.workers.items():
+            while not worker.isFinished():
+                mw.app.processEvents()
+                worker.wait(100)
+        return handle_results('__query_over__')
+    return wrap
+
+
+@join_result
+def query_all_flds(note):
+    handle_results.total = defaultdict(QueryResult)
+    word_ord, word, maps = inspect_note(note)
+    if not word:
+        raise InvalidWordException
+    for i, each in enumerate(maps):
+        if i == word_ord:
+            continue
+        dict_name = each.get('dict', '').strip()
+        dict_field = each.get('dict_field', '').strip()
+        dict_unique = each.get('dict_unique', '').strip()
+        if dict_name and dict_name not in _sl('NOT_DICT_FIELD') and dict_field:
+            worker = work_manager.get_worker(dict_unique)
+            worker.target(i, dict_field, word)
+    work_manager.start_all_workers()
+
+
+@join_result
+def query_single_fld(note, fld_index):
+    handle_results.total = defaultdict(QueryResult)
+    word_ord, word, maps = inspect_note(note)
+    if not word:
+        raise InvalidWordException
     # assert fld_index > 0
     if fld_index >= len(maps):
         return QueryResult()
-    handle_results.total = defaultdict(QueryResult)
     dict_name = maps[fld_index].get('dict', '').strip()
     dict_field = maps[fld_index].get('dict_field', '').strip()
     dict_unique = maps[fld_index].get('dict_unique', '').strip()
@@ -174,32 +248,6 @@ def query_single_fld(word, fld_index, maps):
         worker = work_manager.get_worker(dict_unique)
         worker.target(fld_index, dict_field, word)
     work_manager.start_all_workers()
-    return join_result()
-
-
-def query_all_flds(word_ord, word, maps):
-    handle_results.total = defaultdict(QueryResult)
-    for i, each in enumerate(maps):
-        if i == word_ord:
-            continue
-        dict_name = each.get('dict', '').strip()
-        dict_field = each.get('dict_field', '').strip()
-        dict_unique = each.get('dict_unique', '').strip()
-        # webservice manager 使用combobox的文本值选择服务
-        # mdxservice manager 使用combox的itemData即字典路径选择服务
-        if dict_name and dict_name not in _sl('NOT_DICT_FIELD') and dict_field:
-            worker = work_manager.get_worker(dict_unique)
-            worker.target(i, dict_field, word)
-    work_manager.start_all_workers()
-    return join_result()
-
-
-def join_result():
-    for name, worker in work_manager.workers.items():
-        while not worker.isFinished():
-            mw.app.processEvents()
-            worker.wait(100)
-    return handle_results('__query_over__')
 
 
 @pyqtSlot(dict)

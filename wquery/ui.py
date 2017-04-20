@@ -1,4 +1,22 @@
 #-*- coding:utf-8 -*-
+#
+# Copyright © 2016–2017 Liang Feng <finalion@gmail.com>
+#
+# Support: Report an issue at https://github.com/finalion/WordQuery/issues
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# any later version; http://www.gnu.org/copyleft/gpl.html.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <http://www.gnu.org/licenses/>.
+
 import os
 import sys
 
@@ -192,12 +210,7 @@ class OptionsDialog(QDialog):
             if maps:
                 for j, each in enumerate(maps):
                     if each.get('fld_ord', -1) == ord:
-                        self.add_dict_layout(j, fld_name=name,
-                                             word_checked=each['word_checked'],
-                                             dict=each['dict'],
-                                             dict_field=each['dict_field'],
-                                             dict_unique=each['dict_unique']
-                                             )
+                        self.add_dict_layout(j, fld_name=name, **each)
                         break
                 else:
                     self.add_dict_layout(i, fld_name=name)
