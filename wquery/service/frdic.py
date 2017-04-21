@@ -8,7 +8,7 @@ from collections import defaultdict
 from aqt.utils import showInfo
 from BeautifulSoup import BeautifulSoup
 
-from .base import WebService, export, with_styles
+from .base import WebService, export, with_styles, register
 
 # Anki buit-in BeautifulSoup is bs3 not bs4
 
@@ -16,9 +16,8 @@ from .base import WebService, export, with_styles
 css = ''
 
 
+@register(u'法语助手')
 class Frdic(WebService):
-
-    __register_label__ = u'法语助手'
 
     def __init__(self):
         super(Frdic, self).__init__()

@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from aqt.utils import showInfo
 
-from .base import WebService, export, with_styles
+from .base import WebService, export, with_styles, register
 
 
 youdao_css = '''
@@ -16,9 +16,8 @@ youdao_css = '''
 '''
 
 
+@register(u'有道词典-法语')
 class Youdaofr(WebService):
-
-    __register_label__ = u'有道词典-法语'
 
     def __init__(self):
         super(Youdaofr, self).__init__()

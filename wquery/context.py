@@ -103,5 +103,4 @@ class Config(object):
         return self.data.get('export_media', False)
 
 
-context = defaultdict(int)
 config = Config(mw)

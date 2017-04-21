@@ -29,11 +29,11 @@ from aqt import mw
 from aqt.qt import *
 from aqt.utils import showInfo, showText
 
-from .base import QueryResult, WebService, export, with_styles
+from .base import QueryResult, WebService, export, with_styles, register
 
 
+@register('MDX server')
 class RemoteMdx(WebService):
-    __register_label__ = 'MDX server'
 
     def __init__(self):
         super(RemoteMdx, self).__init__()

@@ -29,12 +29,18 @@ from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
 from wquery.ui import show_options
 from wquery.query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
-from wquery.context import context, config
+from wquery.context import config
 from wquery.service import start_services
 
 
 have_setup = False
 my_shortcut = ''
+
+
+def query_decor(func, obj):
+    def callback():
+        return func(obj)
+    return callback
 
 
 def set_shortcut(key_sequence):
@@ -45,9 +51,9 @@ def set_shortcut(key_sequence):
 def add_query_button(self):
     bb = self.form.buttonBox
     ar = QDialogButtonBox.ActionRole
-    context['editor'] = self.editor
     self.queryButton = bb.addButton(_(u"Query"), ar)
-    self.queryButton.clicked.connect(query_from_editor_all_fields)
+    self.queryButton.clicked.connect(query_decor(
+        query_from_editor_all_fields, self.editor))
     self.queryButton.setShortcut(QKeySequence(my_shortcut))
     self.queryButton.setToolTip(
         shortcut(_(u"Query (shortcut: %s)" % my_shortcut)))
@@ -56,11 +62,11 @@ def add_query_button(self):
 def setup_browser_menu():
 
     def on_setup_menus(browser):
-        context['browser'] = browser
         menu = QMenu("WordQuery", browser.form.menubar)
         browser.form.menubar.addMenu(menu)
         action_queryselected = QAction("Query Selected", browser)
-        action_queryselected.triggered.connect(query_from_browser)
+        action_queryselected.triggered.connect(query_decor(
+            query_from_browser, browser))
         action_queryselected.setShortcut(QKeySequence(my_shortcut))
         action_options = QAction("Options", browser)
         action_options.triggered.connect(show_options)
@@ -71,17 +77,19 @@ def setup_browser_menu():
 
 
 def setup_context_menu():
+
     def on_setup_menus(web_view, menu):
         """
         add context menu to webview
         """
-        context['editor'] = web_view.editor
         wqmenu = menu.addMenu('Word Query')
         action1 = wqmenu.addAction('Query All Fields')
         action2 = wqmenu.addAction('Query Current Field')
         action3 = wqmenu.addAction('Options')
-        action1.triggered.connect(query_from_editor_all_fields)
-        action2.triggered.connect(query_from_editor_current_field)
+        action1.triggered.connect(query_decor(
+            query_from_editor_all_fields, web_view.editor))
+        action2.triggered.connect(query_decor(
+            query_from_editor_current_field, web_view.editor))
         action3.triggered.connect(show_options)
         needs_separator = True
         # menu.addMenu(submenu)

@@ -7,7 +7,7 @@ from collections import defaultdict
 
 from aqt.utils import showInfo
 
-from .base import WebService, export, with_styles
+from .base import WebService, export, with_styles, register
 
 
 youdao_css = '''
@@ -32,9 +32,8 @@ initVoice();
 '''
 
 
+@register(u'有道词典')
 class Youdao(WebService):
-
-    __register_label__ = u'有道词典'
 
     def __init__(self):
         super(Youdao, self).__init__()

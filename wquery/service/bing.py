@@ -8,12 +8,11 @@ from aqt.utils import showInfo
 from BeautifulSoup import BeautifulSoup
 from cookielib import CookieJar
 
-from .base import WebService, export, with_styles
+from .base import WebService, export, with_styles, register
 
 
+@register(u'bing')
 class Bing(WebService):
-
-    __register_label__ = u'bing'
 
     def __init__(self):
         super(Bing, self).__init__()

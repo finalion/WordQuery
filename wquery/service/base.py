@@ -31,6 +31,14 @@ from wquery.libs.pystardict import Dictionary
 from wquery.utils import MapDict
 
 
+def register(label):
+    """register the dict service with a label, which will be shown in the dicts list."""
+    def _deco(cls):
+        cls.__register_label__ = label
+        return cls
+    return _deco
+
+
 def export(label, index):
     """export dict field function with a label, which will be shown in the fields list."""
     def _with(fld_func):
@@ -320,14 +328,6 @@ class QueryResult(MapDict):
     @classmethod
     def default(cls):
         return QueryResult(result="")
-
-
-def register(label):
-    """register the dict service with a label, which will be shown in the dicts list."""
-    def _deco(cls):
-        return _deco
-    cls.__register_label__ = label
-    return cls
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ from aqt import mw
 from aqt.qt import QObject, QThread, pyqtSignal, pyqtSlot
 from aqt.utils import showInfo, showText, tooltip
 
-from .context import config, context
+from .context import config
 from .lang import _, _sl
 from .service import service_manager
 from .service.base import QueryResult
@@ -78,9 +78,8 @@ def inspect_note(note):
     return word_ord, word, maps
 
 
-def query_from_browser():
+def query_from_browser(browser):
     work_manager.reset_query_counts()
-    browser = context['browser']
     if not browser:
         return
     notes = [browser.mw.col.getNote(note_id)
@@ -88,8 +87,7 @@ def query_from_browser():
     if len(notes) == 0:
         return
     if len(notes) == 1:
-        context['editor'] = browser.editor
-        query_from_editor_all_fields()
+        query_from_editor_all_fields(browser.editor)
     if len(notes) > 1:
         fields_number = 0
         update_progress_label.kwargs = defaultdict(str)
@@ -117,9 +115,8 @@ def query_from_browser():
                                       _('FIELDS')))
 
 
-def query_from_editor_all_fields():
+def query_from_editor_all_fields(editor):
     work_manager.reset_query_counts()
-    editor = context['editor']
     if not editor:
         return
     update_progress_label.kwargs = defaultdict(str)
@@ -134,9 +131,8 @@ def query_from_editor_all_fields():
     editor.saveNow()
 
 
-def query_from_editor_current_field():
+def query_from_editor_current_field(editor):
     work_manager.reset_query_counts()
-    editor = context['editor']
     if not editor:
         return
     update_progress_label.kwargs = defaultdict(str)

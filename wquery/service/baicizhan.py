@@ -9,12 +9,11 @@ from collections import defaultdict
 
 from aqt.utils import showInfo
 
-from .base import WebService, export, with_styles
+from .base import WebService, export, with_styles, register
 
 
+@register(u'百词斩')
 class Baicizhan(WebService):
-
-    __register_label__ = u'百词斩'
 
     def __init__(self):
         super(Baicizhan, self).__init__()
