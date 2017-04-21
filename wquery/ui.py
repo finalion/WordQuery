@@ -34,8 +34,6 @@ from .odds import get_model_byId, get_ord_from_fldname
 from .service import service_manager
 from .utils import MapDict
 
-reload(sys)
-sys.setdefaultencoding('utf8')
 
 DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
 
@@ -77,7 +75,7 @@ class FoldersManageDialog(QDialog):
 
     def add_folder(self):
         dir_ = QFileDialog.getExistingDirectory(self,
-                                                caption="Select Folder", directory="", options=QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
+                                                caption=u"Select Folder", directory="", options=QFileDialog.ShowDirsOnly | QFileDialog.DontResolveSymlinks)
         if dir_:
             self.folders_lst.addItem(dir_)
 
@@ -90,7 +88,7 @@ class FoldersManageDialog(QDialog):
         for each in dirs:
             for dirpath, dirnames, filenames in os.walk(each):
                 self._dict_paths.extend([os.path.join(dirpath, filename)
-                                         for filename in filenames if filename.endswith('.mdx')])
+                                         for filename in filenames if filename.endswith(u'.mdx')])
         return list(set(self._dict_paths))
 
     @property

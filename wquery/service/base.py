@@ -19,6 +19,9 @@
 
 import inspect
 import os
+# use ntpath module to ensure the windows-style (e.g. '\\LDOCE.css')
+# path can be processed on Unix platform.
+# import ntpath
 import re
 from collections import defaultdict
 from functools import wraps
@@ -242,7 +245,8 @@ class MdxService(LocalService):
         diff = data.difference(self.cache['files'])
         self.cache['files'].update(diff)
         lst, errors, styles = list(), list(), list()
-        wild = ['*' + os.path.basename(each) for each in diff]
+        wild = ['*' + os.path.basename(each.replace('\\', os.path.sep))
+                for each in diff]
         try:
             for each in wild:
                 keys = self.builder.get_mdd_keys(each)
@@ -250,19 +254,20 @@ class MdxService(LocalService):
                     errors.append(each)
                 lst.extend(keys)
             for each in lst:
+                basename = os.path.basename(each.replace('\\', os.path.sep))
+                saved_basename = '_' + basename
                 try:
                     bytes_list = self.builder.mdd_lookup(each)
                     if bytes_list:
                         savepath = os.path.join(
-                            mw.col.media.dir(), '_' + os.path.basename(each))
-                        if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
-                            styles.append('_' + os.path.basename(each))
+                            mw.col.media.dir(), saved_basename)
+                        if basename.endswith('.css') or basename.endswith('.js'):
+                            styles.append(saved_basename)
                         if not os.path.exists(savepath):
                             with open(savepath, 'wb') as f:
                                 f.write(bytes_list[0])
                 except sqlite3.OperationalError as e:
                     showInfo(str(e))
-            # showInfo(str(styles))
         except AttributeError:
             '''
             有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'
@@ -305,9 +310,9 @@ class StardictService(LocalService):
             return
         try:
             result = self.builder[self.word]
-            result = result.strip()\
-                .replace('\r\n', '<br />')\
-                .replace('\r', '<br />')\
+            result = result.strip()
+                .replace('\r\n', '<br />')
+                .replace('\r', '<br />')
                 .replace('\n', '<br />')
             return QueryResult(result=result)
         except KeyError:
@@ -328,11 +333,3 @@ class QueryResult(MapDict):
     @classmethod
     def default(cls):
         return QueryResult(result="")
-
-
-if __name__ == '__main__':
-    from youdao import Youdao
-    yd = Youdao()
-    flds = yd.get_export_flds()
-    for each in flds:
-        print each.export_fld_label

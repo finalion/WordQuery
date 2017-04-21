@@ -18,6 +18,7 @@
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
 import os
+# import ntpath
 import re
 import urllib
 import urllib2
@@ -57,11 +58,12 @@ class RemoteMdx(WebService):
         self.cache[self.url].update(diff)
         errors, styles = list(), list()
         for each in diff:
+            basename = os.path.basename(each.replace('\\', os.path.sep))
+            saved_basename = '_' + basename
             abs_url = urlparse.urljoin(self.url, each)
-            savepath = os.path.join(
-                mw.col.media.dir(), '_' + os.path.basename(each))
-            if os.path.basename(each).endswith('.css') or os.path.basename(each).endswith('.js'):
-                styles.append('_' + os.path.basename(each))
+            savepath = os.path.join(mw.col.media.dir(), saved_basename)
+            if basename.endswith('.css') or basename.endswith('.js'):
+                styles.append(saved_basename)
             if not os.path.exists(savepath):
                 try:
                     urllib.urlretrieve(abs_url, savepath)

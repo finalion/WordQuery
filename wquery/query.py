@@ -36,9 +36,6 @@ from .service.base import QueryResult
 from .utils import Empty, Queue
 from .progress import ProgressManager
 
-reload(sys)
-sys.setdefaultencoding('utf8')
-
 
 @pyqtSlot(dict)
 def update_progress_label(info):
