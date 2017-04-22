@@ -4,7 +4,7 @@ import urllib
 import urllib2
 from collections import defaultdict
 
-from aqt.utils import showInfo
+from aqt.utils import showInfo, showText
 from BeautifulSoup import BeautifulSoup
 from cookielib import CookieJar
 
@@ -22,10 +22,10 @@ class Bing(WebService):
             urllib2.HTTPCookieProcessor(self.cj))
 
     def _get_content(self):
-        headers = {'Accept-Encoding': 'gzip, deflate, sdch',
-                   'Accept-Language': 'en-US,zh-CN;q=0.8,zh;q=0.6,en;q=0.4',
-                   'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-                   'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
+        headers = {
+            'Accept-Language': 'en-US,zh-CN;q=0.8,zh;q=0.6,en;q=0.4',
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
         result = {}
         # try:
         # if not self.cj:
@@ -37,7 +37,7 @@ class Bing(WebService):
         html = self.opener.open(request).read()
         soup = BeautifulSoup(html)
 
-        def _get_from_element(dict, key, soup, tag, id=None, class_=None, subtag=None):
+        def _get_element(soup, tag, id=None, class_=None, subtag=None):
             # element = soup.find(tag, id=id, class_=class_)  # bs4
             element = None
             if id:
@@ -46,23 +46,22 @@ class Bing(WebService):
                 element = soup.find(tag, {"class": class_})
             if subtag and element:
                 element = getattr(element, subtag, '')
-            if element:
-                dict[key] = str(element)
-            return dict
+            return element
 
-        result = _get_from_element(
-            result, 'phonitic_us', soup, 'div', class_='hd_prUS')
-        result = _get_from_element(
-            result, 'phonitic_uk', soup, 'div', class_='hd_pr')
-        result = _get_from_element(
-            result, 'participle', soup, 'div', class_='hd_if')
-        result = _get_from_element(
-            result, 'def', soup, 'div', class_='qdef', subtag='ul')
-        def_contents = soup.find('div', {"class": 'qdef'}).ul.contents
-        # showInfo(str(def_strings))
-        # pairs = zip(def_strings[::2], def_strings[1::2])
-        # '\n'.join(['%s %s' % (str(pair[0]), str(pair[1]))
-        result['def'] = ''.join([str(content) for content in def_contents])
+        element = _get_element(soup, 'div', class_='hd_prUS')
+        if element:
+            result['phonitic_us'] = str(element).decode('utf-8')
+        element = _get_element(soup, 'div', class_='hd_pr')
+        if element:
+            result['phonitic_uk'] = str(element).decode('utf-8')
+        element = _get_element(soup, 'div', class_='hd_if')
+        if element:
+            result['participle'] = str(element).decode('utf-8')
+        element = _get_element(soup, 'div', class_='qdef', subtag='ul')
+        if element:
+            qdef = ''.join([str(content)
+                            for content in element.contents])
+            result['def'] = qdef.decode('utf-8')
         #    for pair in pairs])
         # result = _get_from_element(
         #     result, 'advanced_ec', soup, 'div', id='authid')

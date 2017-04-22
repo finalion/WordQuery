@@ -39,11 +39,10 @@ class Frdic(WebService):
                     element = soup.find(tag, {"class": class_})
                 if element:
                     dict[key] = str(element)
-                if element:
                     dict[key] = re.sub(
                         r'href="/', 'href="' + baseURL, dict[key])
-                if element:
                     dict[key] = re.sub(r'声明：.*。', '', dict[key])
+                    dict[key] = dict[key].decode('utf-8')
                 return dict
 
             # '<span class="Phonitic">[bɔ̃ʒur]</span>'
