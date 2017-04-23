@@ -325,7 +325,6 @@ class OptionsDialog(QDialog):
         dict_combo.currentIndexChanged.connect(
             self.dict_combobox_index_changed)
         self.fill_dict_combo_options(dict_combo, dict_name)
-        # dict_combo.activated.connect(self.dict_combobox_activated)
 
         field_combo = QComboBox()
         field_combo.setMinimumSize(130, 0)

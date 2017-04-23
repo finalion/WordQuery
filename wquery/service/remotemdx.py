@@ -33,13 +33,11 @@ from aqt.utils import showInfo, showText
 from .base import QueryResult, WebService, export, with_styles, register
 
 
-@register('MDX server')
+@register(u'MDX server')
 class RemoteMdx(WebService):
 
     def __init__(self):
         super(RemoteMdx, self).__init__()
-        # key: url
-        # value: set of static files
         self.cache = defaultdict(set)
 
     def active(self, dict_path, word):
@@ -61,12 +59,11 @@ class RemoteMdx(WebService):
             basename = os.path.basename(each.replace('\\', os.path.sep))
             saved_basename = '_' + basename
             abs_url = urlparse.urljoin(self.url, each)
-            savepath = os.path.join(mw.col.media.dir(), saved_basename)
             if basename.endswith('.css') or basename.endswith('.js'):
                 styles.append(saved_basename)
-            if not os.path.exists(savepath):
+            if not os.path.exists(saved_basename):
                 try:
-                    urllib.urlretrieve(abs_url, savepath)
+                    urllib.urlretrieve(abs_url, saved_basename)
                 except:
                     errors.append(each)
         return errors, styles
@@ -78,19 +75,19 @@ class RemoteMdx(WebService):
         3. import css, to make sure the css file can be synced. TO VALIDATE!
         """
         media_files_set = set()
-        mcss = re.findall('href="(\S+?\.css)"', html)
+        mcss = re.findall(r'href="(\S+?\.css)"', html)
         media_files_set.update(set(mcss))
-        mjs = re.findall('src="([\w\./]\S+?\.js)"', html)
+        mjs = re.findall(r'src="([\w\./]\S+?\.js)"', html)
         media_files_set.update(set(mjs))
-        msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
+        msrc = re.findall(r'<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
         for each in media_files_set:
             html = html.replace(each, '_' + each.split('/')[-1])
         errors, styles = self.download_media_files(media_files_set)
-        html = '<br>'.join(["<style>@import url('%s');</style>" %
-                            style for style in styles if style.endswith('.css')]) + html
-        js = re.findall('<script.*?>.*?</script>', html, re.DOTALL)
+        html = u'<br>'.join([u"<style>@import url('%s');</style>".format(style)
+                             for style in styles if style.endswith('.css')]) + html
+        js = re.findall(r'<script.*?>.*?</script>', html, re.DOTALL)
         # for each in js:
         #     html = html.replace(each, '')
         # showText(html)
-        return unicode(html), '\n'.join(js)
+        return unicode(html), u'\n'.join(js)

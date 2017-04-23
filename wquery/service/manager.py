@@ -108,7 +108,7 @@ class ServiceManager(object):
         return services
 
     def index_all_mdxs(self):
-        mw.progress.start(immediate=True, label="Index building...")
+        mw.progress.start(immediate=True, label=u"Index building...")
         index_thread = self.MdxIndexer(self, self._dict_paths)
         index_thread.start()
         while not index_thread.isFinished():
@@ -126,7 +126,7 @@ class ServiceManager(object):
 
         def run(self):
             for path in self.paths:
-                mw.progress.update(label="Index building...\n%s" %
-                                   os.path.basename(path))
+                mw.progress.update(
+                    label=u"Index building...\n{0}".format(os.path.basename(path)))
                 if MdxService.support(path):
                     IndexBuilder(path)

@@ -1,9 +1,7 @@
 #-*- coding:utf-8 -*-
 import re
-import urllib
 import urllib2
 import xml.etree.ElementTree
-from collections import defaultdict
 
 from aqt.utils import showInfo
 

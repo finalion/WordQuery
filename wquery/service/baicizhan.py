@@ -19,7 +19,7 @@ class Baicizhan(WebService):
         super(Baicizhan, self).__init__()
 
     def _get_from_api(self):
-        url = "http://mall.baicizhan.com/ws/search?w={word}".format(
+        url = u"http://mall.baicizhan.com/ws/search?w={word}".format(
             word=self.word)
         try:
             html = urllib2.urlopen(url, timeout=5).read()
@@ -29,24 +29,23 @@ class Baicizhan(WebService):
 
     @export(u'发音', 0)
     def fld_phonetic(self):
-        url = 'http://baicizhan.qiniucdn.com/word_audios/{word}.mp3'.format(
+        url = u'http://baicizhan.qiniucdn.com/word_audios/{word}.mp3'.format(
             word=self.word)
-        audio_name = 'bcz_{word}.mp3'.format(word=self.word)
+        audio_name = u'_bcz_{word}.mp3'.format(word=self.word)
         try:
             urllib.urlretrieve(url, audio_name)
             error = False
             with open(audio_name, 'rb') as f:
-                if f.read().strip() == '{"error":"Document not found"}':
-                    # showInfo(os.path.abspath(audio_name))
-                    error = True
+                error = f.read().strip() == '{"error":"Document not found"}'
+                # showInfo(os.path.abspath(audio_name))
             if error:
                 os.remove(audio_name)
                 return ''
-            return '[sound: %s]' % audio_name
+            return self.get_anki_label(audio_name, 'audio')
         except:
             return ''
 
-    def _get_field(self, key, default=''):
+    def _get_field(self, key, default=u''):
         return self.cache_result(key) if self.cached(key) else self._get_from_api().get(key, default)
 
     @export(u'音标', 1)
@@ -55,12 +54,11 @@ class Baicizhan(WebService):
 
     @export(u'图片', 2)
     def fld_img(self):
-        url = self._get_field('img')
-        return '<img src="{}">'.format(url)
+        return self.get_anki_label(self._get_field('img'), 'img')
 
     @export(u'象形', 3)
     def fld_df(self):
-        return self._get_field('df')
+        return self.get_anki_label(self._get_field('df'), 'img')
 
     @export(u'中文释义', 6)
     def fld_mean(self):
@@ -76,5 +74,4 @@ class Baicizhan(WebService):
 
     @export(u'单词tv', 7)
     def fld_tv_url(self):
-        url = self._get_field('tv')
-        return '<video controls="controls" width="100%" height="auto" src="{}"></video>'.format(url)
+        return self.get_anki_label(self._get_field('tv'), 'video')

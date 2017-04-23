@@ -40,15 +40,20 @@ from .progress import ProgressManager
 @pyqtSlot(dict)
 def update_progress_label(info):
     update_progress_label.kwargs.update(info)
-    words_number, fields_number = update_progress_label.kwargs.get(
-        'words_number', 0), update_progress_label.kwargs.get('fields_number', 0)
-    number_info = '<br>%s %d %s, %d %s' % (_('QUERIED'), words_number,
-                                           _('WORDS'), fields_number, _('FIELDS')) \
-        if words_number and fields_number else ""
-    progress.update(label="Querying <b>%s</b>...<br>[%s] %s%s" % (
+    words_number, fields_number = \
+        update_progress_label.kwargs.get('words_number', 0), \
+        update_progress_label.kwargs.get('fields_number', 0)
+    number_info = ''
+    if words_number and fields_number:
+        number_info = u'<br>{0} {1} {2}, {3} {4}'.format(
+            _('QUERIED'), words_number, _('WORDS'), fields_number, _('FIELDS')
+        )
+    progress.update(label=u"Querying <b>{0}</b>...<br>[{1}] {2}{3}".format(
         update_progress_label.kwargs['word'],
         update_progress_label.kwargs['service_name'],
-        update_progress_label.kwargs['field_name'], number_info))
+        update_progress_label.kwargs['field_name'],
+        number_info
+    ))
 
 
 def inspect_note(note):
@@ -71,14 +76,14 @@ def inspect_note(note):
     def purify_word(word):
         return word.lower().strip() if word else ''
 
-    word = purify_word(note.fields[word_ord].decode('utf-8'))
+    word = purify_word(note.fields[word_ord])
     return word_ord, word, maps
 
 
 def query_from_browser(browser):
-    work_manager.reset_query_counts()
     if not browser:
         return
+    work_manager.reset_query_counts()
     notes = [browser.mw.col.getNote(note_id)
              for note_id in browser.selectedNotes()]
     if len(notes) == 0:
@@ -105,17 +110,14 @@ def query_from_browser(browser):
         progress.finish()
         # browser.model.reset()
         # browser.endReset()
-        tooltip(u'%s %d %s, %d %s' % (_('UPDATED'),
-                                      i + 1,
-                                      _('CARDS'),
-                                      work_manager.completed_query_counts(),
-                                      _('FIELDS')))
+        tooltip(u'{0} {1} {2}, {3} {4}'.format(
+            _('UPDATED'), i + 1, _('CARDS'), work_manager.completed_query_counts(), _('FIELDS')))
 
 
 def query_from_editor_all_fields(editor):
-    work_manager.reset_query_counts()
     if not editor:
         return
+    work_manager.reset_query_counts()
     update_progress_label.kwargs = defaultdict(str)
     progress.start(immediate=True, label="Querying...")
     try:
@@ -129,9 +131,9 @@ def query_from_editor_all_fields(editor):
 
 
 def query_from_editor_current_field(editor):
-    work_manager.reset_query_counts()
-    if not editor:
+    if not editor or not editor.note:
         return
+    work_manager.reset_query_counts()
     update_progress_label.kwargs = defaultdict(str)
     progress.start(immediate=True, label="Querying...")
     # if the focus falls into the word field, then query all note fields,
@@ -163,7 +165,7 @@ def update_note_field(note, fld_index, fld_result):
     result, js, jsfile = fld_result.result, fld_result.js, fld_result.jsfile
     # js process: add to template of the note model
     add_to_tmpl(note, js=js, jsfile=jsfile)
-    note.fields[fld_index] = result
+    note.fields[fld_index] = result if result else ''
     note.flush()
 
 
@@ -180,13 +182,14 @@ def add_to_tmpl(note, **kwargs):
         if js and js.strip():
             addings = js.strip()
             if addings not in afmt:
-                if not addings.startswith('<script') and not addings.endswith('/script>'):
-                    addings = '<script>%s</script>\r\n' % addings
+                if not addings.startswith(u'<script') and not addings.endswith(u'/script>'):
+                    addings = u'\r\n<script>{}</script>'.format(addings)
                 afmt += addings
         if jsfile:
-            new_jsfile = '_' + jsfile if not jsfile.startswith('_') else jsfile
+            new_jsfile = u'_' + \
+                jsfile if not jsfile.startswith(u'_') else jsfile
             copy_static_file(jsfile, new_jsfile)
-            addings = '<script src="%s"></script>\r\n' % new_jsfile
+            addings = u'\r\n<script src="{}"></script>'.format(new_jsfile)
             afmt += addings
         note.model()['tmpls'][0]['afmt'] = afmt
 

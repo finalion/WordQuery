@@ -85,7 +85,7 @@ class Config(object):
                         # showInfo(VERSION + self.version)
                         self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
                 except Exception as e:
-                    showInfo(str(e))
+                    # showInfo(str(e))
                     self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
         except:
             self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()

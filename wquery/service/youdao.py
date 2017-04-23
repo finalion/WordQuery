@@ -1,9 +1,7 @@
 #-*- coding:utf-8 -*-
 import re
-import urllib
 import urllib2
 import xml.etree.ElementTree
-from collections import defaultdict
 
 from aqt.utils import showInfo
 
@@ -25,6 +23,8 @@ var initVoice = function () {
 };
 initVoice();
 '''
+
+youdao_download_mp3 = True
 
 
 @register(u'有道词典')
@@ -67,33 +67,33 @@ class Youdao(WebService):
 
     @with_styles(cssfile='_youdao.css', js=js, need_wrap_css=True, wrap_class='youdao')
     def _get_singledict(self, single_dict, lang='eng'):
-        url = "http://m.youdao.com/singledict?q=%s&dict=%s&le=%s&more=false" % (
+        url = u"http://m.youdao.com/singledict?q={0}&dict={1}&le={2}&more=false".format(
             self.word, single_dict, lang)
         try:
             result = urllib2.urlopen(url, timeout=5).read()
-            return '<div id="%s_contentWrp" class="content-wrp dict-container"><div id="%s" class="trans-container %s ">%s</div></div><div id="outer"><audio id="dictVoice" style="display: none"></audio></div>' % (single_dict, single_dict, single_dict, result)
+            return u'<div id="{0}_contentWrp" class="content-wrp dict-container"><div id="{0}" class="trans-container {0} ">{1}</div></div><div id="outer"><audio id="dictVoice" style="display: none"></audio></div>'.format(single_dict, result.decode('utf-8'))
         except:
             return ''
 
     @export(u'英式发音', 2)
     def fld_british_audio(self):
-        url = 'http://dict.youdao.com/dictvoice?audio=%s&type=1' % self.word
-        audio_name = self.word + '_uk.mp3'
-        try:
-            urllib.urlretrieve(url, audio_name)
-            return '[sound:%s]' % audio_name
-        except Exception as e:
-            return ''
+        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=1'.format(
+            self.word)
+        if youdao_download_mp3:
+            filename = u'_youdao_{}_uk.mp3'.format(self.word)
+            if self.download(audio_url, filename):
+                return self.get_anki_label(filename, 'audio')
+        return audio_url
 
     @export(u'美式发音', 3)
     def fld_american_audio(self):
-        url = 'http://dict.youdao.com/dictvoice?audio=%s&type=2' % self.word
-        audio_name = self.word + '_us.mp3'
-        try:
-            urllib.urlretrieve(url, audio_name)
-            return '[sound:%s]' % audio_name
-        except Exception as e:
-            return ''
+        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=2'.format(
+            self.word)
+        if youdao_download_mp3:
+            filename = u'_youdao_{}_us.mp3'.format(self.word)
+            if self.download(audio_url, filename):
+                return self.get_anki_label(filename, 'audio')
+        return audio_url
 
     @export(u'柯林斯英汉', 4)
     def fld_collins(self):

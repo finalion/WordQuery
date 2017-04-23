@@ -3,7 +3,6 @@ import base64
 import re
 import urllib
 import urllib2
-from collections import defaultdict
 
 from aqt.utils import showInfo
 from BeautifulSoup import BeautifulSoup
@@ -24,7 +23,7 @@ class Frdic(WebService):
 
     def _get_content(self):
         url = 'https://frdic.com/mdicts/fr/{word}'.format(
-            word=urllib.quote(self.word.encode()))
+            word=urllib.quote(self.word.encode('utf-8')))
         try:
             result = {}
             html = urllib2.urlopen(url, timeout=5).read()
@@ -64,20 +63,20 @@ class Frdic(WebService):
         except Exception as e:
             return {}
 
-    #@export(u'真人发音', 0)
+    @export(u'真人发音', 0)
     def fld_sound(self):
         # base64.b64encode('bonjour') == 'Ym9uam91cg=='
         # https://api.frdic.com/api/v2/speech/speakweb?langid=fr&txt=QYNYm9uam91cg%3d%3d
         url = 'https://api.frdic.com/api/v2/speech/speakweb?langid=fr&txt=QYN{word}'.format(
-            word=urllib.quote(base64.b64encode(self.word.encode())))
-        audio_name = 'frdic_{word}.mp3'.format(word=self.word.encode())
+            word=urllib.quote(base64.b64encode(self.word.encode('utf-8'))))
+        audio_name = u'_frdic_{word}.mp3'.format(word=self.word)
         try:
-            urllib.urlretrieve(url, 'frdic_{word}.mp3'.format(word=self.word))
-            return '[sound: %s]' % audio_name
+            urllib.urlretrieve(url, audio_name)
+            return self.get_anki_label(audio_name, 'audio')
         except Exception as e:
             return ''
 
-    def _get_field(self, key, default=''):
+    def _get_field(self, key, default=u''):
         return self.cache_result(key) if self.cached(key) else self._get_content().get(key, default)
 
     @export(u'音标', 1)

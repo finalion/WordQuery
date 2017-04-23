@@ -1,8 +1,6 @@
 #-*- coding:utf-8 -*-
 import re
-import urllib
 import urllib2
-from collections import defaultdict
 
 from aqt.utils import showInfo, showText
 from BeautifulSoup import BeautifulSoup
@@ -11,7 +9,7 @@ from cookielib import CookieJar
 from .base import WebService, export, with_styles, register
 
 
-@register(u'bing')
+@register(u'Bing')
 class Bing(WebService):
 
     def __init__(self):
@@ -58,9 +56,8 @@ class Bing(WebService):
             result['participle'] = str(element).decode('utf-8')
         element = _get_element(soup, 'div', class_='qdef', subtag='ul')
         if element:
-            qdef = ''.join([str(content)
-                            for content in element.contents])
-            result['def'] = qdef.decode('utf-8')
+            result['def'] = u''.join([str(content).decode('utf-8')
+                                      for content in element.contents])
         #    for pair in pairs])
         # result = _get_from_element(
         #     result, 'advanced_ec', soup, 'div', id='authid')
@@ -83,7 +80,7 @@ class Bing(WebService):
         #     showInfo(str(e))
         #     return {}
 
-    def _get_field(self, key, default=''):
+    def _get_field(self, key, default=u''):
         return self.cache_result(key) if self.cached(key) else self._get_content().get(key, default)
 
     @export(u'美式音标', 1)

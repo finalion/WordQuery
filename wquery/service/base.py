@@ -22,8 +22,10 @@ import os
 import shutil
 # use ntpath module to ensure the windows-style (e.g. '\\LDOCE.css')
 # path can be processed on Unix platform.
+# However, anki version on mac platforms doesn't including this package?
 # import ntpath
 import re
+import urllib
 from collections import defaultdict
 from functools import wraps
 
@@ -89,25 +91,23 @@ def with_styles(**styles):
             def wrap(html, css_obj, is_file=True):
                 # wrap css and html
                 if need_wrap_css and class_wrapper:
-                    html = '<div class="{}">{}</div>'.format(
+                    html = u'<div class="{}">{}</div>'.format(
                         class_wrapper, html)
                     return html, wrap_css(css_obj, is_file=is_file, class_wrapper=class_wrapper)[0]
                 return html, css_obj
 
             if cssfile:
-                static_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
-                                          'static')
-                new_cssfile = cssfile if cssfile.startswith(
-                    '_') else '_' + cssfile
+                new_cssfile = cssfile if cssfile.startswith('_') \
+                    else u'_' + cssfile
                 # copy the css file to media folder
                 copy_static_file(cssfile, new_cssfile)
                 # wrap the css file
                 res, new_cssfile = wrap(res, new_cssfile)
-                res = '<link type="text/css" rel="stylesheet" href="{}" />{}'.format(
+                res = u'<link type="text/css" rel="stylesheet" href="{0}" />{1}'.format(
                     new_cssfile, res)
             if css:
                 res, css = wrap(res, css, is_file=False)
-                res = '<styles>{}</styles>{}'.format(css, res)
+                res = u'<styles>{0}</styles>{1}'.format(css, res)
 
             if not isinstance(res, QueryResult):
                 return QueryResult(result=res, jsfile=jsfile, js=js)
@@ -118,21 +118,21 @@ def with_styles(**styles):
     return _with
 
 
-def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix='wrap'):
+def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix=u'wrap'):
 
     def process(content):
         # clean the comments
-        regx = re.compile('/\*.*?\*/', re.DOTALL)
-        content = regx.sub('', content).strip()
+        regx = re.compile(r'/\*.*?\*/', re.DOTALL)
+        content = regx.sub(r'', content).strip()
         # add wrappers to all the selectors except the first one
-        regx = re.compile('([^\r\n,{}]+)(,(?=[^}]*{)|\s*{)', re.DOTALL)
-        new_css = regx.sub('.%s \\1\\2' % class_wrapper, content)
+        regx = re.compile(r'([^\r\n,{}]+)(,(?=[^}]*{)|\s*{)', re.DOTALL)
+        new_css = regx.sub(u'.{} \\1\\2'.format(class_wrapper), content)
         return new_css
 
     if is_file:
         if not class_wrapper:
             class_wrapper = os.path.splitext(os.path.basename(orig_css))[0]
-        new_cssfile = '{css_name}_{suffix}.css'.format(
+        new_cssfile = u'{css_name}_{suffix}.css'.format(
             css_name=orig_css[:orig_css.rindex('.css')],
             suffix=new_cssfile_suffix)
         # if new css file exists, not process
@@ -140,10 +140,10 @@ def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix='wra
             return new_cssfile, class_wrapper
         result = ''
         with open(orig_css, 'rb') as f:
-            result = process(f.read().strip())
+            result = process(f.read().strip().decode('utf-8'))
         if result:
             with open(new_cssfile, 'wb') as f:
-                f.write(result)
+                f.write(result.encode('utf-8'))
         return new_cssfile, class_wrapper
     else:
         # class_wrapper must be valid.
@@ -153,12 +153,11 @@ def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix='wra
 
 class Service(object):
     '''service base class'''
-    Web, Mdx, Stardict = 0, 1, 2
 
     def __init__(self):
         self._exporters = self.get_exporters()
-        self._fields, self._actions = zip(
-            *self._exporters) if self._exporters else (None, None)
+        self._fields, self._actions = zip(*self._exporters) \
+            if self._exporters else (None, None)
         # query interval: default 500ms
         self.query_interval = 0.5
 
@@ -193,6 +192,13 @@ class Service(object):
                 return result if result else QueryResult.default()  # avoid return None
         return QueryResult.default()
 
+    @staticmethod
+    def get_anki_label(filename, type_):
+        formats = {'audio': u'[sound: {0}]',
+                   'img': u'<img src="{0}">',
+                   'video': u'<video controls="controls" width="100%" height="auto" src="{0}"></video>'}
+        return formats[type_].format(filename)
+
 
 class WebService(Service):
     '''web service class'''
@@ -210,7 +216,7 @@ class WebService(Service):
         return (self.word in self.cache) and self.cache[self.word].has_key(key)
 
     def cache_result(self, key):
-        return self.cache[self.word].get(key, '')
+        return self.cache[self.word].get(key, u'')
 
     @property
     def title(self):
@@ -219,6 +225,14 @@ class WebService(Service):
     @property
     def unique(self):
         return self.__class__.__name__
+
+    @classmethod
+    def download(cls, url, filename):
+        try:
+            return urllib.urlretrieve(url, filename)
+        except Exception as e:
+            showInfo(str(e))
+            pass
 
 
 class LocalService(Service):
@@ -246,8 +260,7 @@ class MdxService(LocalService):
 
     @staticmethod
     def support(dict_path):
-        if dict_path.endswith('.mdx'):
-            return True
+        return dict_path.endswith('.mdx')
 
     @property
     def title(self):
@@ -274,13 +287,13 @@ class MdxService(LocalService):
             self.index()
         result = self.builder.mdx_lookup(self.word)
         if result:
-            if result[0].upper().find("@@@LINK=") > -1:
+            if result[0].upper().find(u"@@@LINK=") > -1:
                 # redirect to a new word behind the equal symol.
-                self.word = result[0][len("@@@LINK="):].strip()
+                self.word = result[0][len(u"@@@LINK="):].strip()
                 return self.fld_whole()
             else:
-                ss = self.adapt_to_anki(result[0])
-                return QueryResult(result=ss[0], js=ss[1])
+                html, js = self.adapt_to_anki(result[0])
+                return QueryResult(result=html, js=js)
         return QueryResult.default()
 
     def adapt_to_anki(self, html):
@@ -290,21 +303,21 @@ class MdxService(LocalService):
         """
         # convert media path, save media files
         media_files_set = set()
-        mcss = re.findall('href="(\S+?\.css)"', html)
+        mcss = re.findall(r'href="(\S+?\.css)"', html)
         media_files_set.update(set(mcss))
-        mjs = re.findall('src="([\w\./]\S+?\.js)"', html)
+        mjs = re.findall(r'src="([\w\./]\S+?\.js)"', html)
         media_files_set.update(set(mjs))
-        msrc = re.findall('<img.*?src="([\w\./]\S+?)".*?>', html)
+        msrc = re.findall(r'<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
-        msound = re.findall('href="sound:(.*?\.mp3)"', html)
+        msound = re.findall(r'href="sound:(.*?\.mp3)"', html)
         if config.export_media():
             media_files_set.update(set(msound))
         for each in media_files_set:
-            html = html.replace(each, '_' + each.split('/')[-1])
+            html = html.replace(each, u'_' + each.split('/')[-1])
         # find sounds
         p = re.compile(
-            '<a[^>]+?href=\"(sound:_.*?\.(?:mp3|wav))\"[^>]*?>(.*?)</a>')
-        html = p.sub("[\\1]\\2", html)
+            r'<a[^>]+?href=\"(sound:_.*?\.(?:mp3|wav))\"[^>]*?>(.*?)</a>')
+        html = p.sub(u"[\\1]\\2", html)
         self.save_media_files(media_files_set)
         for cssfile in mcss:
             cssfile = '_' + cssfile
@@ -315,10 +328,11 @@ class MdxService(LocalService):
                 new_css_file, wrap_class_name = wrap_css(cssfile)
                 html = html.replace(cssfile, new_css_file)
                 # add global div to the result html
-                html = '<div class="{}">{}</div>'.format(wrap_class_name, html)
+                html = u'<div class="{0}">{1}</div>'.format(
+                    wrap_class_name, html)
 
-        js = re.findall('<script.*?>.*?</script>', html, re.DOTALL)
-        return unicode(html), '\n'.join(js)
+        js = re.findall(r'<script.*?>.*?</script>', html, re.DOTALL)
+        return html, u'\n'.join(js)
 
     def save_media_files(self, data):
         """
@@ -327,14 +341,9 @@ class MdxService(LocalService):
         """
         diff = data.difference(self.cache['files'])
         self.cache['files'].update(diff)
-<<<<<<< HEAD
-        lst, errors, styles = list(), list(), list()
-        wild = ['*' + os.path.basename(each.replace('\\', os.path.sep))
-                for each in diff]
-=======
         lst, errors = list(), list()
-        wild = ['*' + ntpath.basename(each) for each in diff]
->>>>>>> cd0bb59... wrapping css to avoid styles confusion; supporting static files as service styles; update some webservices
+        wild = [
+            '*' + os.path.basename(each.replace('\\', os.path.sep)) for each in diff]
         try:
             for each in wild:
                 keys = self.builder.get_mdd_keys(each)
@@ -371,8 +380,7 @@ class StardictService(LocalService):
 
     @staticmethod
     def support(dict_path):
-        if dict_path.endswith('.ifo'):
-            return True
+        return dict_path.endswith('.ifo')
 
     @property
     def title(self):
@@ -384,9 +392,7 @@ class StardictService(LocalService):
     def index(self):
         try:
             self.builder = Dictionary(self.dict_path, in_memory=False)
-            if self.builder:
-                return True
-            return False
+            return True if self.builder else False
         except:
             return False
 
