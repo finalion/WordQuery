@@ -36,7 +36,8 @@ trans = {
     'DICTS': {'zh_CN': u'<b>字典</b>', 'en': u'<b>Dict</b>', 'fr': u'<b>Dico</b>'},
     'DICT_FIELDS': {'zh_CN': u'<b>字典字段</b>', 'en': u'<b>Dict fields</b>', 'fr': u'<b>Champ de dico</b>'},
     'RADIOS_DESC': {'zh_CN': u'<b>单选框选中为待查询单词字段</b>', 'en': u'<b>Word field needs to be selected.</b>', 'fr': u'<b>Champ de mot doit être sélectionné. </b>'},
-    'NO_QUERY_WORD': {'zh_CN': u'查询字段无单词', 'en': u'No word is found in the query field', 'fr': u'Aucun est trouvée dans le champ'}
+    'NO_QUERY_WORD': {'zh_CN': u'查询字段无单词', 'en': u'No word is found in the query field', 'fr': u'Aucun est trouvée dans le champ'},
+    'CSS_NOT_FOUND': {'zh_CN': u'没有找到CSS文件，请手动选择', 'en': u'No valid css stylesheets found, please choose the file', 'fr': u'No valid css stylesheets found, please choose the file'}
 }
 
 

@@ -77,31 +77,33 @@ class Frdic(WebService):
         except Exception as e:
             return ''
 
+    def _get_field(self, key, default=''):
+        return self.cache_result(key) if self.cached(key) else self._get_content().get(key, default)
+
     @export(u'音标', 1)
     def fld_phonetic(self):
-        return self.cache_result('phonitic') if self.cached('phonitic') else self._get_content().get('phonitic', '')
+        return self._get_field('phonitic')
 
     @export(u'法汉-汉法词典', 2)
-    @with_styles(css=css)
     def fld_fccf(self):
-        return self.cache_result('fccf') if self.cached('fccf') else self._get_content().get('fccf', '')
+        return self._get_field('fccf')
 
     @export(u'法语例句库', 3)
     @with_styles(css=css)
     def fld_example(self):
-        return self.cache_result('example') if self.cached('example') else self._get_content().get('example', '')
+        return self._get_field('example')
 
     @export(u'近义、反义、派生词典', 4)
     @with_styles(css=css)
     def fld_syn(self):
-        return self.cache_result('syn') if self.cached('syn') else self._get_content().get('syn', '')
+        return self._get_field('syn')
 
     @export(u'法法词典', 5)
     @with_styles(css=css)
     def fld_ff(self):
-        return self.cache_result('ff') if self.cached('ff') else self._get_content().get('ff', '')
+        return self._get_field('ff')
 
     @export(u'法英词典', 6)
     @with_styles(css=css)
     def fld_fe(self):
-        return self.cache_result('fe') if self.cached('fe') else self._get_content().get('fe', '')
+        return self._get_field('fe')

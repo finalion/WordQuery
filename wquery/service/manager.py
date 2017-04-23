@@ -77,15 +77,18 @@ class ServiceManager(object):
                  and not f.endswith('.pyc')]
 
         for f in files:
-            # try:
-            module = importlib.import_module(
-                '.%s' % os.path.splitext(f)[0], __package__)
-            for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
-                if issubclass(cls, WebService) and cls is not WebService:
-                    label = getattr(cls, '__register_label__', cls.__name__)
-                    service = cls()
-                    if service not in services:
-                        services.append(service)
+            try:
+                module = importlib.import_module(
+                    '.%s' % os.path.splitext(f)[0], __package__)
+                for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
+                    if issubclass(cls, WebService) and cls is not WebService:
+                        label = getattr(
+                            cls, '__register_label__', cls.__name__)
+                        service = cls()
+                        if service not in services:
+                            services.append(service)
+            except ImportError:
+                continue
         return services
 
     def get_available_local_services(self):

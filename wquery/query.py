@@ -32,7 +32,7 @@ from aqt.utils import showInfo, showText, tooltip
 from .context import config
 from .lang import _, _sl
 from .service import service_manager
-from .service.base import QueryResult
+from .service.base import QueryResult, copy_static_file
 from .utils import Empty, Queue
 from .progress import ProgressManager
 
@@ -160,14 +160,9 @@ def update_note_fields(note, results):
 
 
 def update_note_field(note, fld_index, fld_result):
-    result, js, css = fld_result.result, fld_result.js, fld_result.css
+    result, js, jsfile = fld_result.result, fld_result.js, fld_result.jsfile
     # js process: add to template of the note model
-    if js:
-        add_to_tmpl(note, js=js)
-    # css process: add css directly to the note field, that can ensure there
-    # will not exist css confusion
-    if css:
-        result = css + result
+    add_to_tmpl(note, js=js, jsfile=jsfile)
     note.fields[fld_index] = result
     note.flush()
 
@@ -181,13 +176,19 @@ def add_to_tmpl(note, **kwargs):
     # showInfo(str(kwargs))
     afmt = note.model()['tmpls'][0]['afmt']
     if kwargs:
-        for key, value in kwargs.items():
-            value = value.strip()
-            if key == 'js' and value not in afmt:
-                js = value
-                if not value.startswith('<script') and not value.endswith('/script>'):
-                    js = '<script>%s</script>' % value
-                note.model()['tmpls'][0]['afmt'] = afmt + js
+        jsfile, js = kwargs.get('jsfile', None), kwargs.get('js', None)
+        if js and js.strip():
+            addings = js.strip()
+            if addings not in afmt:
+                if not addings.startswith('<script') and not addings.endswith('/script>'):
+                    addings = '<script>%s</script>\r\n' % addings
+                afmt += addings
+        if jsfile:
+            new_jsfile = '_' + jsfile if not jsfile.startswith('_') else jsfile
+            copy_static_file(jsfile, new_jsfile)
+            addings = '<script src="%s"></script>\r\n' % new_jsfile
+            afmt += addings
+        note.model()['tmpls'][0]['afmt'] = afmt
 
 
 class InvalidWordException(Exception):

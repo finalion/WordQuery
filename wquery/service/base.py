@@ -19,6 +19,7 @@
 
 import inspect
 import os
+import shutil
 # use ntpath module to ensure the windows-style (e.g. '\\LDOCE.css')
 # path can be processed on Unix platform.
 # import ntpath
@@ -27,11 +28,13 @@ from collections import defaultdict
 from functools import wraps
 
 from aqt import mw
+from aqt.qt import QFileDialog
 from aqt.utils import showInfo, showText
 from wquery.context import config
 from wquery.libs.mdict.mdict_query import IndexBuilder
 from wquery.libs.pystardict import Dictionary
 from wquery.utils import MapDict
+from wquery.lang import _
 
 
 def register(label):
@@ -54,20 +57,98 @@ def export(label, index):
     return _with
 
 
+def copy_static_file(filename, new_filename=None, static_dir='static'):
+    """
+    copy file in static directory to media folder
+    """
+    abspath = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                           static_dir,
+                           filename)
+    shutil.copy(abspath, new_filename if new_filename else filename)
+
+
 def with_styles(**styles):
+    """
+    cssfile: specify the css file in static folder
+    css: css strings
+    js: js strings
+    jsfile: specify the js file in static folder
+    """
     def _with(fld_func):
         @wraps(fld_func)
         def _deco(cls, *args, **kwargs):
             res = fld_func(cls, *args, **kwargs)
-            if styles:
-                if not isinstance(res, QueryResult):
-                    return QueryResult(result=res, **styles)
-                else:
-                    res.set_styles(**styles)
-                    return res
-            return res
+            cssfile, css, jsfile, js, need_wrap_css, class_wrapper =\
+                styles.get('cssfile', None),\
+                styles.get('css', None),\
+                styles.get('jsfile', None),\
+                styles.get('js', None),\
+                styles.get('need_wrap_css', False),\
+                styles.get('wrap_class', '')
+
+            def wrap(html, css_obj, is_file=True):
+                # wrap css and html
+                if need_wrap_css and class_wrapper:
+                    html = '<div class="{}">{}</div>'.format(
+                        class_wrapper, html)
+                    return html, wrap_css(css_obj, is_file=is_file, class_wrapper=class_wrapper)[0]
+                return html, css_obj
+
+            if cssfile:
+                static_dir = os.path.join(os.path.dirname(os.path.realpath(__file__)),
+                                          'static')
+                new_cssfile = cssfile if cssfile.startswith(
+                    '_') else '_' + cssfile
+                # copy the css file to media folder
+                copy_static_file(cssfile, new_cssfile)
+                # wrap the css file
+                res, new_cssfile = wrap(res, new_cssfile)
+                res = '<link type="text/css" rel="stylesheet" href="{}" />{}'.format(
+                    new_cssfile, res)
+            if css:
+                res, css = wrap(res, css, is_file=False)
+                res = '<styles>{}</styles>{}'.format(css, res)
+
+            if not isinstance(res, QueryResult):
+                return QueryResult(result=res, jsfile=jsfile, js=js)
+            else:
+                res.set_styles(jsfile=jsfile, js=js)
+                return res
         return _deco
     return _with
+
+
+def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix='wrap'):
+
+    def process(content):
+        # clean the comments
+        regx = re.compile('/\*.*?\*/', re.DOTALL)
+        content = regx.sub('', content).strip()
+        # add wrappers to all the selectors except the first one
+        regx = re.compile('([^\r\n,{}]+)(,(?=[^}]*{)|\s*{)', re.DOTALL)
+        new_css = regx.sub('.%s \\1\\2' % class_wrapper, content)
+        return new_css
+
+    if is_file:
+        if not class_wrapper:
+            class_wrapper = os.path.splitext(os.path.basename(orig_css))[0]
+        new_cssfile = '{css_name}_{suffix}.css'.format(
+            css_name=orig_css[:orig_css.rindex('.css')],
+            suffix=new_cssfile_suffix)
+        # if new css file exists, not process
+        if os.path.exists(new_cssfile):
+            return new_cssfile, class_wrapper
+        result = ''
+        with open(orig_css, 'rb') as f:
+            result = process(f.read().strip())
+        if result:
+            with open(new_cssfile, 'wb') as f:
+                f.write(result)
+        return new_cssfile, class_wrapper
+    else:
+        # class_wrapper must be valid.
+        assert class_wrapper
+        return process(orig_css), class_wrapper
 
 
 class Service(object):
@@ -161,6 +242,7 @@ class MdxService(LocalService):
         #  {'builder':builder, 'files':[...static files list...]}
         self.cache = defaultdict(set)
         self.query_interval = 0.01
+        self.styles = []
 
     @staticmethod
     def support(dict_path):
@@ -198,7 +280,6 @@ class MdxService(LocalService):
                 return self.fld_whole()
             else:
                 ss = self.adapt_to_anki(result[0])
-                # open('d:\\wmu.html', 'wb').write(ss)
                 return QueryResult(result=ss[0], js=ss[1])
         return QueryResult.default()
 
@@ -206,7 +287,6 @@ class MdxService(LocalService):
         """
         1. convert the media path to actual path in anki's collection media folder.
         2. remove the js codes (js inside will expires.)
-        3. import css, to make sure the css file can be synced. TO VALIDATE!
         """
         # convert media path, save media files
         media_files_set = set()
@@ -225,16 +305,19 @@ class MdxService(LocalService):
         p = re.compile(
             '<a[^>]+?href=\"(sound:_.*?\.(?:mp3|wav))\"[^>]*?>(.*?)</a>')
         html = p.sub("[\\1]\\2", html)
-        # showText(html)
-        errors, styles = self.save_media_files(media_files_set)
-        # import css
-        html = '<br>'.join(["<style>@import url('%s');</style>" %
-                            style for style in styles if style.endswith('.css')]) + html
-        # remove the js codes, send them back to the editor and add them to the template
-        # 插入笔记<div>中不能有js代码，否则会不显示。例如mwu字典
+        self.save_media_files(media_files_set)
+        for cssfile in mcss:
+            cssfile = '_' + cssfile
+            # if not exists the css file, the user can place the file to media
+            # folder first, and it will also execute the wrap process to generate
+            # the desired file.
+            if os.path.exists(cssfile):
+                new_css_file, wrap_class_name = wrap_css(cssfile)
+                html = html.replace(cssfile, new_css_file)
+                # add global div to the result html
+                html = '<div class="{}">{}</div>'.format(wrap_class_name, html)
+
         js = re.findall('<script.*?>.*?</script>', html, re.DOTALL)
-        # for each in js:
-        #     html = html.replace(each, '')
         return unicode(html), '\n'.join(js)
 
     def save_media_files(self, data):
@@ -244,9 +327,14 @@ class MdxService(LocalService):
         """
         diff = data.difference(self.cache['files'])
         self.cache['files'].update(diff)
+<<<<<<< HEAD
         lst, errors, styles = list(), list(), list()
         wild = ['*' + os.path.basename(each.replace('\\', os.path.sep))
                 for each in diff]
+=======
+        lst, errors = list(), list()
+        wild = ['*' + ntpath.basename(each) for each in diff]
+>>>>>>> cd0bb59... wrapping css to avoid styles confusion; supporting static files as service styles; update some webservices
         try:
             for each in wild:
                 keys = self.builder.get_mdd_keys(each)
@@ -259,12 +347,10 @@ class MdxService(LocalService):
                 try:
                     bytes_list = self.builder.mdd_lookup(each)
                     if bytes_list:
-                        savepath = os.path.join(
-                            mw.col.media.dir(), saved_basename)
                         if basename.endswith('.css') or basename.endswith('.js'):
-                            styles.append(saved_basename)
-                        if not os.path.exists(savepath):
-                            with open(savepath, 'wb') as f:
+                            self.styles.append(saved_basename)
+                        if not os.path.exists(saved_basename):
+                            with open(saved_basename, 'wb') as f:
                                 f.write(bytes_list[0])
                 except sqlite3.OperationalError as e:
                     showInfo(str(e))
@@ -274,7 +360,7 @@ class MdxService(LocalService):
             '''
             pass
 
-        return errors, styles
+        return errors
 
 
 class StardictService(LocalService):

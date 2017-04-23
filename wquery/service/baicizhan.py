@@ -46,34 +46,35 @@ class Baicizhan(WebService):
         except:
             return ''
 
+    def _get_field(self, key, default=''):
+        return self.cache_result(key) if self.cached(key) else self._get_from_api().get(key, default)
+
     @export(u'音标', 1)
     def fld_explains(self):
-        return self.cache_result('accent') if self.cached('accent') else self._get_from_api().get('accent', '')
+        return self._get_field('accent')
 
     @export(u'图片', 2)
     def fld_img(self):
-        url = self.cache_result('img') if self.cached(
-            'img') else self._get_from_api().get('img', '')
+        url = self._get_field('img')
         return '<img src="{}">'.format(url)
 
     @export(u'象形', 3)
     def fld_df(self):
-        return self.cache_result('df') if self.cached('df') else self._get_from_api().get('df', '')
+        return self._get_field('df')
 
     @export(u'中文释义', 6)
     def fld_mean(self):
-        return self.cache_result('mean_cn') if self.cached('mean_cn') else self._get_from_api().get('mean_cn', '')
+        return self._get_field('mean_cn')
 
     @export(u'英文例句', 4)
     def fld_st(self):
-        return self.cache_result('st') if self.cached('st') else self._get_from_api().get('st', '')
+        return self._get_field('st')
 
     @export(u'例句翻译', 5)
     def fld_sttr(self):
-        return self.cache_result('sttr') if self.cached('sttr') else self._get_from_api().get('sttr', '')
+        return self._get_field('sttr')
 
     @export(u'单词tv', 7)
     def fld_tv_url(self):
-        url = self.cache_result('tv') if self.cached(
-            'tv') else self._get_from_api().get('tv', '')
-        return '<video controls="controls" width="100%" height="auto" src={}></video>'.format(url)
+        url = self._get_field('tv')
+        return '<video controls="controls" width="100%" height="auto" src="{}"></video>'.format(url)

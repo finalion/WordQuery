@@ -16,7 +16,6 @@ class Bing(WebService):
 
     def __init__(self):
         super(Bing, self).__init__()
-        self.cache = defaultdict(defaultdict)
         self.cj = CookieJar()
         self.opener = urllib2.build_opener(
             urllib2.HTTPCookieProcessor(self.cj))
