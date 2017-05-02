@@ -115,7 +115,7 @@ def query_from_browser(browser):
 
 
 def query_from_editor_all_fields(editor):
-    if not editor:
+    if not editor or not editor.note:
         return
     work_manager.reset_query_counts()
     update_progress_label.kwargs = defaultdict(str)
