@@ -28,7 +28,7 @@ from aqt.qt import *
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
 
-from .context import config
+from .context import config, VERSION
 from .lang import _, _sl
 from .odds import get_model_byId, get_ord_from_fldname
 from .service import service_manager
@@ -140,8 +140,11 @@ class OptionsDialog(QDialog):
         self.main_layout.addWidget(scroll_area)
         # add description of radio buttons AND ok button
         bottom_layout = QHBoxLayout()
+        about_btn = QPushButton(_('ABOUT'))
+        about_btn.clicked.connect(self.show_about)
         btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         btnbox.accepted.connect(self.accept)
+        bottom_layout.addWidget(about_btn)
         bottom_layout.addWidget(QLabel(_("RADIOS_DESC")))
         bottom_layout.addWidget(btnbox)
         self.main_layout.addLayout(bottom_layout)
@@ -155,6 +158,13 @@ class OptionsDialog(QDialog):
                     u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  model['name']))
                 # build fields -- dicts layout
                 self.build_mappings_layout(model)
+
+    def show_about(self):
+        info = u'<b>{t0}</b><br />{version}<br /><b>{t1}</b><br /><a href="{url}">{url}</a><br /><b>{t2}</b><br /><a href="{feedback0}">{feedback0}</a><br /><a href="mailto:{feedback1}">{feedback1}</a>'.format(
+            t0=_('VERSION'), version=VERSION,
+            t1=_('REPOSITORY'), url=u'https://github.com/finalion/WordQuery',
+            t2=_('FEEDBACK'), feedback0=u'https://github.com/finalion/WordQuery/issues', feedback1=u'finalion@gmail.com')
+        QMessageBox.about(self, _('ABOUT'), info)
 
     def show_fm_dialog(self):
         fm_dialog = FoldersManageDialog(self)
@@ -302,12 +312,12 @@ class OptionsDialog(QDialog):
         kwargs:
         word_checked  dict  fld_name dict_field
         """
-        word_checked, dict_name, dict_unique, fld_name, dict_field =\
-            kwargs.get('word_checked', False), \
-            kwargs.get('dict', _('NOT_DICT_FIELD')), \
-            kwargs.get('dict_unique', ''),\
-            kwargs.get('fld_name', ''), \
-            kwargs.get('dict_field', '')
+        word_checked, dict_name, dict_unique, fld_name, dict_field = (
+            kwargs.get('word_checked', False),
+            kwargs.get('dict', _('NOT_DICT_FIELD')),
+            kwargs.get('dict_unique', ''),
+            kwargs.get('fld_name', ''),
+            kwargs.get('dict_field', ''),)
 
         fldname_label = QRadioButton(fld_name)
         fldname_label.setMinimumSize(100, 0)
