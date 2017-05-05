@@ -402,9 +402,9 @@ class StardictService(LocalService):
             return
         try:
             result = self.builder[self.word]
-            result = result.strip()
-                .replace('\r\n', '<br />')
-                .replace('\r', '<br />')
+            result = result.strip()\
+                .replace('\r\n', '<br />')\
+                .replace('\r', '<br />')\
                 .replace('\n', '<br />')
             return QueryResult(result=result)
         except KeyError:
