@@ -22,17 +22,18 @@ import re
 import sqlite3
 import sys
 import time
+import shutil
 from collections import defaultdict
 
 import aqt
 from aqt import mw
-from aqt.qt import QObject, QThread, pyqtSignal, pyqtSlot
+from aqt.qt import QObject, QThread, pyqtSignal, pyqtSlot, QFileDialog
 from aqt.utils import showInfo, showText, tooltip
 
 from .context import config
 from .lang import _, _sl
 from .service import service_manager
-from .service.base import QueryResult, copy_static_file
+from .service.base import QueryResult, copy_static_file, wrap_css
 from .utils import Empty, Queue
 from .progress import ProgressManager
 
@@ -106,6 +107,7 @@ def query_from_browser(browser):
                     {'words_number': i + 1, 'fields_number': fields_number})
             except InvalidWordException:
                 showInfo(_("NO_QUERY_WORD"))
+        promot_choose_css()
         browser.model.reset()
         progress.finish()
         # browser.model.reset()
@@ -126,6 +128,7 @@ def query_from_editor_all_fields(editor):
     except InvalidWordException:
         showInfo(_("NO_QUERY_WORD"))
     progress.finish()
+    promot_choose_css()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
 
@@ -151,6 +154,7 @@ def query_from_editor_current_field(editor):
     # editor.note.flush()
     # showText(str(editor.note.model()['tmpls']))
     progress.finish()
+    promot_choose_css()
     editor.setNote(editor.note, focus=True)
     editor.saveNow()
 
@@ -167,6 +171,23 @@ def update_note_field(note, fld_index, fld_result):
     add_to_tmpl(note, js=js, jsfile=jsfile)
     note.fields[fld_index] = result if result else ''
     note.flush()
+
+
+def promot_choose_css():
+    for local_service in service_manager.local_services:
+        try:
+            missed_css = local_service.missed_css.pop()
+            showInfo(
+                u'MDX dictonary <b>{dict}</b> misses css file <b>{css}</b>. <br />Please choose the file.'.format(dict=local_service.title, css=missed_css))
+            filepath = QFileDialog.getOpenFileName(
+                caption=u'Choose css file', filter=u'CSS (*.css)')
+            if filepath:
+                shutil.copy(filepath, u'_' + missed_css)
+                wrap_css(u'_' + missed_css)
+                local_service.missed_css.clear()
+
+        except KeyError as e:
+            pass
 
 
 def add_to_tmpl(note, **kwargs):
@@ -205,6 +226,7 @@ def join_result(query_func):
             while not worker.isFinished():
                 mw.app.processEvents()
                 worker.wait(100)
+
         return handle_results('__query_over__')
     return wrap
 

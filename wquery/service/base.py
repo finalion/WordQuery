@@ -136,11 +136,17 @@ def wrap_css(orig_css, is_file=True, class_wrapper=None, new_cssfile_suffix=u'wr
             css_name=orig_css[:orig_css.rindex('.css')],
             suffix=new_cssfile_suffix)
         # if new css file exists, not process
-        if os.path.exists(new_cssfile):
+        # if input original css file doesn't exist, return the new css filename and class wrapper
+        # to make the subsequent process easy.
+        if os.path.exists(new_cssfile) or not os.path.exists(orig_css):
             return new_cssfile, class_wrapper
         result = ''
         with open(orig_css, 'rb') as f:
-            result = process(f.read().strip().decode('utf-8'))
+            try:
+                result = process(f.read().strip().decode('utf-8', 'ignore'))
+            except:
+                showInfo('error: ' + orig_css)
+
         if result:
             with open(new_cssfile, 'wb') as f:
                 f.write(result.encode('utf-8'))
@@ -241,6 +247,7 @@ class LocalService(Service):
         super(LocalService, self).__init__()
         self.dict_path = dict_path
         self.builder = None
+        self.missed_css = set()
 
     @property
     def unique(self):
@@ -309,7 +316,7 @@ class MdxService(LocalService):
         media_files_set.update(set(mjs))
         msrc = re.findall(r'<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
-        msound = re.findall(r'href="sound:(.*?\.mp3)"', html)
+        msound = re.findall(r'href="sound:(.*?\.(?:mp3|wav))"', html)
         if config.export_media():
             media_files_set.update(set(msound))
         for each in media_files_set:
@@ -324,15 +331,58 @@ class MdxService(LocalService):
             # if not exists the css file, the user can place the file to media
             # folder first, and it will also execute the wrap process to generate
             # the desired file.
-            if os.path.exists(cssfile):
-                new_css_file, wrap_class_name = wrap_css(cssfile)
-                html = html.replace(cssfile, new_css_file)
-                # add global div to the result html
-                html = u'<div class="{0}">{1}</div>'.format(
-                    wrap_class_name, html)
+            if not os.path.exists(cssfile):
+                self.missed_css.add(cssfile[1:])
+            new_css_file, wrap_class_name = wrap_css(cssfile)
+            html = html.replace(cssfile, new_css_file)
+            # add global div to the result html
+            html = u'<div class="{0}">{1}</div>'.format(
+                wrap_class_name, html)
 
         js = re.findall(r'<script.*?>.*?</script>', html, re.DOTALL)
         return html, u'\n'.join(js)
+
+    # def export_media_files(self, html):
+    #     imgs = re.findall(r'<img.*?src="(.*?)".*?>', html)
+    #     imgs = [img.strip() for img in imgs]
+    #     sounds = re.findall(r'href="sound:(.*?)"', html)
+    #     sounds = [sound.strip() for sound in sounds]
+    #     media_files = list(set(imgs)) + list(set(sounds)) \
+    #         if config.export_media() else list(set(imgs))
+    #     wild = ['*' + os.path.basename(each.replace('\\', os.path.sep))
+    #             for each in media_files]
+    #     keys = [builder.get_mdd_keys(each) for each in wild]
+    #     for key in keys:
+    #         savefile = self.save_file(key)
+
+    # def export_static_files(self):
+    #     """
+    #     export css files and js files.
+    #     """
+    #     css_files, js_files = [], []
+    #     keys = self.builder.get_mdd_keys(
+    #         '*.css') + self.builder.get_mdd_keys('*.js')
+    #     for key in keys:
+    #         savefile = self.save_file(key)
+    #         if key.endswith('.css') and savefile:
+    #             new_css_file, wrap_class_name = wrap_css(savefile)
+    #             css_files.append(new_css_file)
+    #         if key.endswith('*.js') and savefile:
+    #             js_files.append(savefile)
+    #     return css_files, js_files
+
+    def save_file(self, filepath_in_mdx, savepath=None):
+        basename = os.path.basename(filepath_in_mdx.replace('\\', os.path.sep))
+        if savepath is None:
+            savepath = '_' + basename
+        try:
+            bytes_list = self.builder.mdd_lookup(filepath_in_mdx)
+            if bytes_list and not os.path.exists(savepath):
+                with open(savepath, 'wb') as f:
+                    f.write(bytes_list[0])
+                    return savepath
+        except sqlite3.OperationalError as e:
+            showInfo(str(e))
 
     def save_media_files(self, data):
         """
@@ -351,18 +401,19 @@ class MdxService(LocalService):
                     errors.append(each)
                 lst.extend(keys)
             for each in lst:
-                basename = os.path.basename(each.replace('\\', os.path.sep))
-                saved_basename = '_' + basename
-                try:
-                    bytes_list = self.builder.mdd_lookup(each)
-                    if bytes_list:
-                        if basename.endswith('.css') or basename.endswith('.js'):
-                            self.styles.append(saved_basename)
-                        if not os.path.exists(saved_basename):
-                            with open(saved_basename, 'wb') as f:
-                                f.write(bytes_list[0])
-                except sqlite3.OperationalError as e:
-                    showInfo(str(e))
+                self.save_file(each)
+                # basename = os.path.basename(each.replace('\\', os.path.sep))
+                # saved_basename = '_' + basename
+                # try:
+                #     bytes_list = self.builder.mdd_lookup(each)
+                #     if bytes_list:
+                #         if basename.endswith('.css') or basename.endswith('.js'):
+                #             self.styles.append(saved_basename)
+                #         if not os.path.exists(saved_basename):
+                #             with open(saved_basename, 'wb') as f:
+                #                 f.write(bytes_list[0])
+                # except sqlite3.OperationalError as e:
+                #     showInfo(str(e))
         except AttributeError:
             '''
             有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'
