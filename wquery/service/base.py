@@ -262,7 +262,8 @@ class MdxService(LocalService):
         # self.index()
         # cache all the static files queried, cache builder
         #  {'builder':builder, 'files':[...static files list...]}
-        self.cache = defaultdict(set)
+        self.media_cache = defaultdict(set)
+        self.cache = defaultdict(str)
         self.query_interval = 0.01
         self.styles = []
 
@@ -285,24 +286,30 @@ class MdxService(LocalService):
             self.builder = IndexBuilder(self.dict_path)
             if self.builder:
                 return True
-            return False
         except:
-            return False
+            pass
 
     @export(u"default", 0)
     def fld_whole(self):
-        if not self.builder:
-            self.index()
-        result = self.builder.mdx_lookup(self.word)
-        if result:
-            if result[0].upper().find(u"@@@LINK=") > -1:
-                # redirect to a new word behind the equal symol.
-                self.word = result[0][len(u"@@@LINK="):].strip()
-                return self.fld_whole()
-            else:
-                html, js = self.adapt_to_anki(result[0])
-                return QueryResult(result=html, js=js)
-        return QueryResult.default()
+        html = self.get_html()
+        js = re.findall(r'<script.*?>.*?</script>', html, re.DOTALL)
+        return QueryResult(result=html, js=u'\n'.join(js))
+
+    def get_html(self):
+        if not self.cache[self.word]:
+            if not self.builder:
+                self.index()
+            html = ''
+            result = self.builder.mdx_lookup(self.word)
+            if result:
+                if result[0].upper().find(u"@@@LINK=") > -1:
+                    # redirect to a new word behind the equal symol.
+                    self.word = result[0][len(u"@@@LINK="):].strip()
+                    return self.get_html()
+                else:
+                    html = self.adapt_to_anki(result[0])
+                    self.cache[self.word] = html
+        return self.cache[self.word]
 
     def adapt_to_anki(self, html):
         """
@@ -340,8 +347,7 @@ class MdxService(LocalService):
             html = u'<div class="{0}">{1}</div>'.format(
                 wrap_class_name, html)
 
-        js = re.findall(r'<script.*?>.*?</script>', html, re.DOTALL)
-        return html, u'\n'.join(js)
+        return html
 
     # def export_media_files(self, html):
     #     imgs = re.findall(r'<img.*?src="(.*?)".*?>', html)
@@ -390,8 +396,8 @@ class MdxService(LocalService):
         get the necessary static files from local mdx dictionary
         ** kwargs: data = list
         """
-        diff = data.difference(self.cache['files'])
-        self.cache['files'].update(diff)
+        diff = data.difference(self.media_cache['files'])
+        self.media_cache['files'].update(diff)
         lst, errors = list(), list()
         wild = [
             '*' + os.path.basename(each.replace('\\', os.path.sep)) for each in diff]

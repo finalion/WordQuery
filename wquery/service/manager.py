@@ -28,7 +28,7 @@ from wquery.context import config
 from wquery.libs.mdict.mdict_query import IndexBuilder
 from wquery.utils import MapDict, importlib
 
-from .base import MdxService, StardictService, WebService
+from .base import MdxService, StardictService, WebService, LocalService
 
 
 class ServiceManager(object):
@@ -49,7 +49,6 @@ class ServiceManager(object):
         # make all local services available
         for service in self.local_services:
             if not service.index():
-                # showInfo(service.dict_path)
                 self.local_services.remove(service)
 
     def update_services(self):
@@ -69,27 +68,35 @@ class ServiceManager(object):
             if each.label == label:
                 return each
 
-    def get_available_web_services(self):
+    def _get_services_from_files(self, type_, *args):
+        """
+        get service from service packages, available type is
+        WebService, LocalService
+        """
         services = []
         mypath = os.path.dirname(os.path.realpath(__file__))
         files = [f for f in os.listdir(mypath)
-                 if f not in ('__init__.py', 'base.py', 'localservice.py', 'webservice.py')
-                 and not f.endswith('.pyc')]
+                 if f not in ('__init__.py', 'base.py',) and not f.endswith('.pyc')]
+        base_class = (WebService, LocalService,
+                      MdxService, StardictService)
 
         for f in files:
             try:
                 module = importlib.import_module(
                     '.%s' % os.path.splitext(f)[0], __package__)
                 for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
-                    if issubclass(cls, WebService) and cls is not WebService:
+                    if issubclass(cls, type_) and cls not in base_class:
                         label = getattr(
                             cls, '__register_label__', cls.__name__)
-                        service = cls()
+                        service = cls(*args)
                         if service not in services:
                             services.append(service)
             except ImportError:
                 continue
         return services
+
+    def get_available_web_services(self):
+        return self._get_services_from_files(WebService)
 
     def get_available_local_services(self):
         self.local_dict_paths = []
@@ -104,6 +111,9 @@ class ServiceManager(object):
                     if StardictService.support(dict_path):
                         services.append(StardictService(dict_path))
                 # support mdx dictionary and stardict format dictionary
+        customed_services = self._get_services_from_files(LocalService, None)
+        services.extend([service for service in customed_services
+                         if os.path.exists(service.dict_path)])
         self._dict_paths = [service.dict_path for service in services]
         return services
 
