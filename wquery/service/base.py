@@ -20,6 +20,7 @@
 import inspect
 import os
 import shutil
+import sqlite3
 # use ntpath module to ensure the windows-style (e.g. '\\LDOCE.css')
 # path can be processed on Unix platform.
 # However, anki version on mac platforms doesn't including this package?
