@@ -19,25 +19,28 @@
 
 import inspect
 import os
-import shutil
-import sqlite3
 # use ntpath module to ensure the windows-style (e.g. '\\LDOCE.css')
 # path can be processed on Unix platform.
 # However, anki version on mac platforms doesn't including this package?
 # import ntpath
 import re
+import shutil
+import sqlite3
 import urllib
+import urllib2
+import zlib
 from collections import defaultdict
 from functools import wraps
 
+import cookielib
 from aqt import mw
 from aqt.qt import QFileDialog
 from aqt.utils import showInfo, showText
 from wquery.context import config
+from wquery.lang import _
 from wquery.libs.mdict.mdict_query import IndexBuilder
 from wquery.libs.pystardict import Dictionary
 from wquery.utils import MapDict
-from wquery.lang import _
 
 
 def register(label):
@@ -213,6 +216,9 @@ class WebService(Service):
     def __init__(self):
         super(WebService, self).__init__()
         self.cache = defaultdict(defaultdict)
+        self._cookie = cookielib.CookieJar()
+        self._opener = urllib2.build_opener(
+            urllib2.HTTPCookieProcessor(self._cookie))
         self.query_interval = 1
 
     def cache_this(self, result):
@@ -233,12 +239,28 @@ class WebService(Service):
     def unique(self):
         return self.__class__.__name__
 
+    def get_response(self, url, data=None, headers=None, timeout=10):
+        default_headers = {'User-Agent': 'Anki WordQuery',
+                           'Accept-Encoding': 'gzip'}
+        if headers:
+            showInfo(str(headers))
+            default_headers.update(headers)
+
+        request = urllib2.Request(url, headers=default_headers)
+        try:
+            response = self._opener.open(request, data=data, timeout=timeout)
+            data = response.read()
+            if response.info().get('Content-Encoding') == 'gzip':
+                data = zlib.decompress(data, 16 + zlib.MAX_WBITS)
+            return data
+        except:
+            return ''
+
     @classmethod
     def download(cls, url, filename):
         try:
             return urllib.urlretrieve(url, filename)
         except Exception as e:
-            showInfo(str(e))
             pass
 
 
@@ -349,35 +371,6 @@ class MdxService(LocalService):
 
         return html
 
-    # def export_media_files(self, html):
-    #     imgs = re.findall(r'<img.*?src="(.*?)".*?>', html)
-    #     imgs = [img.strip() for img in imgs]
-    #     sounds = re.findall(r'href="sound:(.*?)"', html)
-    #     sounds = [sound.strip() for sound in sounds]
-    #     media_files = list(set(imgs)) + list(set(sounds)) \
-    #         if config.export_media() else list(set(imgs))
-    #     wild = ['*' + os.path.basename(each.replace('\\', os.path.sep))
-    #             for each in media_files]
-    #     keys = [builder.get_mdd_keys(each) for each in wild]
-    #     for key in keys:
-    #         savefile = self.save_file(key)
-
-    # def export_static_files(self):
-    #     """
-    #     export css files and js files.
-    #     """
-    #     css_files, js_files = [], []
-    #     keys = self.builder.get_mdd_keys(
-    #         '*.css') + self.builder.get_mdd_keys('*.js')
-    #     for key in keys:
-    #         savefile = self.save_file(key)
-    #         if key.endswith('.css') and savefile:
-    #             new_css_file, wrap_class_name = wrap_css(savefile)
-    #             css_files.append(new_css_file)
-    #         if key.endswith('*.js') and savefile:
-    #             js_files.append(savefile)
-    #     return css_files, js_files
-
     def save_file(self, filepath_in_mdx, savepath=None):
         basename = os.path.basename(filepath_in_mdx.replace('\\', os.path.sep))
         if savepath is None:
@@ -409,18 +402,6 @@ class MdxService(LocalService):
                 lst.extend(keys)
             for each in lst:
                 self.save_file(each)
-                # basename = os.path.basename(each.replace('\\', os.path.sep))
-                # saved_basename = '_' + basename
-                # try:
-                #     bytes_list = self.builder.mdd_lookup(each)
-                #     if bytes_list:
-                #         if basename.endswith('.css') or basename.endswith('.js'):
-                #             self.styles.append(saved_basename)
-                #         if not os.path.exists(saved_basename):
-                #             with open(saved_basename, 'wb') as f:
-                #                 f.write(bytes_list[0])
-                # except sqlite3.OperationalError as e:
-                #     showInfo(str(e))
         except AttributeError:
             '''
             有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'

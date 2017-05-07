@@ -291,7 +291,6 @@ class OptionsDialog(QDialog):
             current_service = None
             service_unique = dict_combo_itemdata
             current_service = service_manager.get_service(service_unique)
-
             # problem
             if current_service and current_service.fields:
                 for each in current_service.fields:

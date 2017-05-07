@@ -1,12 +1,10 @@
 #-*- coding:utf-8 -*-
 import re
-import urllib2
 
 from aqt.utils import showInfo, showText
 from BeautifulSoup import BeautifulSoup
-from cookielib import CookieJar
 
-from .base import WebService, export, with_styles, register
+from .base import WebService, export, register, with_styles
 
 
 @register(u'Bing')
@@ -14,25 +12,12 @@ class Bing(WebService):
 
     def __init__(self):
         super(Bing, self).__init__()
-        self.cj = CookieJar()
-        self.opener = urllib2.build_opener(
-            urllib2.HTTPCookieProcessor(self.cj))
 
     def _get_content(self):
-        headers = {
-            'Accept-Language': 'en-US,zh-CN;q=0.8,zh;q=0.6,en;q=0.4',
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/56.0.2924.87 Safari/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8'}
-        result = {}
-        # try:
-        # if not self.cj:
-        request = urllib2.Request(
-            'http://cn.bing.com/dict/', headers=headers)
-        self.opener.open(request).read()
-        request = urllib2.Request(
-            "http://cn.bing.com/dict/search?q=%s" % self.word, headers=headers)
-        html = self.opener.open(request).read()
-        soup = BeautifulSoup(html)
+        data = self.get_response(
+            "http://cn.bing.com/dict/search?q={}&mkt=zh-cn".format(self.word))
+
+        soup = BeautifulSoup(data)
 
         def _get_element(soup, tag, id=None, class_=None, subtag=None):
             # element = soup.find(tag, id=id, class_=class_)  # bs4
@@ -45,6 +30,7 @@ class Bing(WebService):
                 element = getattr(element, subtag, '')
             return element
 
+        result = {}
         element = _get_element(soup, 'div', class_='hd_prUS')
         if element:
             result['phonitic_us'] = str(element).decode('utf-8')

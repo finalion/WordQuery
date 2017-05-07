@@ -1,12 +1,11 @@
 #-*- coding:utf-8 -*-
-import urllib
-import urllib2
-import re
-import cookielib
 import json
+import re
+import urllib
+
 from aqt.utils import showInfo, showText
 
-from .base import WebService, export, with_styles, register
+from .base import WebService, export, register, with_styles
 
 
 @register(u'海词迷你词典')
@@ -15,52 +14,29 @@ class MiniDict(WebService):
     def __init__(self):
         super(MiniDict, self).__init__()
         self.encoder = Encoder()
-        self.cookie = cookielib.CookieJar()
-        self.opener = urllib2.build_opener(
-            urllib2.HTTPCookieProcessor(self.cookie))
 
     def get_content(self, token):
         expressions, sentences, variations = [''] * 3
-        content_url = "http://dict.cn/ajax/dictcontent.php"
-        try:
-            headers = {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36',
-                'Referer': 'http://dict.cn/mini.php?q=%s' % self.word,
-                'ISAJAX': 'yes',
-                'Content-type': 'application/x-www-form-urlencoded',
-                'Accept-Encoding': 'gzip, deflate',
-                'Accept': '*/*',
-                'Accept-Language': 'zh-CN,zh;q=0.8,en;q=0.6,en-US;q=0.4,en-GB;q=0.2',
-                'Cache-Control': 'max-age=0',
-                'Host': 'dict.cn',
-                'Connection': 'keep-alive'}
-            self.opener.addheaders = headers.items()
-            encoded_word = self.encoder.go(self.word, token)
-            data = urllib.urlencode(
-                {'q': self.word, 's': 2, 't': encoded_word})
-            result = self.opener.open(
-                content_url, data=data, timeout=15).read()
+
+        encoded_word = self.encoder.go(self.word, token)
+        data = urllib.urlencode(
+            {'q': self.word, 's': 2, 't': encoded_word})
+        result = self.get_response(
+            "http://dict.cn/ajax/dictcontent.php", data=data)
+        if result:
             expressions = json.loads(result).get("e", "")
             sentences = json.loads(result).get("s", "")
             variations = json.loads(result).get("t", "")
             sentences = re.sub('/imgs/audio\.gif', "", sentences)
             self.cache_this(
                 {'expressions': expressions, 'sentences': sentences, 'variations': variations})
-        except Exception as e:
-            showText(str(e))
-            pass
         return expressions, sentences, variations
 
     def get_token_phonetic(self):
+        result = self.get_response(
+            "http://dict.cn/mini.php?q={}".format(self.word))
+
         page_token, phonetic = '', ''
-        url = "http://dict.cn/mini.php?q=%s" % (self.word)
-        headers = {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/54.0.2840.71 Safari/537.36',
-            #    'Accept-Encoding': 'gzip, deflate',
-            'Accept': 'text/html, application/xhtml+xml, image/jxr, */*',
-            'Host': 'dict.cn'}
-        self.opener.addheaders = headers.items()
-        result = self.opener.open(url, timeout=15).read()
         mt = re.search('<script>var dict_pagetoken="(.*?)";</script>', result)
         if mt:
             page_token = mt.groups()[0]
