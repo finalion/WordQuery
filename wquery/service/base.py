@@ -243,7 +243,6 @@ class WebService(Service):
         default_headers = {'User-Agent': 'Anki WordQuery',
                            'Accept-Encoding': 'gzip'}
         if headers:
-            showInfo(str(headers))
             default_headers.update(headers)
 
         request = urllib2.Request(url, headers=default_headers)
