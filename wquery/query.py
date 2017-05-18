@@ -37,25 +37,6 @@ from .utils import Empty, Queue
 from .progress import ProgressManager
 
 
-@pyqtSlot(dict)
-def update_progress_label(info):
-    update_progress_label.kwargs.update(info)
-    words_number, fields_number = \
-        update_progress_label.kwargs.get('words_number', 0), \
-        update_progress_label.kwargs.get('fields_number', 0)
-    number_info = ''
-    if words_number and fields_number:
-        number_info = u'<br>{0} {1} {2}, {3} {4}'.format(
-            _('QUERIED'), words_number, _('WORDS'), fields_number, _('FIELDS')
-        )
-    progress.update(label=u"Querying <b>{0}</b>...<br>[{1}] {2}{3}".format(
-        update_progress_label.kwargs['word'],
-        update_progress_label.kwargs['service_name'],
-        update_progress_label.kwargs['field_name'],
-        number_info
-    ))
-
-
 def inspect_note(note):
     '''
     inspect the note, and get necessary input parameters
@@ -92,7 +73,6 @@ def query_from_browser(browser):
         query_from_editor_all_fields(browser.editor)
     if len(notes) > 1:
         fields_number = 0
-        update_progress_label.kwargs = defaultdict(str)
         progress.start(immediate=True, label="Querying...")
         for i, note in enumerate(notes):
             # user cancels the progress
@@ -102,7 +82,7 @@ def query_from_browser(browser):
                 results = query_all_flds(note)
                 update_note_fields(note, results)
                 fields_number += len(results)
-                update_progress_label(
+                progress.update_lables(
                     {'words_number': i + 1, 'fields_number': fields_number})
             except InvalidWordException:
                 showInfo(_("NO_QUERY_WORD"))
@@ -119,7 +99,6 @@ def query_from_editor_all_fields(editor):
     if not editor or not editor.note:
         return
     work_manager.reset_query_counts()
-    update_progress_label.kwargs = defaultdict(str)
     progress.start(immediate=True, label="Querying...")
     try:
         results = query_all_flds(editor.note)
@@ -136,7 +115,6 @@ def query_from_editor_current_field(editor):
     if not editor or not editor.note:
         return
     work_manager.reset_query_counts()
-    update_progress_label.kwargs = defaultdict(str)
     progress.start(immediate=True, label="Querying...")
     # if the focus falls into the word field, then query all note fields,
     # else only query the current focused field.
@@ -160,7 +138,7 @@ def query_from_editor_current_field(editor):
 
 def update_note_fields(note, results):
     for i, q in results.items():
-        if isinstance(q, QueryResult):
+        if isinstance(q, QueryResult) and i < len(note.fields):
             update_note_field(note, i, q)
 
 
@@ -239,6 +217,8 @@ def query_all_flds(note):
     for i, each in enumerate(maps):
         if i == word_ord:
             continue
+        if i == len(note.fields):
+            break
         dict_name = each.get('dict', '').strip()
         dict_field = each.get('dict_field', '').strip()
         dict_unique = each.get('dict_unique', '').strip()
@@ -260,8 +240,6 @@ def query_single_fld(note, fld_index):
     dict_name = maps[fld_index].get('dict', '').strip()
     dict_field = maps[fld_index].get('dict_field', '').strip()
     dict_unique = maps[fld_index].get('dict_unique', '').strip()
-    # update_progress_label(
-    #     {'word': word, 'service_name': dict_name, 'field_name': dict_field})
     if dict_name and dict_name not in _sl('NOT_DICT_FIELD') and dict_field:
         worker = work_manager.get_worker(dict_unique)
         worker.target(fld_index, dict_field, word)
@@ -316,7 +294,7 @@ class QueryWorker(QThread):
         self.completed_counts = 0
         self.queue = Queue()
         self.result_ready.connect(handle_results)
-        self.progress_update.connect(update_progress_label)
+        self.progress_update.connect(progress.update_lables)
 
     def target(self, index, service_field, word):
         self.queue.put((index, service_field, word))

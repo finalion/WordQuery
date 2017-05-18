@@ -3,8 +3,9 @@
 # License: GNU AGPL, version 3 or later; http://www.gnu.org/licenses/agpl.html
 
 import time
+from collections import defaultdict
 from aqt.qt import *
-
+from .lang import _
 # fixme: if mw->subwindow opens a progress dialog with mw as the parent, mw
 # gets raised on finish on compiz. perhaps we should be using the progress
 # dialog as the parent?
@@ -22,11 +23,31 @@ class ProgressManager(object):
         self._win = None
         self._levels = 0
         self.aborted = False
-
+        self.labels = defaultdict(str)
     # Creating progress dialogs
     ##########################################################################
 
+    @pyqtSlot(dict)
+    def update_lables(self, info):
+        self.labels.update(info)
+        words_number, fields_number = \
+            self.labels.get('words_number', 0), \
+            self.labels.get('fields_number', 0)
+        number_info = ''
+        if words_number and fields_number:
+            number_info = u'<br>{0} {1} {2}, {3} {4}'.format(
+                _('QUERIED'), words_number, _(
+                    'WORDS'), fields_number, _('FIELDS')
+            )
+        self.update(label=u"Querying <b>{0}</b>...<br>[{1}] {2}{3}".format(
+            self.labels['word'],
+            self.labels['service_name'],
+            self.labels['field_name'],
+            number_info
+        ))
+
     def start(self, max=0, min=0, label=None, parent=None, immediate=False):
+        self.labels.clear()
         self.aborted = False
         self._levels += 1
         if self._levels > 1:
