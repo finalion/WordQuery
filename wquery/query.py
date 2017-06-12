@@ -55,7 +55,7 @@ def inspect_note(note):
         word_ord = 0
 
     def purify_word(word):
-        return word.lower().strip() if word else ''
+        return word.strip() if word else ''
 
     word = purify_word(note.fields[word_ord])
     return word_ord, word, maps
