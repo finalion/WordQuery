@@ -17,6 +17,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
+from functools import wraps
+
+
+def ignore_exception(func):
+    @wraps(func)
+    def wrap(*args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except:
+            return ''
+    return wrap
+
 
 def get_model_byId(models, id):
     for m in list(models.all()):
