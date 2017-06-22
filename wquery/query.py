@@ -302,6 +302,8 @@ class QueryWorker(QThread):
     def run(self):
         # self.completed_counts = 0
         while True:
+            if progress.abort():
+                break
             try:
                 index, service_field, word = self.queue.get(timeout=0.1)
                 self.progress_update.emit({
