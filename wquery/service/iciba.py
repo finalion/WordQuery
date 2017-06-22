@@ -1,4 +1,5 @@
 #-*- coding:utf-8 -*-
+import os
 import re
 import urllib2
 import json
@@ -54,10 +55,12 @@ class ICIBA(WebService):
     @export(u'美式发音', 3)
     def fld_mp3_us(self):
         seg = self._get_field('baesInfo')
-        audio_url = seg['symbols'][0]['ph_am_mp3']
+        audio_url, t = seg['symbols'][0]['ph_am_mp3'], 'am'
+        if not audio_url:
+            audio_url, t = seg['symbols'][0]['ph_tts_mp3'], 'tts'
         if iciba_download_mp3 and audio_url:
-            filename = u'_iciba_{}_am.mp3'.format(self.word)
-            if self.download(audio_url, filename):
+            filename = u'_iciba_{0}_{1}.mp3'.format(self.word, t)
+            if os.path.exists(filename) or self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url
 
@@ -65,10 +68,12 @@ class ICIBA(WebService):
     @export(u'英式发音', 4)
     def fld_mp3_uk(self):
         seg = self._get_field('baesInfo')
-        audio_url = seg['symbols'][0]['ph_en_mp3']
+        audio_url, t = seg['symbols'][0]['ph_en_mp3'], 'en'
+        if not audio_url:
+            audio_url, t = seg['symbols'][0]['ph_tts_mp3'], 'tts'
         if iciba_download_mp3 and audio_url:
-            filename = u'_iciba_{}_en.mp3'.format(self.word)
-            if self.download(audio_url, filename):
+            filename = u'_iciba_{0}_{1}.mp3'.format(self.word, t)
+            if os.path.exists(filename) or self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url
 
