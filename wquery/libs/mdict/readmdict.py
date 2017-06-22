@@ -281,7 +281,6 @@ class MDict(object):
             if encoding in ['GBK', 'GB2312']:
                 encoding = 'GB18030'
             self._encoding = encoding
-
         # 读取标题和描述
         if b'Title' in header_tag:
             self._title = header_tag[b'Title'].decode('utf-8')

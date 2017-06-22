@@ -4,15 +4,16 @@ import json
 
 
 class Dir(object):
-    
-    def __init__(self, mdict_dir, config_name = 'config.json'):
 
-        assert(os.path.isdir(mdict_dir))        
+    def __init__(self, mdict_dir, config_name='config.json'):
+
+        assert(os.path.isdir(mdict_dir))
         self._mdict_dir = mdict_dir
         self._config_file_base_name = config_name
         self._config = {}
-        #check config.json
-        self._config_file = os.path.join(mdict_dir, self._config_file_base_name)
+        # check config.json
+        self._config_file = os.path.join(
+            mdict_dir, self._config_file_base_name)
 
         if os.path.exists(self._config_file):
             self._ensure_config_consistency()
@@ -31,16 +32,14 @@ class Dir(object):
         for dict in self._config['dicts']:
             dict['builder'] = IndexBuilder(dict['mdx_name'])
 
-
     def _load_config(self):
 
-        file_opened = open(self._config_file, 'r', encoding = 'utf-8')
+        file_opened = open(self._config_file, 'r', encoding='utf-8')
         self._config = json.load(file_opened)
         file_opened.close()
 
-
     def _build_index(self):
-        
+
         dict_list = []
         files_in_dir = os.listdir(self._mdict_dir)
         for item in files_in_dir:
@@ -51,10 +50,10 @@ class Dir(object):
                 if _file_extension == '.mdx':
                     _config_single_dic = {
                         'title': '',
-                        'description':'',
+                        'description': '',
                         'mdx_name': full_name,
                         'has_mdd': os.path.isfile(_filename + '.mdd')
-                        }
+                    }
                     try:
                         ib = IndexBuilder(full_name)
                     except Exception:
@@ -69,11 +68,11 @@ class Dir(object):
 
     def _dump_config(self):
 
-        file_opened = open(self._config_file, 'w', encoding = 'utf-8')
-        json.dump(self._config, file_opened, ensure_ascii = False, indent = True)
+        file_opened = open(self._config_file, 'w', encoding='utf-8')
+        json.dump(self._config, file_opened, ensure_ascii=False, indent=True)
         file_opened.close()
 
-    #todo: implement ensure consistency
+    # todo: implement ensure consistency
     def _ensure_config_consistency(self):
         pass
 
