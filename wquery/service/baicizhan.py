@@ -9,7 +9,11 @@ from collections import defaultdict
 
 from aqt.utils import showInfo
 
-from .base import WebService, export, with_styles, register
+from .base import WebService, export, register
+from wquery.odds import ignore_exception
+
+bcz_download_mp3 = True
+bcz_download_img = True
 
 
 @register(u'百词斩')
@@ -27,23 +31,21 @@ class Baicizhan(WebService):
         except:
             return defaultdict(str)
 
+    # @ignore_exception
     @export(u'发音', 0)
     def fld_phonetic(self):
         url = u'http://baicizhan.qiniucdn.com/word_audios/{word}.mp3'.format(
             word=self.word)
-        audio_name = u'_bcz_{word}.mp3'.format(word=self.word)
-        try:
+        audio_name = 'bcz_%s.mp3' % self.word
+        if bcz_download_mp3:
             urllib.urlretrieve(url, audio_name)
-            error = False
             with open(audio_name, 'rb') as f:
-                error = f.read().strip() == '{"error":"Document not found"}'
-                # showInfo(os.path.abspath(audio_name))
-            if error:
-                os.remove(audio_name)
-                return ''
+                if f.read().strip() == '{"error":"Document not found"}':
+                    os.remove(audio_name)
+                    return ''
             return self.get_anki_label(audio_name, 'audio')
-        except:
-            return ''
+        else:
+            return url
 
     def _get_field(self, key, default=u''):
         return self.cache_result(key) if self.cached(key) else self._get_from_api().get(key, default)
@@ -54,11 +56,21 @@ class Baicizhan(WebService):
 
     @export(u'图片', 2)
     def fld_img(self):
-        return self.get_anki_label(self._get_field('img'), 'img')
+        url = self._get_field('img')
+        if url and bcz_download_img:
+            filename = url[url.rindex('/') + 1:]
+            if self.download(url, filename):
+                return self.get_anki_label(filename, 'img')
+        return self.get_anki_label(url, 'img')
 
     @export(u'象形', 3)
     def fld_df(self):
-        return self.get_anki_label(self._get_field('df'), 'img')
+        url = self._get_field('df')
+        if url and bcz_download_img:
+            filename = url[url.rindex('/') + 1:]
+            if self.download(url, filename):
+                return self.get_anki_label(filename, 'img')
+        return self.get_anki_label(url, 'img')
 
     @export(u'中文释义', 6)
     def fld_mean(self):

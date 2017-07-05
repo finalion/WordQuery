@@ -72,7 +72,7 @@ class Esdict(WebService):
         # https://api.frdic.com/api/v2/speech/speakweb?langid=fr&txt=QYNYm9uam91cg%3d%3d
         url = 'https://api.frdic.com/api/v2/speech/speakweb?langid=es&txt=QYN{word}'.format(
             word=urllib.quote(base64.b64encode(self.word.encode('utf-8'))))
-        audio_name = u'_esdict_{word}.mp3'.format(word=self.word)
+        audio_name = u'esdict_{word}.mp3'.format(word=self.word)
         try:
             urllib.urlretrieve(url, audio_name)
             return self.get_anki_label(audio_name, 'audio')

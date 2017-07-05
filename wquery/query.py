@@ -32,8 +32,8 @@ from aqt.utils import showInfo, showText, tooltip
 from .context import config
 from .lang import _, _sl
 from .service import service_manager
-from .service.base import QueryResult, copy_static_file, wrap_css
-from .utils import Empty, Queue
+from .service.base import QueryResult, copy_static_file
+from .utils import Empty, Queue, wrap_css
 from .progress import ProgressManager
 
 

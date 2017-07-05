@@ -56,7 +56,7 @@ class BingXtk(WebService):
         seg = audio_url = self._get_field('pronunciation')
         audio_url = self._get_subfield(seg, 'AmEmp3')
         if bing_download_mp3 and audio_url:
-            filename = u'_bing_{}_us.mp3'.format(self.word)
+            filename = u'bing_{}_us.mp3'.format(self.word)
             if self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url
@@ -66,7 +66,7 @@ class BingXtk(WebService):
         seg = self._get_field('pronunciation')
         audio_url = self._get_subfield(seg, 'BrEmp3')
         if bing_download_mp3 and audio_url:
-            filename = u'_bing_{}_br.mp3'.format(self.word)
+            filename = u'bing_{}_br.mp3'.format(self.word)
             if self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url

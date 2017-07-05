@@ -59,7 +59,7 @@ class ICIBA(WebService):
         if not audio_url:
             audio_url, t = seg['symbols'][0]['ph_tts_mp3'], 'tts'
         if iciba_download_mp3 and audio_url:
-            filename = u'_iciba_{0}_{1}.mp3'.format(self.word, t)
+            filename = u'iciba_{0}_{1}.mp3'.format(self.word, t)
             if os.path.exists(filename) or self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url
@@ -72,7 +72,7 @@ class ICIBA(WebService):
         if not audio_url:
             audio_url, t = seg['symbols'][0]['ph_tts_mp3'], 'tts'
         if iciba_download_mp3 and audio_url:
-            filename = u'_iciba_{0}_{1}.mp3'.format(self.word, t)
+            filename = u'iciba_{0}_{1}.mp3'.format(self.word, t)
             if os.path.exists(filename) or self.download(audio_url, filename):
                 return self.get_anki_label(filename, 'audio')
         return audio_url

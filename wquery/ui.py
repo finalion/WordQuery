@@ -19,7 +19,7 @@
 
 import os
 import sys
-
+from collections import namedtuple
 import anki
 import aqt
 import aqt.models
@@ -36,6 +36,10 @@ from .utils import MapDict
 
 
 DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
+
+widget_size = namedtuple('WidgetSize', ['dialog_width', 'dialog_height_margin', 'map_min_height',
+                                        'map_max_height', 'map_fld_width', 'map_dictname_width',
+                                        'map_dictfield_width'])(450, 120, 0, 30, 100, 130, 130)
 
 
 class FoldersManageDialog(QDialog):
@@ -84,8 +88,7 @@ class FoldersManageDialog(QDialog):
         del item
 
     def find_mdxes(self):
-        dirs = self.dirs
-        for each in dirs:
+        for each in self.dirs:
             for dirpath, dirnames, filenames in os.walk(each):
                 self._dict_paths.extend([os.path.join(dirpath, filename)
                                          for filename in filenames if filename.endswith(u'.mdx')])
@@ -101,7 +104,11 @@ class FoldersManageDialog(QDialog):
                 for i in range(self.folders_lst.count())]
 
     def save(self):
-        config.save_fm_dialog(self)
+        data = dict()
+        data['dirs'] = self.dirs
+        data['use_filename'] = self.chk_use_filename.isChecked()
+        data['export_media'] = self.chk_export_media.isChecked()
+        config.update(data)
 
 
 class OptionsDialog(QDialog):
@@ -112,8 +119,6 @@ class OptionsDialog(QDialog):
                             Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinMaxButtonsHint)
         self.parent = parent
         self.setWindowTitle(u"Options")
-        self.signal_mapper_chk = QSignalMapper(self)
-        # self.accepted.connect(self.parent.update_dicts_list)
         self.build()
 
     def build(self):
@@ -148,16 +153,17 @@ class OptionsDialog(QDialog):
         bottom_layout.addWidget(QLabel(_("RADIOS_DESC")))
         bottom_layout.addWidget(btnbox)
         self.main_layout.addLayout(bottom_layout)
-        # self.signal_mapper_chk.mapped.connect(self.chkbox_state_changed)
         self.setLayout(self.main_layout)
         # init from saved data
+        self.current_model = None
         if config.last_model_id:
-            model = get_model_byId(mw.col.models, config.last_model_id)
-            if model:
+            self.current_model = get_model_byId(
+                mw.col.models, config.last_model_id)
+            if self.current_model:
                 self.models_button.setText(
-                    u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  model['name']))
+                    u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  self.current_model['name']))
                 # build fields -- dicts layout
-                self.build_mappings_layout(model)
+                self.build_mappings_layout(self.current_model)
 
     def show_about(self):
         info = u'<b>{t0}</b><br />{version}<br /><b>{t1}</b><br /><a href="{url}">{url}</a><br /><b>{t2}</b><br /><a href="{feedback0}">{feedback0}</a><br /><a href="mailto:{feedback1}">{feedback1}</a>'.format(
@@ -186,22 +192,25 @@ class OptionsDialog(QDialog):
         self.close()
 
     def btn_models_pressed(self):
-        model = self.show_models()
-        if model:
-            self.build_mappings_layout(model)
-
-    def clear_layout(self, layout):
-        if layout is not None:
-            while layout.count():
-                item = layout.takeAt(0)
-                widget = item.widget()
-                if widget is not None:
-                    widget.deleteLater()
-                else:
-                    self.clear_layout(item.layout())
+        self.save()
+        self.current_model = self.show_models()
+        if self.current_model:
+            self.build_mappings_layout(self.current_model)
 
     def build_mappings_layout(self, model):
-        self.clear_layout(self.dicts_layout)
+
+        def clear_layout(layout):
+            if layout is not None:
+                while layout.count():
+                    item = layout.takeAt(0)
+                    widget = item.widget()
+                    if widget is not None:
+                        widget.deleteLater()
+                    else:
+                        clear_layout(item.layout())
+
+        clear_layout(self.dicts_layout)
+
         label1 = QLabel("")
         label1.setSizePolicy(QSizePolicy.Preferred, QSizePolicy.Fixed)
         label2 = QLabel(_("DICTS"))
@@ -211,7 +220,7 @@ class OptionsDialog(QDialog):
         self.dicts_layout.addWidget(label1, 0, 0)
         self.dicts_layout.addWidget(label2, 0, 1)
         self.dicts_layout.addWidget(label3, 0, 2)
-        maps = config.get_maps(model['id'])
+        maps = config.get_maps(str(model['id']))
         for i, fld in enumerate(model['flds']):
             ord = fld['ord']
             name = fld['name']
@@ -226,17 +235,18 @@ class OptionsDialog(QDialog):
                 self.add_dict_layout(i, fld_name=name)
         self.setLayout(self.main_layout)
 
+        self.resize(widget_size.dialog_width,
+                    (i + 1) * widget_size.map_max_height + widget_size.dialog_height_margin)
+
     def show_models(self):
-        self.save()
-        edit = QPushButton(
-            anki.lang._("Manage"), clicked=lambda: aqt.models.Models(mw, self))
-        ret = StudyDeck(
-            mw, names=lambda: sorted(mw.col.models.allNames()), accept=anki.lang._("Choose"), title=anki.lang._("Choose Note Type"),
-            help="_notes", parent=self, buttons=[edit],
-            cancel=True, geomKey="selectModel")
+        edit = QPushButton(anki.lang._("Manage"),
+                           clicked=lambda: aqt.models.Models(mw, self))
+        ret = StudyDeck(mw, names=lambda: sorted(mw.col.models.allNames()),
+                        accept=anki.lang._("Choose"), title=anki.lang._("Choose Note Type"),
+                        help="_notes", parent=self, buttons=[edit],
+                        cancel=True, geomKey="selectModel")
         if ret.name:
             model = mw.col.models.byName(ret.name)
-            config.last_model_id = model['id']
             self.models_button.setText(
                 u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'), ret.name))
             return model
@@ -319,15 +329,16 @@ class OptionsDialog(QDialog):
             kwargs.get('dict_field', ''),)
 
         fldname_label = QRadioButton(fld_name)
-        fldname_label.setMinimumSize(100, 0)
-        fldname_label.setMaximumSize(100, 30)
+        fldname_label.setMinimumSize(widget_size.map_fld_width, 0)
+        fldname_label.setMaximumSize(widget_size.map_fld_width,
+                                     widget_size.map_max_height)
         fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
         fldname_label.setCheckable(True)
         fldname_label.clicked.connect(self.radio_btn_checked)
         fldname_label.setChecked(word_checked)
 
         dict_combo = QComboBox()
-        dict_combo.setMinimumSize(130, 0)
+        dict_combo.setMinimumSize(widget_size.map_dictname_width, 0)
         dict_combo.setFocusPolicy(
             Qt.TabFocus | Qt.ClickFocus | Qt.StrongFocus | Qt.WheelFocus)
         dict_combo.setEnabled(not word_checked)
@@ -336,7 +347,7 @@ class OptionsDialog(QDialog):
         self.fill_dict_combo_options(dict_combo, dict_name)
 
         field_combo = QComboBox()
-        field_combo.setMinimumSize(130, 0)
+        field_combo.setMinimumSize(widget_size.map_dictfield_width, 0)
         # field_combo.setMaximumSize(130, 30)
         field_combo.setEnabled((not word_checked) and (
             dict_name != _('NOT_DICT_FIELD')))
@@ -344,9 +355,6 @@ class OptionsDialog(QDialog):
         field_combo.setEditText(dict_field)
         self.fill_field_combo_options(field_combo, dict_name, dict_unique)
 
-        # self.connect(dict_check, SIGNAL("clicked()"),
-        #              self.signal_mapper_chk, SLOT("map()"))
-        # self.signal_mapper_chk.setMapping(dict_check, i)
         self.dicts_layout.addWidget(fldname_label, i + 1, 0)
         self.dicts_layout.addWidget(dict_combo, i + 1, 1)
         self.dicts_layout.addWidget(field_combo, i + 1, 2)
@@ -365,7 +373,22 @@ class OptionsDialog(QDialog):
             return dict_combos[::2], dict_combos[1::2]
 
     def save(self):
-        config.save_options_dialog(self)
+        if not self.current_model:
+            return
+        data = dict()
+        labels = self.findChildren(QRadioButton)
+        dict_cbs, field_cbs = self._get_combos(ALL_COMBOS)
+        maps = [{"word_checked": label.isChecked(),
+                 "dict": dict_cb.currentText().strip(),
+                 "dict_unique": dict_cb.itemData(dict_cb.currentIndex()) if dict_cb.itemData(dict_cb.currentIndex()) else "",
+                 "dict_field": field_cb.currentText().strip(),
+                 "fld_ord": get_ord_from_fldname(self.current_model, label.text()
+                                                 )}
+                for (dict_cb, field_cb, label) in zip(dict_cbs, field_cbs, labels)]
+        current_model_id = str(self.current_model['id'])
+        data[current_model_id] = maps
+        data['last_model'] = self.current_model['id']
+        config.update(data)
 
 
 def show_options():

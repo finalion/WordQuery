@@ -17,8 +17,8 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import cPickle
 import os
+import json
 from collections import defaultdict
 
 from aqt import mw
@@ -28,8 +28,8 @@ from aqt.utils import shortcut, showInfo, showText
 from .lang import _
 from .odds import get_model_byId, get_ord_from_fldname
 
-VERSION = 'V4.0.20170622'
-CONFIG_FILENAME = '.wqcfg'
+VERSION = 'V4.0.20170705'
+CONFIG_FILENAME = '.wqcfg.json'
 
 
 class Config(object):
@@ -46,39 +46,19 @@ class Config(object):
     def pmname(self):
         return self.window.pm.name
 
-    def save_options_dialog(self, dialog):
-        comboboxs, labels = dialog.findChildren(
-            QComboBox), dialog.findChildren(QRadioButton)
-        dict_cbs, field_cbs = comboboxs[::2], comboboxs[1::2]
-        model = get_model_byId(self.window.col.models, self.last_model_id)
-        maps = [{"word_checked": label.isChecked(),
-                 "dict": dict_cb.currentText().strip(),
-                 "dict_unique": dict_cb.itemData(dict_cb.currentIndex()) if dict_cb.itemData(dict_cb.currentIndex()) else "",
-                 "dict_field": field_cb.currentText().strip(),
-                 "fld_ord": get_ord_from_fldname(model, label.text()
-                                                 )}
-                for (dict_cb, field_cb, label) in zip(dict_cbs, field_cbs, labels)]
-        # profilename: {'last':last_model_id, '..model_id..':[..maps..]}
-        self.data[self.last_model_id] = maps
-        self.data['%s_last' % self.pmname] = self.last_model_id
-        self.data['version'] = VERSION
+    def update(self, data):
+        data['version'] = VERSION
+        data['%s_last' % self.pmname] = data.get('last_model', 0)
+        self.data.update(data)
         with open(self.path, 'wb') as f:
-            cPickle.dump(self.data, f)
-
-    def save_fm_dialog(self, dialog):
-        self.data['dirs'] = dialog.dirs
-        self.data['use_filename'] = dialog.chk_use_filename.isChecked()
-        self.data['export_media'] = dialog.chk_export_media.isChecked()
-        with open(self.path, 'wb') as f:
-            cPickle.dump(self.data, f)
+            json.dump(self.data, f)
 
     def read(self):
         try:
             with open(self.path, 'rb') as f:
-                self.data = cPickle.load(f)
+                self.data = json.load(f)
                 try:
                     self.last_model_id = self.data['%s_last' % self.pmname]
-                    self.last_model_maps = self.data[self.last_model_id]
                     self.dirs = self.data.get('dirs', [])
                     self.version = self.data.get('version', '0')
                     if VERSION != self.version:
