@@ -597,7 +597,8 @@ class MDD(MDict):
                 index_dict['record_block_type'] = _type
                 record_start, key_text = self._key_list[i]
                 index_dict['record_start'] = record_start
-                index_dict['key_text'] = key_text.decode("utf-8")
+                index_dict['key_text'] = key_text.decode(
+                    "utf-8", errors='ignore')
                 index_dict['offset'] = offset
                 # reach the end of current record block
                 if record_start - offset >= decompressed_size:
@@ -846,7 +847,8 @@ class MDX(MDict):
                 index_dict['record_block_type'] = _type
                 record_start, key_text = self._key_list[i]
                 index_dict['record_start'] = record_start
-                index_dict['key_text'] = key_text.decode('utf-8')
+                index_dict['key_text'] = key_text.decode(
+                    'utf-8', errors='ignore')
                 index_dict['offset'] = offset
                 # reach the end of current record block
                 if record_start - offset >= decompressed_size:

@@ -287,10 +287,10 @@ class IndexBuilder(object):
     def lookup_indexes(db, keyword, ignorecase=None):
         indexes = []
         if ignorecase:
-            sql = 'SELECT * FROM MDX_INDEX WHERE lower(key_text) = lower("{}")'.format(
+            sql = u'SELECT * FROM MDX_INDEX WHERE lower(key_text) = lower("{}")'.format(
                 keyword)
         else:
-            sql = 'SELECT * FROM MDX_INDEX WHERE key_text = "{}"'.format(
+            sql = u'SELECT * FROM MDX_INDEX WHERE key_text = "{}"'.format(
                 keyword)
         with sqlite3.connect(db) as conn:
             cursor = conn.execute(sql)

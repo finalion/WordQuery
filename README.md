@@ -56,7 +56,8 @@ The "Dict fields" comoboxes are used to specify the available dictionary fields.
 
 ## How to Use
 
-1. In "Add" dialog   
+### "Add" dialog   
+
 Once the word to query is ready, click "Query" button or popup the context menu and use relevant commands.
 
 * "Query" button  
@@ -66,14 +67,15 @@ Query the explanations for all the fields.
 * "Query Current Field" menu  
 Query the explanation for current focused field.
 
-    ![](screenshots/editor.png)
+![](screenshots/editor.png)
 
-2. In "Browse" window   
+### "Browse" window   
+
 Select single word or multiple words, click menu "WordQuery"->"Query selected".
 
-    ![](screenshots/browser.png)
+![](screenshots/browser.png)
 
-All above can be also trigged by the shortcut (default "Ctrl+Q"), but you could modify it through the addon's "Edit" menu.  
+All above query actions can be trigged also by the shortcut (default "Ctrl+Q"), but you could change it through the addon's "Edit" menu.  
 ```python
 # shortcut
 shortcut = 'Ctrl+Q'
@@ -82,7 +84,7 @@ shortcut = 'Ctrl+Q'
 
 ## <a name="customize"></a>Service Customization
 
-All web dictionaries services can be modified and deleted. 
+The advanced users can implement new web dictionary services. See [a typical reference](wquery/service/youdao.py) for the details.
 
 ### Inherit `WebService` class
 
@@ -132,6 +134,5 @@ def _get_singledict(self, single_dict, lang='eng'):
 ## Other Projects Used
 
 - [mdict-query](https://github.com/mmjang/mdict-query)
-
 - [pystardict](https://github.com/lig/pystardict)
 

@@ -28,7 +28,7 @@ from aqt.utils import shortcut, showInfo, showText
 from .lang import _
 from .odds import get_model_byId, get_ord_from_fldname
 
-VERSION = 'V4.0.20170705'
+VERSION = 'V4.0.20170709'
 CONFIG_FILENAME = '.wqcfg.json'
 
 
@@ -71,7 +71,7 @@ class Config(object):
             self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
 
     def get_maps(self, model_id):
-        return self.data.get(model_id, list())
+        return self.data.get(str(model_id), list())
 
     def get_dirs(self):
         return self.data.get('dirs', list())

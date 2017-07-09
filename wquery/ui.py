@@ -220,7 +220,7 @@ class OptionsDialog(QDialog):
         self.dicts_layout.addWidget(label1, 0, 0)
         self.dicts_layout.addWidget(label2, 0, 1)
         self.dicts_layout.addWidget(label3, 0, 2)
-        maps = config.get_maps(str(model['id']))
+        maps = config.get_maps(model['id'])
         for i, fld in enumerate(model['flds']):
             ord = fld['ord']
             name = fld['name']

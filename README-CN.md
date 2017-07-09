@@ -203,10 +203,8 @@ def _get_singledict(self, single_dict, lang='eng'):
 具体可参考[有道词典 youdao.py](wquery/service/youdao.py)实现方式。    
 
 
-
 ## 插件所使用的外部库
 
 - [mdict-query](https://github.com/mmjang/mdict-query)
-
 - [pystardict](https://github.com/lig/pystardict)
 

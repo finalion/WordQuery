@@ -282,7 +282,7 @@ class MdxService(LocalService):
             if not self.builder:
                 self.index()
             html = ''
-            result = self.builder.mdx_lookup(self.word)
+            result = self.builder.mdx_lookup(self.word)  # self.word: unicode
             if result:
                 if result[0].upper().find(u"@@@LINK=") > -1:
                     # redirect to a new word behind the equal symol.
