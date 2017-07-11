@@ -38,7 +38,6 @@ class Config(object):
         self.path = os.path.join(os.path.dirname(
             os.path.realpath(__file__)), CONFIG_FILENAME)
         self.window = window
-        self.data = dict()
         self.version = '0'
         self.read()
 
@@ -57,28 +56,29 @@ class Config(object):
         try:
             with open(self.path, 'rb') as f:
                 self.data = json.load(f)
-                try:
-                    self.last_model_id = self.data['%s_last' % self.pmname]
-                    self.dirs = self.data.get('dirs', [])
-                    self.version = self.data.get('version', '0')
-                    if VERSION != self.version:
-                        # showInfo(VERSION + self.version)
-                        self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
-                except Exception as e:
-                    # showInfo(str(e))
-                    self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
+                # self.version = self.data.get('version', '0')
+                # if VERSION != self.version:
+                #     # showInfo(VERSION + self.version)
+                #     self.last_model_id, self.dirs = 0, list()
         except:
-            self.last_model_maps, self.last_model_id, self.dirs = list(),  0, list()
+            self.data = dict()
 
     def get_maps(self, model_id):
         return self.data.get(str(model_id), list())
 
-    def get_dirs(self):
+    @property
+    def last_model_id(self):
+        return self.data.get('%s_last' % self.pmname, 0)
+
+    @property
+    def dirs(self):
         return self.data.get('dirs', list())
 
+    @property
     def use_filename(self):
         return self.data.get('use_filename', True)
 
+    @property
     def export_media(self):
         return self.data.get('export_media', False)
 

@@ -61,11 +61,11 @@ class FoldersManageDialog(QDialog):
         add_btn.clicked.connect(self.add_folder)
         remove_btn.clicked.connect(self.remove_folder)
         self.folders_lst = QListWidget()
-        self.folders_lst.addItems(config.get_dirs())
+        self.folders_lst.addItems(config.dirs)
         self.chk_use_filename = QCheckBox(_('CHECK_FILENAME_LABEL'))
         self.chk_export_media = QCheckBox(_('EXPORT_MEDIA'))
-        self.chk_use_filename.setChecked(config.use_filename())
-        self.chk_export_media.setChecked(config.export_media())
+        self.chk_use_filename.setChecked(config.use_filename)
+        self.chk_export_media.setChecked(config.export_media)
         chk_layout = QHBoxLayout()
         chk_layout.addWidget(self.chk_use_filename)
         chk_layout.addWidget(self.chk_export_media)
@@ -91,7 +91,7 @@ class FoldersManageDialog(QDialog):
         for each in self.dirs:
             for dirpath, dirnames, filenames in os.walk(each):
                 self._dict_paths.extend([os.path.join(dirpath, filename)
-                                         for filename in filenames if filename.endswith(u'.mdx')])
+                                         for filename in filenames if filename.lower().endswith(u'.mdx')])
         return list(set(self._dict_paths))
 
     @property
@@ -104,10 +104,9 @@ class FoldersManageDialog(QDialog):
                 for i in range(self.folders_lst.count())]
 
     def save(self):
-        data = dict()
-        data['dirs'] = self.dirs
-        data['use_filename'] = self.chk_use_filename.isChecked()
-        data['export_media'] = self.chk_export_media.isChecked()
+        data = {'dirs': self.dirs,
+                'use_filename': self.chk_use_filename.isChecked(),
+                'export_media': self.chk_export_media.isChecked()}
         config.update(data)
 
 
@@ -234,7 +233,6 @@ class OptionsDialog(QDialog):
             else:
                 self.add_dict_layout(i, fld_name=name)
         self.setLayout(self.main_layout)
-
         self.resize(widget_size.dialog_width,
                     (i + 1) * widget_size.map_max_height + widget_size.dialog_height_margin)
 

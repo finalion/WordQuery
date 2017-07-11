@@ -256,7 +256,7 @@ class MdxService(LocalService):
     @property
     def title(self):
         if self.builder:
-            if config.use_filename() or not self.builder._title or self.builder._title.startswith('Title'):
+            if config.use_filename or not self.builder._title or self.builder._title.startswith('Title'):
                 return os.path.splitext(os.path.basename(self.dict_path))[0]
             else:
                 return self.builder._title
@@ -383,7 +383,7 @@ class StardictService(LocalService):
 
     @property
     def title(self):
-        if config.use_filename() or not self.builder.ifo.bookname:
+        if config.use_filename or not self.builder.ifo.bookname:
             return os.path.splitext(os.path.basename(self.dict_path))[0]
         else:
             return self.builder.ifo.bookname.decode('utf-8')

@@ -99,10 +99,8 @@ class ServiceManager(object):
         return self._get_services_from_files(WebService)
 
     def get_available_local_services(self):
-        self.local_dict_paths = []
-        mdx_paths = config.get_dirs()
         services = []
-        for each in mdx_paths:
+        for each in config.dirs:
             for dirpath, dirnames, filenames in os.walk(each):
                 for filename in filenames:
                     dict_path = os.path.join(dirpath, filename)
