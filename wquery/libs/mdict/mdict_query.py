@@ -1,6 +1,4 @@
 # -*- coding: utf-8 -*-
-
-
 from readmdict import MDX, MDD
 from struct import pack, unpack
 from io import BytesIO
@@ -9,6 +7,7 @@ import sys
 import os
 import sqlite3
 import json
+from aqt.utils import showInfo, showText, tooltip
 
 # zlib compression is used for engine version >=2.0
 import zlib
@@ -119,10 +118,16 @@ class IndexBuilder(object):
         for j, p in enumerate(txt_list[1:]):
             style = self._stylesheet[txt_tag[j][1:-1]]
             if p and p[-1] == '\n':
+                # showInfo('txt_styled: ' + repr(txt_styled))
+                # showInfo('style[0]: ' + repr(style[0]))
+                # showInfo('p:' + repr(p.rstrip()))
+                # showInfo('style[1]:' + repr(style[1]))
                 txt_styled = txt_styled + \
-                    style[0] + p.rstrip() + style[1] + '\r\n'
+                    style[0].encode('utf-8') + p.rstrip() + \
+                    style[1].encode('utf-8') + '\r\n'
             else:
-                txt_styled = txt_styled + style[0] + p + style[1]
+                txt_styled = txt_styled + \
+                    style[0].encode('utf-8') + p + style[1].encode('utf-8')
         return txt_styled
 
     def _make_mdx_index(self, db_name):
