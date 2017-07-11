@@ -307,7 +307,7 @@ class MdxService(LocalService):
         msrc = re.findall(r'<img.*?src="([\w\./]\S+?)".*?>', html)
         media_files_set.update(set(msrc))
         msound = re.findall(r'href="sound:(.*?\.(?:mp3|wav))"', html)
-        if config.export_media():
+        if config.export_media:
             media_files_set.update(set(msound))
         for each in media_files_set:
             html = html.replace(each, u'_' + each.split('/')[-1])
