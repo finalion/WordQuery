@@ -5,7 +5,7 @@ from aqt.utils import showInfo, showText
 
 from .base import export, with_styles, register, MdxService
 
-path = u'C:\\Users\\surface\\Documents\\dicts\\LDOCE\\LDOCE6.mdx'
+path = u'D:\\dicts\\LDOCE\\LDOCE62.mdx'
 
 
 @register(u'本地词典解析Sample-LDOCE6')
