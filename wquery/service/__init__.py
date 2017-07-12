@@ -23,4 +23,4 @@ service_manager = ServiceManager()
 
 
 def start_services():
-    service_manager.start_all()
+    service_manager.fetch_headers()

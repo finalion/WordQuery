@@ -434,22 +434,35 @@ class Dictionary(dict):
 
         self.in_memory = in_memory
 
-        filename_prefix = os.path.splitext(filename)[0]
-        # reading somedict.ifo
-        self.ifo = _StarDictIfo(dict_prefix=filename_prefix, container=self)
-
-        # reading somedict.idx or somedict.idx.gz
-        self.idx = _StarDictIdx(dict_prefix=filename_prefix, container=self)
-
-        # reading somedict.dict or somedict.dict.dz
-        self.dict = _StarDictDict(
-            dict_prefix=filename_prefix, container=self, in_memory=in_memory)
-
-        # reading somedict.syn (optional)
-        self.syn = _StarDictSyn(dict_prefix=filename_prefix, container=self)
+        self.filename_prefix = os.path.splitext(filename)[0]
 
         # initializing cache
         self._dict_cache = {}
+
+        self.ifo = None
+        self.idx = None
+
+    def get_header(self):
+        # reading somedict.ifo
+        self.ifo = _StarDictIfo(
+            dict_prefix=self.filename_prefix, container=self)
+
+    def check_build(self):
+        if not self.ifo:
+            self.get_header()
+
+        if not self.idx:
+            # reading somedict.idx or somedict.idx.gz
+            self.idx = _StarDictIdx(
+                dict_prefix=self.filename_prefix, container=self)
+
+            # reading somedict.dict or somedict.dict.dz
+            self.dict = _StarDictDict(
+                dict_prefix=self.filename_prefix, container=self, in_memory=in_memory)
+
+            # reading somedict.syn (optional)
+            self.syn = _StarDictSyn(
+                dict_prefix=self.filename_prefix, container=self)
 
     @staticmethod
     def get_filename_prefix(path):

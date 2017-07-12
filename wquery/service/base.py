@@ -249,28 +249,21 @@ class MdxService(LocalService):
         self.query_interval = 0.01
         self.styles = []
         self.engine_ready = False
+        self.builder = IndexBuilder(self.dict_path)
 
     @staticmethod
     def support(dict_path):
-        return dict_path.lower().endswith('.mdx')
+        return os.path.isfile(dict_path) and dict_path.lower().endswith('.mdx')
 
     @property
     def title(self):
-        if self.builder:
-            if config.use_filename or not self.builder._title or self.builder._title.startswith('Title'):
-                return os.path.splitext(os.path.basename(self.dict_path))[0]
-            else:
-                return self.builder._title
-        else:
+        if config.use_filename or not self.builder._title or self.builder._title.startswith('Title'):
             return os.path.splitext(os.path.basename(self.dict_path))[0]
+        else:
+            return self.builder.meta['title']
 
-    def index(self, only_header=False):
-        self.builder = IndexBuilder(
-            self.dict_path, only_header=only_header)
-        if not only_header and self.builder:
-            self.engine_ready = True
-        if self.builder and not only_header:
-            return True
+    def index_header(self):
+        self.builder.get_header()
 
     @export(u"default", 0)
     def fld_whole(self):
@@ -280,10 +273,8 @@ class MdxService(LocalService):
 
     def get_html(self):
         if not self.cache[self.word]:
-            if not self.engine_ready:
-                self.index()
             # make sure all the db files are valid
-            self.builder.check_db()
+            self.builder.check_build()
             html = ''
             result = self.builder.mdx_lookup(self.word)  # self.word: unicode
             if result:
@@ -376,10 +367,11 @@ class StardictService(LocalService):
     def __init__(self, dict_path):
         super(StardictService, self).__init__(dict_path)
         self.query_interval = 0.05
+        self.builder = Dictionary(self.dict_path, in_memory=False)
 
     @staticmethod
     def support(dict_path):
-        return dict_path.lower().endswith('.ifo')
+        return os.path.isfile(dict_path) and dict_path.lower().endswith('.ifo')
 
     @property
     def title(self):
@@ -388,17 +380,12 @@ class StardictService(LocalService):
         else:
             return self.builder.ifo.bookname.decode('utf-8')
 
-    def index(self, only_header=False):
-        try:
-            self.builder = Dictionary(self.dict_path, in_memory=False)
-            return True if self.builder else False
-        except:
-            return False
+    def index_header(self):
+        self.builder.get_header()
 
     @export(u"default", 0)
     def fld_whole(self):
-        if not self.builder:
-            self.index()
+        self.builder.check_build()
         try:
             result = self.builder[self.word]
             result = result.strip()\

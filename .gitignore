@@ -96,4 +96,4 @@ dicts/
 .vscode/
 test/
 anki.zip
-*wqcfg.json
+.wqcfg.json

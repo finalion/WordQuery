@@ -25,7 +25,6 @@ from aqt import mw
 from aqt.qt import QThread
 from aqt.utils import showInfo
 from wquery.context import config
-from wquery.libs.mdict.mdict_query import IndexBuilder
 from wquery.utils import MapDict, importlib
 
 from .base import MdxService, StardictService, WebService, LocalService
@@ -41,11 +40,8 @@ class ServiceManager(object):
     def services(self):
         return self.web_services + self.local_services
 
-    def register(self, service):
-        pass
-
-    def start_all(self):
-        self.index_all_mdxs()
+    # def start_all(self):
+    #     self.fetch_headers()
         # make all local services available
         # for service in self.local_services:
         #     if not service.index(only_header=True):
@@ -54,7 +50,7 @@ class ServiceManager(object):
     def update_services(self):
         self.web_services = self.get_available_web_services()
         self.local_services = self.get_available_local_services()
-        self.start_all()
+        self.fetch_headers()
 
     def get_service(self, unique):
         # webservice unique: class name
@@ -111,31 +107,29 @@ class ServiceManager(object):
                 # support mdx dictionary and stardict format dictionary
         # get the customized local services
         customed_services = self._get_services_from_files(LocalService, None)
+        # filter the customized service whose dict path is not available
         services.extend([service for service in customed_services
                          if os.path.exists(service.dict_path)])
-        self._dict_paths = [service.dict_path for service in services]
         return services
 
-    def index_all_mdxs(self):
-        mw.progress.start(immediate=True, label=u"Index building...")
-        index_thread = self.MdxIndexer(self, self._dict_paths)
+    def fetch_headers(self):
+        mw.progress.start(
+            immediate=True, label=u"Fetching dictionary information ...")
+        index_thread = self.DictHeadIndexer(self)
         index_thread.start()
         while not index_thread.isFinished():
             mw.app.processEvents()
             index_thread.wait(100)
         mw.progress.finish()
 
-    class MdxIndexer(QThread):
+    class DictHeadIndexer(QThread):
 
-        def __init__(self, manager, paths):
+        def __init__(self, manager):
             QThread.__init__(self)
             self.manager = manager
-            self.paths = paths
-            self.index_builders = list()
 
         def run(self):
-            for path in self.paths:
+            for service in self.manager.local_services:
                 mw.progress.update(
-                    label=u"Index building...\n{0}".format(os.path.basename(path)))
-                if MdxService.support(path):
-                    IndexBuilder(path, only_header=True)
+                    label=u"Fetching dictionary information ...\n{0}".format(os.path.basename(service.dict_path)))
+                service.index_header()
