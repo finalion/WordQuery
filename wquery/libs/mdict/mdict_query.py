@@ -29,7 +29,7 @@ class IndexBuilder(object):
     # todo: enable history
 
     def __init__(self, fname, encoding="", passcode=None, force_rebuild=False,
-                 enable_history=False, sql_index=True, check=False, only_header=False):
+                 enable_history=False, sql_index=True, check=False):
         self._mdx_file = fname
         self._encoding = ''
         self._stylesheet = {}
@@ -38,29 +38,22 @@ class IndexBuilder(object):
         self._description = ''
         self._sql_index = sql_index
         self._check = check
+        self._force_rebuild = force_rebuild
         _filename, _file_extension = os.path.splitext(fname)
-        assert(_file_extension == '.mdx')
-        assert(os.path.isfile(fname))
+        # assert(_file_extension == '.mdx')
+        # assert(os.path.isfile(fname))
         self._mdx_db = _filename + ".mdx.db"
         self._mdd_db = _filename + ".mdd.db"
         self._mdd_file = _filename + ".mdd"
 
-        self.build(force_rebuild=force_rebuild, only_header=only_header)
+    def get_header(self):
 
-    def check_db(self):
-        if not os.path.isfile(self._mdx_db):
-            self._make_mdx_index()
-        if os.path.isfile(self._mdd_file) and not os.path.isfile(self._mdd_db):
-            self._make_mdd_index()
-
-    def build(self, force_rebuild=False, only_header=False):
-        # make index anyway
-        if force_rebuild:
-            self._make_mdx_index(only_header=only_header)
-            if only_header:
-                return
-            if os.path.isfile(self._mdd_file):
-                self._make_mdd_index()
+        def _():
+            mdx = MDX(self._mdx_file, only_header=True)
+            self._encoding = mdx.meta['encoding']
+            self._stylesheet = json.loads(mdx.meta['stylesheet'])
+            self._title = mdx.meta['title']
+            self._description = mdx.meta['description']
 
         if os.path.isfile(self._mdx_db):
             # read from META table
@@ -72,22 +65,21 @@ class IndexBuilder(object):
                 self._title, self._description, self._version = (
                     each[0] for each in cursor)
             self._stylesheet = json.loads(stylesheet)
-            ################# if not version info #############
+            conn.close()
             if not self._version:
-                print("version info not found")
-                conn.close()
-                self._make_mdx_index(only_header=only_header)
-                print("mdx.db rebuilt!")
-                if only_header:
-                    return
-                if os.path.isfile(self._mdd_file):
-                    self._make_mdd_index()
-                    print("mdd.db rebuilt!")
+                _()
         else:
-            self._make_mdx_index(only_header=only_header)
+            _()
 
-        if only_header:
-            return
+    def rebuild(self):
+        self._make_mdx_index()
+        if os.path.isfile(self._mdd_file):
+            self._make_mdd_index()
+
+    def check_build(self):
+        # check if the mdx.db and mdd.db file is available
+        if not os.path.isfile(self._mdx_db):
+            self._make_mdx_index()
         if os.path.isfile(self._mdd_file) and not os.path.isfile(self._mdd_db):
             self._make_mdd_index()
 
@@ -113,17 +105,10 @@ class IndexBuilder(object):
                     style[0].encode('utf-8') + p + style[1].encode('utf-8')
         return txt_styled
 
-    def _make_mdx_index(self, only_header=False):
+    def _make_mdx_index(self):
         if os.path.exists(self._mdx_db):
             os.remove(self._mdx_db)
-        mdx = MDX(self._mdx_file, only_header=only_header)
-        self._encoding = mdx.meta['encoding']
-        self._stylesheet = json.loads(mdx.meta['stylesheet'])
-        self._title = mdx.meta['title']
-        self._description = mdx.meta['description']
-        if only_header:
-            return
-
+        mdx = MDX(self._mdx_file, only_header=False)
         index_list = mdx.get_index(check_block=self._check)
         conn = sqlite3.connect(self._mdx_db)
         c = conn.cursor()

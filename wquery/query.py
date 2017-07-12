@@ -262,7 +262,9 @@ class QueryWorkerManager(object):
     def get_worker(self, service_unique):
         if service_unique not in self.workers:
             worker = QueryWorker(service_unique)
-            self.workers[service_unique] = worker
+            # check whether the service is available
+            if worker.service:
+                self.workers[service_unique] = worker
         else:
             worker = self.workers[service_unique]
         return worker
