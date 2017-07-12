@@ -28,9 +28,9 @@ version = '1.1'
 class IndexBuilder(object):
     # todo: enable history
 
-    def __init__(self, fname, encoding="", passcode=None, force_rebuild=False, enable_history=False, sql_index=True, check=False):
+    def __init__(self, fname, encoding="", passcode=None, force_rebuild=False,
+                 enable_history=False, sql_index=True, check=False, only_header=False):
         self._mdx_file = fname
-        self._mdd_file = ""
         self._encoding = ''
         self._stylesheet = {}
         self._title = ''
@@ -42,73 +42,60 @@ class IndexBuilder(object):
         assert(_file_extension == '.mdx')
         assert(os.path.isfile(fname))
         self._mdx_db = _filename + ".mdx.db"
+        self._mdd_db = _filename + ".mdd.db"
+        self._mdd_file = _filename + ".mdd"
+
+        self.build(force_rebuild=force_rebuild, only_header=only_header)
+
+    def check_db(self):
+        if not os.path.isfile(self._mdx_db):
+            self._make_mdx_index()
+        if os.path.isfile(self._mdd_file) and not os.path.isfile(self._mdd_db):
+            self._make_mdd_index()
+
+    def build(self, force_rebuild=False, only_header=False):
         # make index anyway
         if force_rebuild:
-            self._make_mdx_index(self._mdx_db)
-            if os.path.isfile(_filename + '.mdd'):
-                self._mdd_file = _filename + ".mdd"
-                self._mdd_db = _filename + ".mdd.db"
-                self._make_mdd_index(self._mdd_db)
+            self._make_mdx_index(only_header=only_header)
+            if only_header:
+                return
+            if os.path.isfile(self._mdd_file):
+                self._make_mdd_index()
 
         if os.path.isfile(self._mdx_db):
             # read from META table
             conn = sqlite3.connect(self._mdx_db)
             #cursor = conn.execute("SELECT * FROM META")
-            cursor = conn.execute("SELECT * FROM META WHERE key = \"version\"")
-            # 判断有无版本号
-            for cc in cursor:
-                self._version = cc[1]
-            ################# if not version in fo #############
+            cursor = conn.execute(
+                'SELECT value FROM META WHERE key IN ("encoding","stylesheet","title","description","version")')
+            self._encoding, stylesheet,\
+                self._title, self._description, self._version = (
+                    each[0] for each in cursor)
+            self._stylesheet = json.loads(stylesheet)
+            ################# if not version info #############
             if not self._version:
                 print("version info not found")
                 conn.close()
-                self._make_mdx_index(self._mdx_db)
+                self._make_mdx_index(only_header=only_header)
                 print("mdx.db rebuilt!")
-                if os.path.isfile(_filename + '.mdd'):
-                    self._mdd_file = _filename + ".mdd"
-                    self._mdd_db = _filename + ".mdd.db"
-                    self._make_mdd_index(self._mdd_db)
+                if only_header:
+                    return
+                if os.path.isfile(self._mdd_file):
+                    self._make_mdd_index()
                     print("mdd.db rebuilt!")
-                return None
-            cursor = conn.execute(
-                "SELECT * FROM META WHERE key = \"encoding\"")
-            for cc in cursor:
-                self._encoding = cc[1]
-            cursor = conn.execute(
-                "SELECT * FROM META WHERE key = \"stylesheet\"")
-            for cc in cursor:
-                self._stylesheet = json.loads(cc[1])
-
-            cursor = conn.execute("SELECT * FROM META WHERE key = \"title\"")
-            for cc in cursor:
-                self._title = cc[1]
-
-            cursor = conn.execute(
-                "SELECT * FROM META WHERE key = \"description\"")
-            for cc in cursor:
-                self._description = cc[1]
-
-            # for cc in cursor:
-            #    if cc[0] == 'encoding':
-            #        self._encoding = cc[1]
-            #        continue
-            #    if cc[0] == 'stylesheet':
-            #        self._stylesheet = json.loads(cc[1])
-            #        continue
-            #    if cc[0] == 'title':
-            #        self._title = cc[1]
-            #        continue
-            #    if cc[0] == 'title':
-            #        self._description = cc[1]
         else:
-            self._make_mdx_index(self._mdx_db)
+            self._make_mdx_index(only_header=only_header)
 
-        if os.path.isfile(_filename + ".mdd"):
-            self._mdd_file = _filename + ".mdd"
-            self._mdd_db = _filename + ".mdd.db"
-            if not os.path.isfile(self._mdd_db):
-                self._make_mdd_index(self._mdd_db)
-        pass
+        if only_header:
+            return
+        if os.path.isfile(self._mdd_file) and not os.path.isfile(self._mdd_db):
+            self._make_mdd_index()
+
+    @property
+    def meta(self):
+        return {'title': self._title, 'description': self._description,
+                'encoding': self._encoding, 'version': self._version,
+                'stylesheet': self._stylesheet}
 
     def _replace_stylesheet(self, txt):
         # substitute stylesheet definition
@@ -118,10 +105,6 @@ class IndexBuilder(object):
         for j, p in enumerate(txt_list[1:]):
             style = self._stylesheet[txt_tag[j][1:-1]]
             if p and p[-1] == '\n':
-                # showInfo('txt_styled: ' + repr(txt_styled))
-                # showInfo('style[0]: ' + repr(style[0]))
-                # showInfo('p:' + repr(p.rstrip()))
-                # showInfo('style[1]:' + repr(style[1]))
                 txt_styled = txt_styled + \
                     style[0].encode('utf-8') + p.rstrip() + \
                     style[1].encode('utf-8') + '\r\n'
@@ -130,14 +113,19 @@ class IndexBuilder(object):
                     style[0].encode('utf-8') + p + style[1].encode('utf-8')
         return txt_styled
 
-    def _make_mdx_index(self, db_name):
-        if os.path.exists(db_name):
-            os.remove(db_name)
-        mdx = MDX(self._mdx_file)
-        self._mdx_db = db_name
-        returned_index = mdx.get_index(check_block=self._check)
-        index_list = returned_index['index_dict_list']
-        conn = sqlite3.connect(db_name)
+    def _make_mdx_index(self, only_header=False):
+        if os.path.exists(self._mdx_db):
+            os.remove(self._mdx_db)
+        mdx = MDX(self._mdx_file, only_header=only_header)
+        self._encoding = mdx.meta['encoding']
+        self._stylesheet = json.loads(mdx.meta['stylesheet'])
+        self._title = mdx.meta['title']
+        self._description = mdx.meta['description']
+        if only_header:
+            return
+
+        index_list = mdx.get_index(check_block=self._check)
+        conn = sqlite3.connect(self._mdx_db)
         c = conn.cursor()
         c.execute(
             ''' CREATE TABLE MDX_INDEX
@@ -167,25 +155,17 @@ class IndexBuilder(object):
         c.executemany('INSERT INTO MDX_INDEX VALUES (?,?,?,?,?,?,?,?)',
                       tuple_list)
         # build the metadata table
-        meta = returned_index['meta']
         c.execute(
             '''CREATE TABLE META
                (key text,
                 value text
                 )''')
-
-        # for k,v in meta:
-        #    c.execute(
-        #    'INSERT INTO META VALUES (?,?)',
-        #    (k, v)
-        #    )
-
         c.executemany(
             'INSERT INTO META VALUES (?,?)',
-            [('encoding', meta['encoding']),
-             ('stylesheet', meta['stylesheet']),
-             ('title', meta['title']),
-             ('description', meta['description']),
+            [('encoding', self.meta['encoding']),
+             ('stylesheet', json.dumps(self.meta['stylesheet'])),
+             ('title', self.meta['title']),
+             ('description', self.meta['description']),
              ('version', version)
              ]
         )
@@ -199,19 +179,13 @@ class IndexBuilder(object):
 
         conn.commit()
         conn.close()
-        # set class member
-        self._encoding = meta['encoding']
-        self._stylesheet = json.loads(meta['stylesheet'])
-        self._title = meta['title']
-        self._description = meta['description']
 
-    def _make_mdd_index(self, db_name):
-        if os.path.exists(db_name):
-            os.remove(db_name)
+    def _make_mdd_index(self):
+        if os.path.exists(self._mdd_db):
+            os.remove(self._mdd_db)
         mdd = MDD(self._mdd_file)
-        self._mdd_db = db_name
         index_list = mdd.get_index(check_block=self._check)
-        conn = sqlite3.connect(db_name)
+        conn = sqlite3.connect(self._mdd_db)
         c = conn.cursor()
         c.execute(
             ''' CREATE TABLE MDX_INDEX

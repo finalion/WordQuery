@@ -47,9 +47,9 @@ class ServiceManager(object):
     def start_all(self):
         self.index_all_mdxs()
         # make all local services available
-        for service in self.local_services:
-            if not service.index():
-                self.local_services.remove(service)
+        # for service in self.local_services:
+        #     if not service.index(only_header=True):
+        #         self.local_services.remove(service)
 
     def update_services(self):
         self.web_services = self.get_available_web_services()
@@ -109,6 +109,7 @@ class ServiceManager(object):
                     if StardictService.support(dict_path):
                         services.append(StardictService(dict_path))
                 # support mdx dictionary and stardict format dictionary
+        # get the customized local services
         customed_services = self._get_services_from_files(LocalService, None)
         services.extend([service for service in customed_services
                          if os.path.exists(service.dict_path)])
@@ -137,4 +138,4 @@ class ServiceManager(object):
                 mw.progress.update(
                     label=u"Index building...\n{0}".format(os.path.basename(path)))
                 if MdxService.support(path):
-                    IndexBuilder(path)
+                    IndexBuilder(path, only_header=True)

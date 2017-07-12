@@ -25,6 +25,7 @@ import json
 
 from ripemd128 import ripemd128
 from pureSalsa20 import Salsa20
+from aqt.utils import showInfo, showText, tooltip
 
 # zlib compression is used for engine version >=2.0
 import zlib
@@ -93,12 +94,14 @@ class MDict(object):
     It has no public methods and serves only as code sharing base class.
     """
 
-    def __init__(self, fname, encoding='', passcode=None):
+    def __init__(self, fname, encoding='', passcode=None, only_header=False):
         self._fname = fname
         self._encoding = encoding.upper()
         self._passcode = passcode
 
         self.header = self._read_header()
+        if only_header:
+            return
         try:
             self._key_list = self._read_keys()
         except:
@@ -257,6 +260,12 @@ class MDict(object):
             key_start_index = key_end_index + width
             key_list += [(key_id, key_text)]
         return key_list
+
+    @property
+    def meta(self):
+        return {'title': self._title, 'description': self._description,
+                'encoding': self._encoding, 'version': self._version,
+                'stylesheet': json.dumps(self._stylesheet)}
 
     def _read_header(self):
         f = open(self._fname, 'rb')
@@ -632,8 +641,8 @@ class MDX(MDict):
     ... print key, value[:10]
     """
 
-    def __init__(self, fname, encoding='', substyle=False, passcode=None):
-        MDict.__init__(self, fname, encoding, passcode)
+    def __init__(self, fname, encoding='', substyle=False, passcode=None, only_header=False):
+        MDict.__init__(self, fname, encoding, passcode, only_header)
         self._substyle = substyle
 
     def items(self):
@@ -879,14 +888,8 @@ class MDX(MDict):
         # todo: 注意！！！
             #assert(size_counter == record_block_size)
         f.close
-        # 这里比 mdd 部分稍有不同，应该还需要传递编码以及样式表信息
-        meta = {}
-        meta['encoding'] = self._encoding
-        meta['stylesheet'] = json.dumps(self._stylesheet)
-        meta['title'] = self._title
-        meta['description'] = self._description
+        return index_dict_list
 
-        return {"index_dict_list": index_dict_list, 'meta': meta}
 if __name__ == '__main__':
     import sys
     import os

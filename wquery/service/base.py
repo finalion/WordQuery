@@ -248,10 +248,11 @@ class MdxService(LocalService):
         self.cache = defaultdict(str)
         self.query_interval = 0.01
         self.styles = []
+        self.engine_ready = False
 
     @staticmethod
     def support(dict_path):
-        return dict_path.endswith('.mdx')
+        return dict_path.lower().endswith('.mdx')
 
     @property
     def title(self):
@@ -263,13 +264,13 @@ class MdxService(LocalService):
         else:
             return os.path.splitext(os.path.basename(self.dict_path))[0]
 
-    def index(self):
-        try:
-            self.builder = IndexBuilder(self.dict_path)
-            if self.builder:
-                return True
-        except:
-            pass
+    def index(self, only_header=False):
+        self.builder = IndexBuilder(
+            self.dict_path, only_header=only_header)
+        if not only_header and self.builder:
+            self.engine_ready = True
+        if self.builder and not only_header:
+            return True
 
     @export(u"default", 0)
     def fld_whole(self):
@@ -279,8 +280,10 @@ class MdxService(LocalService):
 
     def get_html(self):
         if not self.cache[self.word]:
-            if not self.builder:
+            if not self.engine_ready:
                 self.index()
+            # make sure all the db files are valid
+            self.builder.check_db()
             html = ''
             result = self.builder.mdx_lookup(self.word)  # self.word: unicode
             if result:
@@ -363,9 +366,6 @@ class MdxService(LocalService):
             for each in lst:
                 self.save_file(each)
         except AttributeError:
-            '''
-            有些字典会出这样的错误u AttributeError: 'IndexBuilder' object has no attribute '_mdd_db'
-            '''
             pass
 
         return errors
@@ -379,7 +379,7 @@ class StardictService(LocalService):
 
     @staticmethod
     def support(dict_path):
-        return dict_path.endswith('.ifo')
+        return dict_path.lower().endswith('.ifo')
 
     @property
     def title(self):
@@ -388,7 +388,7 @@ class StardictService(LocalService):
         else:
             return self.builder.ifo.bookname.decode('utf-8')
 
-    def index(self):
+    def index(self, only_header=False):
         try:
             self.builder = Dictionary(self.dict_path, in_memory=False)
             return True if self.builder else False
@@ -398,7 +398,7 @@ class StardictService(LocalService):
     @export(u"default", 0)
     def fld_whole(self):
         if not self.builder:
-            return
+            self.index()
         try:
             result = self.builder[self.word]
             result = result.strip()\
