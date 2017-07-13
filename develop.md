@@ -53,7 +53,7 @@ def _get_singledict(self, single_dict, lang='eng'):
 
 ## MdxService
 
-This addon implement the local dictionary base service supporting mdx and stardict formats. By default, the service only extracts the entire explanation with the field name "default". It is impossible for this base service to extract all the intended fields for any given dictionary, but the user can create a inherited service for a path-specified dictionary.
+This addon implements a basic local dictionary service supporting mdx and stardict formats, which roughly extracts the entire explanation with the field name "default". It is impossible for the basic service to extract all the intended fields for any given dictionary, but the user can create a inherited one for some path-specified dictionary.
 
 **[Sample](samples/LDOCE6.py)**.
 
