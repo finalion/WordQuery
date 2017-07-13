@@ -27,7 +27,6 @@ from aqt.utils import showInfo, shortcut
 from wquery.ui import show_options
 from wquery.query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
 from wquery.context import config
-from wquery.service import start_services
 
 
 have_setup = False

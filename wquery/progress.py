@@ -23,31 +23,48 @@ class ProgressManager(object):
         self._win = None
         self._levels = 0
         self.aborted = False
-        self.labels = defaultdict(str)
+        self.rows_number = 0
+        self.info_dict = dict()
     # Creating progress dialogs
     ##########################################################################
 
     @pyqtSlot(dict)
-    def update_lables(self, info):
-        self.labels.update(info)
-        words_number, fields_number = \
-            self.labels.get('words_number', 0), \
-            self.labels.get('fields_number', 0)
+    def update_labels(self, data):
+        self.info_dict.update(data)
+        labels = ''
+        for index in range(self.rows_number):
+            info = self.info_dict.get(index, None)
+            if not info:
+                continue
+            text = info.get('text', None)
+            if text:
+                labels += text
+            else:
+                labels += u"{2} [{0}] {1}".format(
+                    info['service_name'], info['field_name'], info['flag'])
+            labels += '<br>'
+
         number_info = ''
-        if words_number and fields_number:
-            number_info = u'<br>{0} {1} {2}, {3} {4}'.format(
+        words_number, fields_number = \
+            self.info_dict.get('words_number', 0), \
+            self.info_dict.get('fields_number', 0)
+        if words_number or fields_number:
+            labels += 45 * '-' + '<br>'
+            number_info = u'{0} {1} {2}, {3} {4}'.format(
                 _('QUERIED'), words_number, _(
                     'WORDS'), fields_number, _('FIELDS')
             )
-        self.update(label=u"Querying <b>{0}</b>...<br>[{1}] {2}{3}".format(
-            self.labels['word'],
-            self.labels['service_name'],
-            self.labels['field_name'],
-            number_info
-        ))
+            labels += number_info
 
-    def start(self, max=0, min=0, label=None, parent=None, immediate=False):
-        self.labels.clear()
+        self.update(labels)
+        self._win.repaint()
+
+    def update_title(self, title):
+        self._win.setWindowTitle(title)
+
+    def start(self, max=0, min=0, label=None, parent=None, immediate=False, rows=0):
+        self.info_dict.clear()
+        self.rows_number = rows
         self.aborted = False
         self._levels += 1
         if self._levels > 1:

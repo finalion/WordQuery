@@ -157,11 +157,31 @@ class Service(object):
 
     def active(self, action_label, word):
         self.word = word
+        # if the service instance is LocalService,
+        # then have to build then index.
+        if isinstance(self, LocalService):
+            self.notify({self.work_id: {'text': u'Building %s...' %
+                                        os.path.splitext(os.path.basename(self.dict_path))[0]}})
+            self.builder.check_build()
+
         for each in self.exporters:
             if action_label == each[0]:
+                self.notify({self.work_id: {'service_name': self.title,
+                                            'field_name': action_label,
+                                            'flag': u'->'}})
                 result = each[1]()
+                self.notify({self.work_id: {'service_name': self.title,
+                                            'field_name': action_label,
+                                            'flag': u'√'}})
                 return result if result else QueryResult.default()  # avoid return None
         return QueryResult.default()
+
+    def set_notifier(self, progress_update, index):
+        self.notify_signal = progress_update
+        self.work_id = index
+
+    def notify(self, data):
+        self.notify_signal.emit(data)
 
     @staticmethod
     def get_anki_label(filename, type_):
@@ -248,8 +268,8 @@ class MdxService(LocalService):
         self.cache = defaultdict(str)
         self.query_interval = 0.01
         self.styles = []
-        self.engine_ready = False
         self.builder = IndexBuilder(self.dict_path)
+        self.index_header()
 
     @staticmethod
     def support(dict_path):
@@ -273,8 +293,6 @@ class MdxService(LocalService):
 
     def get_html(self):
         if not self.cache[self.word]:
-            # make sure all the db files are valid
-            self.builder.check_build()
             html = ''
             result = self.builder.mdx_lookup(self.word)  # self.word: unicode
             if result:
@@ -368,6 +386,7 @@ class StardictService(LocalService):
         super(StardictService, self).__init__(dict_path)
         self.query_interval = 0.05
         self.builder = Dictionary(self.dict_path, in_memory=False)
+        self.index_header()
 
     @staticmethod
     def support(dict_path):
