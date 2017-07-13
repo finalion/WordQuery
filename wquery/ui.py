@@ -145,11 +145,18 @@ class OptionsDialog(QDialog):
         # add description of radio buttons AND ok button
         bottom_layout = QHBoxLayout()
         about_btn = QPushButton(_('ABOUT'))
+        home_label = QLabel(
+            '<a href="https://finalion.github.io/WordQuery/">User Guide</a>')
+        home_label.setOpenExternalLinks(True)
+        shop_label = QLabel(
+            '<a href="https://finalion.github.io/WordQuery/shop.html">Service Shop</a>')
+        shop_label.setOpenExternalLinks(True)
         about_btn.clicked.connect(self.show_about)
         btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         btnbox.accepted.connect(self.accept)
         bottom_layout.addWidget(about_btn)
-        bottom_layout.addWidget(QLabel(_("RADIOS_DESC")))
+        bottom_layout.addWidget(home_label)
+        bottom_layout.addWidget(shop_label)
         bottom_layout.addWidget(btnbox)
         self.main_layout.addLayout(bottom_layout)
         self.setLayout(self.main_layout)
@@ -219,7 +226,9 @@ class OptionsDialog(QDialog):
         self.dicts_layout.addWidget(label1, 0, 0)
         self.dicts_layout.addWidget(label2, 0, 1)
         self.dicts_layout.addWidget(label3, 0, 2)
+
         maps = config.get_maps(model['id'])
+        self.radio_group = QButtonGroup()
         for i, fld in enumerate(model['flds']):
             ord = fld['ord']
             name = fld['name']
@@ -232,6 +241,7 @@ class OptionsDialog(QDialog):
                     self.add_dict_layout(i, fld_name=name)
             else:
                 self.add_dict_layout(i, fld_name=name)
+
         self.setLayout(self.main_layout)
         self.resize(widget_size.dialog_width,
                     (i + 1) * widget_size.map_max_height + widget_size.dialog_height_margin)
@@ -296,7 +306,6 @@ class OptionsDialog(QDialog):
             field_combo.setFocus(Qt.MouseFocusReason)  # MouseFocusReason
         else:
             field_text = field_combo.currentText()
-            current_service = None
             service_unique = dict_combo_itemdata
             current_service = service_manager.get_service(service_unique)
             # problem
@@ -326,14 +335,17 @@ class OptionsDialog(QDialog):
             kwargs.get('fld_name', ''),
             kwargs.get('dict_field', ''),)
 
-        fldname_label = QRadioButton(fld_name)
-        fldname_label.setMinimumSize(widget_size.map_fld_width, 0)
-        fldname_label.setMaximumSize(widget_size.map_fld_width,
-                                     widget_size.map_max_height)
-        fldname_label.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        fldname_label.setCheckable(True)
-        fldname_label.clicked.connect(self.radio_btn_checked)
-        fldname_label.setChecked(word_checked)
+        word_check_btn = QRadioButton(fld_name)
+        word_check_btn.setMinimumSize(widget_size.map_fld_width, 0)
+        word_check_btn.setMaximumSize(widget_size.map_fld_width,
+                                      widget_size.map_max_height)
+        word_check_btn.setSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
+        word_check_btn.setCheckable(True)
+        word_check_btn.clicked.connect(self.radio_btn_checked)
+        if i == 0:
+            word_checked = True
+        word_check_btn.setChecked(word_checked)
+        self.radio_group.addButton(word_check_btn)
 
         dict_combo = QComboBox()
         dict_combo.setMinimumSize(widget_size.map_dictname_width, 0)
@@ -353,14 +365,9 @@ class OptionsDialog(QDialog):
         field_combo.setEditText(dict_field)
         self.fill_field_combo_options(field_combo, dict_name, dict_unique)
 
-        self.dicts_layout.addWidget(fldname_label, i + 1, 0)
+        self.dicts_layout.addWidget(word_check_btn, i + 1, 0)
         self.dicts_layout.addWidget(dict_combo, i + 1, 1)
         self.dicts_layout.addWidget(field_combo, i + 1, 2)
-
-        self.setLayout(self.main_layout)
-        # for osx
-        # mw.options_dialog.activateWindow()
-        # mw.options_dialog.raise_()
 
     def _get_combos(self, flag):
         # 0 : dict_combox, 1:field_combox

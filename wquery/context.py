@@ -28,7 +28,7 @@ from aqt.utils import shortcut, showInfo, showText
 from .lang import _
 from .odds import get_model_byId, get_ord_from_fldname
 
-VERSION = 'V4.0.20170709'
+VERSION = 'V4.1.20170714'
 CONFIG_FILENAME = '.wqcfg.json'
 
 

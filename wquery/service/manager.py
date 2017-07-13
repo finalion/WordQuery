@@ -38,7 +38,7 @@ class ServiceManager(object):
 
     @property
     def services(self):
-        return self.web_services + self.local_services
+        return self.web_services | self.local_services
 
     # def start_all(self):
     #     self.fetch_headers()
@@ -69,7 +69,7 @@ class ServiceManager(object):
         get service from service packages, available type is
         WebService, LocalService
         """
-        services = []
+        services = set()
         mypath = os.path.dirname(os.path.realpath(__file__))
         files = [f for f in os.listdir(mypath)
                  if f not in ('__init__.py', 'base.py',) and not f.endswith('.pyc')]
@@ -84,9 +84,12 @@ class ServiceManager(object):
                     if issubclass(cls, type_) and cls not in base_class:
                         label = getattr(
                             cls, '__register_label__', cls.__name__)
-                        service = cls(*args)
-                        if service not in services:
-                            services.append(service)
+                        try:
+                            service = cls(*args)
+                            services.add(service)
+                        except Exception:
+                            # exclude the local service whose path has error.
+                            pass
             except ImportError:
                 continue
         return services
@@ -95,41 +98,18 @@ class ServiceManager(object):
         return self._get_services_from_files(WebService)
 
     def get_available_local_services(self):
-        services = []
+        services = set()
         for each in config.dirs:
             for dirpath, dirnames, filenames in os.walk(each):
                 for filename in filenames:
                     dict_path = os.path.join(dirpath, filename)
                     if MdxService.support(dict_path):
-                        services.append(MdxService(dict_path))
+                        services.add(MdxService(dict_path))
                     if StardictService.support(dict_path):
-                        services.append(StardictService(dict_path))
+                        services.add(StardictService(dict_path))
                 # support mdx dictionary and stardict format dictionary
         # get the customized local services
         customed_services = self._get_services_from_files(LocalService, None)
         # filter the customized service whose dict path is not available
-        services.extend([service for service in customed_services
-                         if os.path.exists(service.dict_path)])
+        services.update(customed_services)
         return services
-
-    # def fetch_headers(self):
-    #     mw.progress.start(
-    #         immediate=True, label=u"Fetching dictionary information ...")
-    #     index_thread = self.DictHeadIndexer(self)
-    #     index_thread.start()
-    #     while not index_thread.isFinished():
-    #         mw.app.processEvents()
-    #         index_thread.wait(100)
-    #     mw.progress.finish()
-
-    # class DictHeadIndexer(QThread):
-
-    #     def __init__(self, manager):
-    #         QThread.__init__(self)
-    #         self.manager = manager
-
-    #     def run(self):
-    #         for service in self.manager.local_services:
-    #             mw.progress.update(
-    #                 label=u"Fetching dictionary information ...\n{0}".format(os.path.basename(service.dict_path)))
-    #             service.index_header()

@@ -24,46 +24,55 @@ class ProgressManager(object):
         self._levels = 0
         self.aborted = False
         self.rows_number = 0
-        self.info_dict = dict()
+        self._msg_info = defaultdict(dict)
+        self._msg_count = defaultdict(int)
     # Creating progress dialogs
     ##########################################################################
 
     @pyqtSlot(dict)
     def update_labels(self, data):
-        self.info_dict.update(data)
-        labels = ''
+        if data.type == 'count':
+            self._msg_count.update(data)
+        else:
+            self._msg_info[data.index] = data
+
+        lst = []
         for index in range(self.rows_number):
-            info = self.info_dict.get(index, None)
+            info = self._msg_info.get(index, None)
             if not info:
                 continue
-            text = info.get('text', None)
-            if text:
-                labels += text
+            if info.type == 'text':
+                lst.append(info.text)
             else:
-                labels += u"{2} [{0}] {1}".format(
-                    info['service_name'], info['field_name'], info['flag'])
-            labels += '<br>'
+                lst.append(u"{2} [{0}] {1}".format(
+                    info.service_name, info.field_name, info.flag))
 
         number_info = ''
-        words_number, fields_number = \
-            self.info_dict.get('words_number', 0), \
-            self.info_dict.get('fields_number', 0)
+        words_number, fields_number = (
+            self._msg_count['words_number'],  self._msg_count['fields_number'])
         if words_number or fields_number:
-            labels += 45 * '-' + '<br>'
-            number_info = u'{0} {1} {2}, {3} {4}'.format(
+            number_info += '<br>' + 45 * '-' + '<br>'
+            number_info += u'{0} {1} {2}, {3} {4}'.format(
                 _('QUERIED'), words_number, _(
                     'WORDS'), fields_number, _('FIELDS')
             )
-            labels += number_info
 
-        self.update(labels)
-        self._win.repaint()
+        self.update('<br>'.join(lst) + number_info)
+        self._win.adjustSize()
 
     def update_title(self, title):
         self._win.setWindowTitle(title)
 
+    def update_rows(self, number):
+        self.rows_number = number
+        self._msg_info.clear()
+
+    def reset_count(self):
+        self._msg_count.clear()
+
     def start(self, max=0, min=0, label=None, parent=None, immediate=False, rows=0):
-        self.info_dict.clear()
+        self._msg_info.clear()
+        self._msg_count.clear()
         self.rows_number = rows
         self.aborted = False
         self._levels += 1

@@ -160,19 +160,22 @@ class Service(object):
         # if the service instance is LocalService,
         # then have to build then index.
         if isinstance(self, LocalService):
-            self.notify({self.work_id: {'text': u'Building %s...' %
-                                        os.path.splitext(os.path.basename(self.dict_path))[0]}})
+            self.notify(MapDict(type='text', index=self.work_id,
+                                text=u'Building %s...' %
+                                os.path.splitext(os.path.basename(self.dict_path))[0]))
             self.builder.check_build()
 
         for each in self.exporters:
             if action_label == each[0]:
-                self.notify({self.work_id: {'service_name': self.title,
-                                            'field_name': action_label,
-                                            'flag': u'->'}})
+                self.notify(MapDict(type='info', index=self.work_id,
+                                    service_name=self.title,
+                                    field_name=action_label,
+                                    flag=u'->'))
                 result = each[1]()
-                self.notify({self.work_id: {'service_name': self.title,
-                                            'field_name': action_label,
-                                            'flag': u'√'}})
+                self.notify(MapDict(type='info', index=self.work_id,
+                                    service_name=self.title,
+                                    field_name=action_label,
+                                    flag=u'√'))
                 return result if result else QueryResult.default()  # avoid return None
         return QueryResult.default()
 
@@ -261,15 +264,12 @@ class MdxService(LocalService):
 
     def __init__(self, dict_path):
         super(MdxService, self).__init__(dict_path)
-        # self.index()
-        # cache all the static files queried, cache builder
-        #  {'builder':builder, 'files':[...static files list...]}
         self.media_cache = defaultdict(set)
         self.cache = defaultdict(str)
         self.query_interval = 0.01
         self.styles = []
-        self.builder = IndexBuilder(self.dict_path)
-        self.index_header()
+        self.builder = IndexBuilder(dict_path)
+        self.builder.get_header()
 
     @staticmethod
     def support(dict_path):
@@ -281,9 +281,6 @@ class MdxService(LocalService):
             return os.path.splitext(os.path.basename(self.dict_path))[0]
         else:
             return self.builder.meta['title']
-
-    def index_header(self):
-        self.builder.get_header()
 
     @export(u"default", 0)
     def fld_whole(self):
@@ -386,7 +383,7 @@ class StardictService(LocalService):
         super(StardictService, self).__init__(dict_path)
         self.query_interval = 0.05
         self.builder = Dictionary(self.dict_path, in_memory=False)
-        self.index_header()
+        self.builder.get_header()
 
     @staticmethod
     def support(dict_path):
@@ -398,9 +395,6 @@ class StardictService(LocalService):
             return os.path.splitext(os.path.basename(self.dict_path))[0]
         else:
             return self.builder.ifo.bookname.decode('utf-8')
-
-    def index_header(self):
-        self.builder.get_header()
 
     @export(u"default", 0)
     def fld_whole(self):
