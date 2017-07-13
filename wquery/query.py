@@ -35,6 +35,7 @@ from .service import service_manager
 from .service.base import QueryResult, copy_static_file
 from .utils import Empty, Queue, wrap_css
 from .progress import ProgressManager
+from utils.mapdict import MapDict
 
 
 def inspect_note(note):
@@ -83,7 +84,7 @@ def query_from_browser(browser):
                 update_note_fields(note, results)
                 fields_number += len(results)
                 progress.update_labels(
-                    {'words_number': i + 1, 'fields_number': fields_number})
+                    MapDict(type='count', words_number=i + 1, fields_number=fields_number))
             except InvalidWordException:
                 showInfo(_("NO_QUERY_WORD"))
         promot_choose_css()
@@ -276,7 +277,7 @@ class QueryWorkerManager(object):
         worker.start()
 
     def start_all_workers(self):
-        progress.rows_number = len(self.workers)
+        progress.update_rows(len(self.workers))
         for i, worker in enumerate(self.workers.values()):
             worker.index = i
             worker.start()
