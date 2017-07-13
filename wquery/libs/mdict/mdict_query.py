@@ -45,10 +45,12 @@ class IndexBuilder(object):
         self._mdx_db = _filename + ".mdx.db"
         self._mdd_db = _filename + ".mdd.db"
         self._mdd_file = _filename + ".mdd"
+        self.header_build_flag = False
 
     def get_header(self):
 
         def _():
+            self.header_build_flag = True
             mdx = MDX(self._mdx_file, only_header=True)
             self._encoding = mdx.meta['encoding']
             self._stylesheet = json.loads(mdx.meta['stylesheet'])
@@ -57,16 +59,19 @@ class IndexBuilder(object):
 
         if os.path.isfile(self._mdx_db):
             # read from META table
-            conn = sqlite3.connect(self._mdx_db)
-            #cursor = conn.execute("SELECT * FROM META")
-            cursor = conn.execute(
-                'SELECT value FROM META WHERE key IN ("encoding","stylesheet","title","description","version")')
-            self._encoding, stylesheet,\
-                self._title, self._description, self._version = (
-                    each[0] for each in cursor)
-            self._stylesheet = json.loads(stylesheet)
-            conn.close()
-            if not self._version:
+            try:
+                conn = sqlite3.connect(self._mdx_db)
+                #cursor = conn.execute("SELECT * FROM META")
+                cursor = conn.execute(
+                    'SELECT value FROM META WHERE key IN ("encoding","stylesheet","title","description","version")')
+                self._encoding, stylesheet,\
+                    self._title, self._description, self._version = (
+                        each[0] for each in cursor)
+                self._stylesheet = json.loads(stylesheet)
+                conn.close()
+                if not self._version:
+                    _()
+            except sqlite3.OperationalError:
                 _()
         else:
             _()
@@ -78,10 +83,11 @@ class IndexBuilder(object):
 
     def check_build(self):
         # check if the mdx.db and mdd.db file is available
-        if not os.path.isfile(self._mdx_db):
+        if self.header_build_flag or not os.path.isfile(self._mdx_db):
             self._make_mdx_index()
         if os.path.isfile(self._mdd_file) and not os.path.isfile(self._mdd_db):
             self._make_mdd_index()
+        self.header_build_flag = False
 
     @property
     def meta(self):

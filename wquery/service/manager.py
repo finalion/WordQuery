@@ -50,7 +50,7 @@ class ServiceManager(object):
     def update_services(self):
         self.web_services = self.get_available_web_services()
         self.local_services = self.get_available_local_services()
-        self.fetch_headers()
+        # self.fetch_headers()
 
     def get_service(self, unique):
         # webservice unique: class name
@@ -112,24 +112,24 @@ class ServiceManager(object):
                          if os.path.exists(service.dict_path)])
         return services
 
-    def fetch_headers(self):
-        mw.progress.start(
-            immediate=True, label=u"Fetching dictionary information ...")
-        index_thread = self.DictHeadIndexer(self)
-        index_thread.start()
-        while not index_thread.isFinished():
-            mw.app.processEvents()
-            index_thread.wait(100)
-        mw.progress.finish()
+    # def fetch_headers(self):
+    #     mw.progress.start(
+    #         immediate=True, label=u"Fetching dictionary information ...")
+    #     index_thread = self.DictHeadIndexer(self)
+    #     index_thread.start()
+    #     while not index_thread.isFinished():
+    #         mw.app.processEvents()
+    #         index_thread.wait(100)
+    #     mw.progress.finish()
 
-    class DictHeadIndexer(QThread):
+    # class DictHeadIndexer(QThread):
 
-        def __init__(self, manager):
-            QThread.__init__(self)
-            self.manager = manager
+    #     def __init__(self, manager):
+    #         QThread.__init__(self)
+    #         self.manager = manager
 
-        def run(self):
-            for service in self.manager.local_services:
-                mw.progress.update(
-                    label=u"Fetching dictionary information ...\n{0}".format(os.path.basename(service.dict_path)))
-                service.index_header()
+    #     def run(self):
+    #         for service in self.manager.local_services:
+    #             mw.progress.update(
+    #                 label=u"Fetching dictionary information ...\n{0}".format(os.path.basename(service.dict_path)))
+    #             service.index_header()

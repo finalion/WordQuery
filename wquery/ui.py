@@ -395,3 +395,4 @@ def show_options():
     opt_dialog.exec_()
     opt_dialog.activateWindow()
     opt_dialog.raise_()
+    # service_manager.fetch_headers()

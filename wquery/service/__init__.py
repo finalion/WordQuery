@@ -22,5 +22,5 @@ from .manager import ServiceManager
 service_manager = ServiceManager()
 
 
-def start_services():
-    service_manager.fetch_headers()
+# def start_services():
+#     service_manager.fetch_headers()

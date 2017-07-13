@@ -73,7 +73,7 @@ def query_from_browser(browser):
         query_from_editor_all_fields(browser.editor)
     if len(notes) > 1:
         fields_number = 0
-        progress.start(immediate=True, label="Querying...")
+        progress.start(immediate=True)
         for i, note in enumerate(notes):
             # user cancels the progress
             if progress.abort():
@@ -82,7 +82,7 @@ def query_from_browser(browser):
                 results = query_all_flds(note)
                 update_note_fields(note, results)
                 fields_number += len(results)
-                progress.update_lables(
+                progress.update_labels(
                     {'words_number': i + 1, 'fields_number': fields_number})
             except InvalidWordException:
                 showInfo(_("NO_QUERY_WORD"))
@@ -99,7 +99,8 @@ def query_from_editor_all_fields(editor):
     if not editor or not editor.note:
         return
     work_manager.reset_query_counts()
-    progress.start(immediate=True, label="Querying...")
+    time.sleep(0.1)
+    progress.start(immediate=True)
     try:
         results = query_all_flds(editor.note)
         update_note_fields(editor.note, results)
@@ -115,7 +116,7 @@ def query_from_editor_current_field(editor):
     if not editor or not editor.note:
         return
     work_manager.reset_query_counts()
-    progress.start(immediate=True, label="Querying...")
+    progress.start(immediate=True)
     # if the focus falls into the word field, then query all note fields,
     # else only query the current focused field.
     fld_index = editor.currentField
@@ -203,7 +204,6 @@ def join_result(query_func):
             while not worker.isFinished():
                 mw.app.processEvents()
                 worker.wait(100)
-
         return handle_results('__query_over__')
     return wrap
 
@@ -214,6 +214,7 @@ def query_all_flds(note):
     word_ord, word, maps = inspect_note(note)
     if not word:
         raise InvalidWordException
+    progress.update_title(u'Querying [[ %s ]]' % word)
     for i, each in enumerate(maps):
         if i == word_ord:
             continue
@@ -234,6 +235,7 @@ def query_single_fld(note, fld_index):
     word_ord, word, maps = inspect_note(note)
     if not word:
         raise InvalidWordException
+    progress.update_title(u'Querying [[ %s ]]' % word)
     # assert fld_index > 0
     if fld_index >= len(maps):
         return QueryResult()
@@ -250,6 +252,7 @@ def query_single_fld(note, fld_index):
 def handle_results(result):
     # showInfo('slot: ' + str(result))
     if result != '__query_over__':
+        # progress.
         handle_results.total.update(result)
     return handle_results.total
 
@@ -273,7 +276,9 @@ class QueryWorkerManager(object):
         worker.start()
 
     def start_all_workers(self):
-        for worker in self.workers.values():
+        progress.rows_number = len(self.workers)
+        for i, worker in enumerate(self.workers.values()):
+            worker.index = i
             worker.start()
 
     def reset_query_counts(self):
@@ -292,11 +297,12 @@ class QueryWorker(QThread):
     def __init__(self, service_unique):
         super(QueryWorker, self).__init__()
         self.service_unique = service_unique
+        self.index = 0
         self.service = service_manager.get_service(service_unique)
         self.completed_counts = 0
         self.queue = Queue()
         self.result_ready.connect(handle_results)
-        self.progress_update.connect(progress.update_lables)
+        self.progress_update.connect(progress.update_labels)
 
     def target(self, index, service_field, word):
         self.queue.put((index, service_field, word))
@@ -308,11 +314,11 @@ class QueryWorker(QThread):
                 break
             try:
                 index, service_field, word = self.queue.get(timeout=0.1)
-                self.progress_update.emit({
-                    'service_name': self.service.title,
-                    'word': word,
-                    'field_name': service_field
-                })
+                # self.progress_update.emit({
+                #     'service_name': self.service.title,
+                #     'word': word,
+                #     'field_name': service_field
+                # })
                 result = self.query(service_field, word)
                 self.result_ready.emit({index: result})
                 self.completed_counts += 1
@@ -325,6 +331,7 @@ class QueryWorker(QThread):
         time.sleep(self.service.query_interval)
 
     def query(self, service_field, word):
+        self.service.set_notifier(self.progress_update, self.index)
         return self.service.active(service_field, word)
 
 

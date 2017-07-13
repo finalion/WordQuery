@@ -458,7 +458,7 @@ class Dictionary(dict):
 
             # reading somedict.dict or somedict.dict.dz
             self.dict = _StarDictDict(
-                dict_prefix=self.filename_prefix, container=self, in_memory=in_memory)
+                dict_prefix=self.filename_prefix, container=self, in_memory=self.in_memory)
 
             # reading somedict.syn (optional)
             self.syn = _StarDictSyn(
