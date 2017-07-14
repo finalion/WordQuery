@@ -2,7 +2,7 @@
 ## [User Guide](README.md) &nbsp;&nbsp;&nbsp;&nbsp;[<u>Develop Guide</u>](develop.md) &nbsp;&nbsp;&nbsp;&nbsp;[Service Shop](shop.md) 
 
 
-The advanced users can implement new web dictionary services to grab the word explanations, or local dictionary services to extract some certain fields. See [a webservice sample](samples/bing.py) and [a mdxservice sample](samples/LDOCE6.md) for the details.
+The advanced users can implement new web dictionary services to grab the word explanations, or local dictionary services to extract some certain fields. See [a webservice sample](samples/bing.py) and [a mdxservice sample](samples/LDOCE6.py) for the details.
 
 ## WebService
 
