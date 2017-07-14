@@ -19,23 +19,20 @@
 
 import os
 import re
+import shutil
 import sys
 import time
-import shutil
 from collections import defaultdict
 
-import aqt
 from aqt import mw
-from aqt.qt import QObject, QThread, pyqtSignal, pyqtSlot, QFileDialog
+from aqt.qt import QFileDialog, QObject, QThread, pyqtSignal, pyqtSlot
 from aqt.utils import showInfo, showText, tooltip
-
-from .context import config
-from .lang import _, _sl
-from .service import service_manager
-from .service.base import QueryResult, copy_static_file
-from .utils import Empty, Queue, wrap_css
-from .progress import ProgressManager
-from utils.mapdict import MapDict
+from wquery.constants import Endpoint, Template
+from wquery.context import config
+from wquery.lang import _, _sl
+from wquery.progress import ProgressManager
+from wquery.service import service_manager, QueryResult, copy_static_file
+from wquery.utils import Empty, MapDict, Queue, wrap_css
 
 
 def inspect_note(note):
@@ -156,8 +153,8 @@ def promot_choose_css():
     for local_service in service_manager.local_services:
         try:
             missed_css = local_service.missed_css.pop()
-            showInfo(
-                u'MDX dictonary <b>{dict}</b> misses css file <b>{css}</b>. <br />Please choose the file.'.format(dict=local_service.title, css=missed_css))
+            showInfo(Template.miss_css.format(
+                dict=local_service.title, css=missed_css))
             filepath = QFileDialog.getOpenFileName(
                 caption=u'Choose css file', filter=u'CSS (*.css)')
             if filepath:

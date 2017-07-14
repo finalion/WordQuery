@@ -4,8 +4,11 @@
 
 import time
 from collections import defaultdict
+
 from aqt.qt import *
-from .lang import _
+from wquery.lang import _
+
+
 # fixme: if mw->subwindow opens a progress dialog with mw as the parent, mw
 # gets raised on finish on compiz. perhaps we should be using the progress
 # dialog as the parent?

@@ -24,10 +24,9 @@ from functools import wraps
 from aqt import mw
 from aqt.qt import QThread
 from aqt.utils import showInfo
+from base import LocalService, MdxService, StardictService, WebService
 from wquery.context import config
 from wquery.utils import MapDict, importlib
-
-from .base import MdxService, StardictService, WebService, LocalService
 
 
 class ServiceManager(object):

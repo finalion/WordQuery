@@ -4,8 +4,7 @@ import urllib2
 import xml.etree.ElementTree
 
 from aqt.utils import showInfo
-
-from .base import WebService, export, with_styles, register
+from base import WebService, export, register, with_styles
 
 
 @register(u'有道词典-法语')

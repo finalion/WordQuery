@@ -20,6 +20,7 @@
 import os
 import sys
 from collections import namedtuple
+
 import anki
 import aqt
 import aqt.models
@@ -27,13 +28,11 @@ from aqt import mw
 from aqt.qt import *
 from aqt.studydeck import StudyDeck
 from aqt.utils import shortcut, showInfo
-
-from .context import config, VERSION
-from .lang import _, _sl
-from .odds import get_model_byId, get_ord_from_fldname
-from .service import service_manager
-from .utils import MapDict
-
+from wquery.constants import VERSION, Endpoint, Template
+from wquery.context import app_icon, config
+from wquery.lang import _, _sl
+from wquery.service import service_manager
+from wquery.utils import MapDict, get_icon, get_model_byId, get_ord_from_fldname
 
 DICT_COMBOS, DICT_FILED_COMBOS, ALL_COMBOS = [0, 1, 2]
 
@@ -117,6 +116,8 @@ class OptionsDialog(QDialog):
         self.setWindowFlags(Qt.CustomizeWindowHint |
                             Qt.WindowTitleHint | Qt.WindowCloseButtonHint | Qt.WindowMinMaxButtonsHint)
         self.parent = parent
+        # from PyQt4 import QtCore, QtGui
+        self.setWindowIcon(app_icon)
         self.setWindowTitle(u"Options")
         self.build()
 
@@ -145,16 +146,19 @@ class OptionsDialog(QDialog):
         # add description of radio buttons AND ok button
         bottom_layout = QHBoxLayout()
         about_btn = QPushButton(_('ABOUT'))
+        about_btn.clicked.connect(self.show_about)
+        chk_update_btn = QPushButton(_('UPDATE'))
+        chk_update_btn.clicked.connect(self.check_updates)
         home_label = QLabel(
-            '<a href="https://finalion.github.io/WordQuery/">User Guide</a>')
+            '<a href="{url}">User Guide</a>'.format(url=Endpoint.repository))
         home_label.setOpenExternalLinks(True)
         shop_label = QLabel(
-            '<a href="https://finalion.github.io/WordQuery/shop.html">Service Shop</a>')
+            '<a href="{url}">Service Shop</a>'.format(url=Endpoint.service_shop))
         shop_label.setOpenExternalLinks(True)
-        about_btn.clicked.connect(self.show_about)
         btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         btnbox.accepted.connect(self.accept)
         bottom_layout.addWidget(about_btn)
+        bottom_layout.addWidget(chk_update_btn)
         bottom_layout.addWidget(home_label)
         bottom_layout.addWidget(shop_label)
         bottom_layout.addWidget(btnbox)
@@ -172,11 +176,7 @@ class OptionsDialog(QDialog):
                 self.build_mappings_layout(self.current_model)
 
     def show_about(self):
-        info = u'<b>{t0}</b><br />{version}<br /><b>{t1}</b><br /><a href="{url}">{url}</a><br /><b>{t2}</b><br /><a href="{feedback0}">{feedback0}</a><br /><a href="mailto:{feedback1}">{feedback1}</a>'.format(
-            t0=_('VERSION'), version=VERSION,
-            t1=_('REPOSITORY'), url=u'https://github.com/finalion/WordQuery',
-            t2=_('FEEDBACK'), feedback0=u'https://github.com/finalion/WordQuery/issues', feedback1=u'finalion@gmail.com')
-        QMessageBox.about(self, _('ABOUT'), info)
+        QMessageBox.about(self, _('ABOUT'), Template.tmpl_about)
 
     def show_fm_dialog(self):
         fm_dialog = FoldersManageDialog(self)
@@ -394,6 +394,46 @@ class OptionsDialog(QDialog):
         data[current_model_id] = maps
         data['last_model'] = self.current_model['id']
         config.update(data)
+
+    def check_updates(self):
+
+        self.updater = Updater()
+        self.updater.chk_finish_signal.connect(self._show_update_result)
+        self.updater.start()
+
+    @pyqtSlot(dict)
+    def _show_update_result(self, data):
+        if data['result'] == 'ok':
+            version = data['version']
+            if version > VERSION:
+                showInfo(Template.new_version.format(version=version))
+            elif version == VERSION:
+                showInfo(Template.latest_version)
+            else:
+                showInfo(Template.abnormal_version)
+        else:
+            showInfo(Template.check_failure.format(msg=data['msg']))
+
+
+class Updater(QThread):
+    chk_finish_signal = pyqtSignal(dict)
+
+    def __init__(self):
+        super(QThread, self).__init__()
+
+    def run(self):
+        import urllib2
+        try:
+            req = urllib2.Request(Endpoint.check_version)
+            req.add_header('Pragma', 'no-cache')
+            resp = urllib2.urlopen(req, timeout=10)
+            version = resp.read().strip()
+            data = {'result': 'ok', 'version': version}
+        except:
+            info = _('CHECK_FAILURE')
+            data = {'result': 'error', 'msg': info}
+
+        self.chk_finish_signal.emit(data)
 
 
 def show_options():

@@ -6,8 +6,7 @@ import urllib2
 
 from aqt.utils import showInfo
 from BeautifulSoup import BeautifulSoup
-
-from .base import WebService, export, with_styles, register
+from base import WebService, export, register, with_styles
 
 # Anki buit-in BeautifulSoup is bs3 not bs4
 

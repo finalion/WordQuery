@@ -1,11 +1,10 @@
 #-*- coding:utf-8 -*-
+import json
 import re
 import urllib2
-import json
 
 from aqt.utils import showInfo, showText
-
-from .base import WebService, export, with_styles, register
+from base import WebService, export, register, with_styles
 
 bing_download_mp3 = True
 

@@ -25,12 +25,8 @@ import urllib2
 import urlparse
 from collections import defaultdict
 
-import aqt
-from aqt import mw
-from aqt.qt import *
 from aqt.utils import showInfo, showText
-
-from .base import QueryResult, WebService, export, with_styles, register
+from base import QueryResult, WebService, export, register, with_styles
 
 
 @register(u'MDX server')

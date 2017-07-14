@@ -38,8 +38,7 @@ from aqt.qt import QFileDialog
 from aqt.utils import showInfo, showText
 from wquery.context import config
 from wquery.lang import _
-from wquery.libs.mdict.mdict_query import IndexBuilder
-from wquery.libs.pystardict import Dictionary
+from wquery.libs import MdxBuilder, StardictBuilder
 from wquery.utils import MapDict, wrap_css
 
 
@@ -111,7 +110,7 @@ def with_styles(**styles):
                     new_cssfile, res)
             if css:
                 res, css = wrap(res, css, is_file=False)
-                res = u'<styles>{0}</styles>{1}'.format(css, res)
+                res = u'<style>{0}</style>{1}'.format(css, res)
 
             if not isinstance(res, QueryResult):
                 return QueryResult(result=res, jsfile=jsfile, js=js)
@@ -268,7 +267,7 @@ class MdxService(LocalService):
         self.cache = defaultdict(str)
         self.query_interval = 0.01
         self.styles = []
-        self.builder = IndexBuilder(dict_path)
+        self.builder = MdxBuilder(dict_path)
         self.builder.get_header()
 
     @staticmethod
@@ -382,7 +381,7 @@ class StardictService(LocalService):
     def __init__(self, dict_path):
         super(StardictService, self).__init__(dict_path)
         self.query_interval = 0.05
-        self.builder = Dictionary(self.dict_path, in_memory=False)
+        self.builder = StardictBuilder(self.dict_path, in_memory=False)
         self.builder.get_header()
 
     @staticmethod

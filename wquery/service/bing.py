@@ -3,7 +3,6 @@ import re
 
 from aqt.utils import showInfo, showText
 from BeautifulSoup import BeautifulSoup
-
 from .base import WebService, export, register, with_styles
 
 
@@ -82,6 +81,7 @@ class Bing(WebService):
         return self._get_field('participle')
 
     @export(u'释义', 4)
+    @with_styles(css='.pos{font-weight:bold;margin-right:4px;}', need_wrap_css=True, wrap_class='bing')
     def fld_definition(self):
         return self._get_field('def')
 

@@ -4,8 +4,7 @@ import re
 import urllib
 
 from aqt.utils import showInfo, showText
-
-from .base import WebService, export, register, with_styles
+from base import WebService, export, register, with_styles
 
 
 @register(u'海词迷你词典')

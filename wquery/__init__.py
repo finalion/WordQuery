@@ -24,9 +24,9 @@ from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
-from wquery.ui import show_options
-from wquery.query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
-from wquery.context import config
+from ui import show_options
+from query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
+from context import config, app_icon
 
 
 have_setup = False
@@ -101,7 +101,7 @@ def customize_addcards():
 
 def setup_options_menu():
     # add options submenu to Tools menu
-    action = QAction("WordQuery...", mw)
+    action = QAction(app_icon, "WordQuery...", mw)
     action.triggered.connect(show_options)
     mw.form.menuTools.addAction(action)
     global have_setup

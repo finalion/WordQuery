@@ -9,8 +9,8 @@ from collections import defaultdict
 
 from aqt.utils import showInfo
 
-from .base import WebService, export, register
-from wquery.odds import ignore_exception
+from base import WebService, export, register
+from wquery.utils import ignore_exception
 
 bcz_download_mp3 = True
 bcz_download_img = True

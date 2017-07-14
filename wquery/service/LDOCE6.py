@@ -2,8 +2,7 @@
 import re
 
 from aqt.utils import showInfo, showText
-
-from .base import export, with_styles, register, MdxService
+from base import MdxService, export, register, with_styles
 
 path = u'D:\\dicts\\LDOCE\\LDOCE6.mdx'
 

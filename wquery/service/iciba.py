@@ -6,8 +6,8 @@ import json
 from collections import defaultdict
 from aqt.utils import showInfo, showText
 
-from .base import WebService, export, with_styles, register
-from wquery.odds import ignore_exception
+from base import WebService, export, with_styles, register
+from wquery.utils import ignore_exception
 
 iciba_download_mp3 = True
 

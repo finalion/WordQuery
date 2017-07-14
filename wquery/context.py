@@ -17,19 +17,21 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-import os
 import json
+import os
 from collections import defaultdict
 
 from aqt import mw
 from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from aqt.utils import shortcut, showInfo, showText
+from wquery.constants import VERSION
+from wquery.lang import _
+from wquery.utils import get_icon
 
-from .lang import _
-from .odds import get_model_byId, get_ord_from_fldname
-
-VERSION = 'V4.1.20170714'
 CONFIG_FILENAME = '.wqcfg.json'
+ICON_FILE = 'wqicon.png'
+
+app_icon = get_icon(ICON_FILE)
 
 
 class Config(object):

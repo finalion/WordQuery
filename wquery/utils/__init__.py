@@ -1,4 +1,4 @@
-from .Queue import Queue, Empty, Full
+from Queue import Queue, Empty, Full
 import importlib
-from .mapdict import MapDict
-from .helper import *
+from misc import *
+from helper import *
