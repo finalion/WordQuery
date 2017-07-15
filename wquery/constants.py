@@ -2,7 +2,7 @@
 from wquery.lang import _
 
 
-VERSION = '4.2.20170714'
+VERSION = '4.2.20170715'
 
 
 class Endpoint:
@@ -12,6 +12,7 @@ class Endpoint:
     check_version = u'https://raw.githubusercontent.com/finalion/WordQuery/gh-pages/version'
     new_version = u'https://github.com/finalion/WordQuery'
     service_shop = u'https://finalion.github.io/WordQuery/shop.html'
+    user_guide = u'https://finalion.github.io/WordQuery/'
 
 
 class Template:

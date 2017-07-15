@@ -150,7 +150,7 @@ class OptionsDialog(QDialog):
         chk_update_btn = QPushButton(_('UPDATE'))
         chk_update_btn.clicked.connect(self.check_updates)
         home_label = QLabel(
-            '<a href="{url}">User Guide</a>'.format(url=Endpoint.repository))
+            '<a href="{url}">User Guide</a>'.format(url=Endpoint.user_guide))
         home_label.setOpenExternalLinks(True)
         shop_label = QLabel(
             '<a href="{url}">Service Shop</a>'.format(url=Endpoint.service_shop))
