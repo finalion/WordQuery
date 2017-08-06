@@ -40,14 +40,13 @@ trans = {
     'CSS_NOT_FOUND': {'zh_CN': u'没有找到CSS文件，请手动选择', 'en': u'No valid css stylesheets found, please choose the file', 'fr': u'Aucun fichier de style CSS est valide, veuillez choisir le fichier'},
     'ABOUT': {'zh_CN': u'关于', 'en': u'About', 'fr': u'À propos'},
     'REPOSITORY': {'zh_CN': u'项目地址', 'en': u'Project homepage', 'fr': u'Accueil du projet'},
-    'FEEDBACK': {'zh_CN': u'反馈', 'en': u'Feedback', 'fr': u'Retour d\'information'},
+    'FEEDBACK': {'zh_CN': u'反馈', 'en': u'Feedback', 'fr': u'Retourner de l\'information'},
     'VERSION': {'zh_CN': u'版本', 'en': u'Version', 'fr': u'Version'},
-    'VERSION': {'zh_CN': u'版本', 'en': u'Version', 'fr': u'Version'},
-    'LATEST_VERSION': {'zh_CN': u'无更新版本.', 'en': u'No update version.'},
-    'ABNORMAL_VERSION': {'zh_CN': u'当前版本异常.', 'en': u'The current version is abnormal.'},
-    'CHECK_FAILURE': {'zh_CN': u'版本检查失败.', 'en': u'Version check failure.'},
-    'NEW_VERSION': {'zh_CN': u'检查到新版本:', 'en': u'New version:'},
-    'UPDATE': {'zh_CN': u'更新'}
+    'LATEST_VERSION': {'zh_CN': u'无更新版本.', 'en': u'No update version.', 'fr': u'Pas de mise à jour.'},
+    'ABNORMAL_VERSION': {'zh_CN': u'当前版本异常.', 'en': u'The current version is abnormal.', 'fr': u'La version actuelle est anormale.'},
+    'CHECK_FAILURE': {'zh_CN': u'版本检查失败.', 'en': u'Version check failure.', 'fr': u'Erreur de vérifier la version.'},
+    'NEW_VERSION': {'zh_CN': u'检查到新版本:', 'en': u'New version:', 'fr': u'Nouvelle version:'},
+    'UPDATE': {'zh_CN': u'更新', 'en': u'Update', 'fr': u'Mise à jour'}
 }
 
 
