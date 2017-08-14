@@ -17,7 +17,7 @@ class TxtTest(TxtService):
     # def unique(self):
     #     return self.__class__.__name__
 
-    @export(u'例句', 1)
+    @export(u'自制例句', 1)
     def fld_sentence(self):
         with open(self.dict_path, 'rb') as f:
             lines = f.readlines()
