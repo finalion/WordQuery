@@ -76,13 +76,13 @@ class Ldoce6(MdxService):
 
     @export(u'all sentence', 7)
     def fld_allsentence(self):
-		html = self.get_html()
-		m=re.findall(r'(<span class="example">.+?</span example><span class="example_c">.+?</span example_c>)',html)
-		if m:
-			items=0
-			my_str=''
-			for items in range(len(m)):
-				my_str=my_str+m[items]
-			return my_str
-		return ''
+	html = self.get_html()
+	m=re.findall(r'(<span class="example">.+?</span example><span class="example_c">.+?</span example_c>)',html)
+	if m:
+		items=0
+		my_str=''
+		for items in range(len(m)):
+			my_str=my_str+m[items]
+		return my_str
+	return ''
 	
