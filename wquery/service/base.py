@@ -333,7 +333,8 @@ class MdxService(LocalService):
         html = p.sub(u"[\\1]\\2", html)
         self.save_media_files(media_files_set)
         for cssfile in mcss:
-            cssfile = '_' + cssfile
+            cssfile = '_' + \
+                os.path.basename(cssfile.replace('\\', os.path.sep))
             # if not exists the css file, the user can place the file to media
             # folder first, and it will also execute the wrap process to generate
             # the desired file.
