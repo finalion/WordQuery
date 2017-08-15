@@ -32,8 +32,7 @@ from wquery.utils import MapDict, importlib
 class ServiceManager(object):
 
     def __init__(self):
-        self.web_services = self.get_available_web_services()
-        self.local_services = self.get_available_local_services()
+        self.update_services()
 
     @property
     def services(self):
@@ -47,9 +46,11 @@ class ServiceManager(object):
         #         self.local_services.remove(service)
 
     def update_services(self):
-        self.web_services = self.get_available_web_services()
-        self.local_services = self.get_available_local_services()
+        self.web_services, self.local_custom_services = self._get_services_from_files()
+        self.local_services = self._get_available_local_services()
         # self.fetch_headers()
+        # combine the customized local services into local services
+        self.local_services.update(self.local_custom_services)
 
     def get_service(self, unique):
         # webservice unique: class name
@@ -63,15 +64,15 @@ class ServiceManager(object):
             if each.label == label:
                 return each
 
-    def _get_services_from_files(self, type_, *args):
+    def _get_services_from_files(self, *args):
         """
         get service from service packages, available type is
         WebService, LocalService
         """
-        services = set()
+        web_services, local_custom_services = set(), set()
         mypath = os.path.dirname(os.path.realpath(__file__))
         files = [f for f in os.listdir(mypath)
-                 if f not in ('__init__.py', 'base.py',) and not f.endswith('.pyc')]
+                 if f not in ('__init__.py', 'base.py', 'manager.py') and not f.endswith('.pyc')]
         base_class = (WebService, LocalService,
                       MdxService, StardictService)
 
@@ -80,23 +81,23 @@ class ServiceManager(object):
                 module = importlib.import_module(
                     '.%s' % os.path.splitext(f)[0], __package__)
                 for name, cls in inspect.getmembers(module, predicate=inspect.isclass):
-                    if issubclass(cls, type_) and cls not in base_class:
-                        label = getattr(
-                            cls, '__register_label__', cls.__name__)
-                        try:
-                            service = cls(*args)
-                            services.add(service)
-                        except Exception:
-                            # exclude the local service whose path has error.
-                            pass
+                    if cls in base_class:
+                        continue
+                    try:
+                        service = cls(*args)
+                        if issubclass(cls, WebService):
+                            web_services.add(service)
+                         # get the customized local services
+                        if issubclass(cls, LocalService):
+                            local_custom_services.add(service)
+                    except Exception:
+                        # exclude the local service whose path has error.
+                        pass
             except ImportError:
                 continue
-        return services
+        return web_services, local_custom_services
 
-    def get_available_web_services(self):
-        return self._get_services_from_files(WebService)
-
-    def get_available_local_services(self):
+    def _get_available_local_services(self):
         services = set()
         for each in config.dirs:
             for dirpath, dirnames, filenames in os.walk(each):
@@ -107,8 +108,4 @@ class ServiceManager(object):
                     if StardictService.support(dict_path):
                         services.add(StardictService(dict_path))
                 # support mdx dictionary and stardict format dictionary
-        # get the customized local services
-        customed_services = self._get_services_from_files(LocalService, None)
-        # filter the customized service whose dict path is not available
-        services.update(customed_services)
         return services

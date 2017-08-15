@@ -1,11 +1,8 @@
 #-*- coding:utf-8 -*-
 import re
-import random
-
 
 from aqt.utils import showInfo, showText
-
-from .base import export, with_styles, register, MdxService
+from base import MdxService, export, register, with_styles
 
 path = u'/Users/yu/Documents/english study/mdx/LDOCE6双解/L6mp3.mdx'
 
@@ -30,7 +27,6 @@ class Ldoce6(MdxService):
         m = re.search(r'<span class="pron">(.*?)</span>', html)
         if m:
             return m.groups()[0]
-        return ''
 
     @export(u'Bre单词发音', 2)
     def fld_voicebre(self):
@@ -39,7 +35,7 @@ class Ldoce6(MdxService):
         if m:
             return m.groups()[0]
         return ''
-		
+
     @export(u'Ame单词发音', 3)
     def fld_voiceame(self):
         html = self.get_html()
@@ -53,9 +49,9 @@ class Ldoce6(MdxService):
         html = self.get_html()
         m = re.search(r'<span class="example">(.*?)</span example>', html)
         if m:
-            return re.sub('<img.*?png">','',m.groups()[0])
+            return re.sub('<img.*?png">', '', m.groups()[0])
         return ''
-		
+
     @export(u'def', 5)
     def fld_definate(self):
         html = self.get_html()
@@ -63,26 +59,26 @@ class Ldoce6(MdxService):
         if m:
             return m.groups()[0]
         return ''
-		
+
     @export(u'random_sentence', 6)
     def fld_random_sentence(self):
         html = self.get_html()
         m = re.findall(r'<span class="example">(.*?)</span example>', html)
         if m:
-            number=len(m)
-            index = random.randrange(0,number-1,1)
-            return re.sub('<img.*?png">','',m[index])
+            number = len(m)
+            index = random.randrange(0, number - 1, 1)
+            return re.sub('<img.*?png">', '', m[index])
         return ''
 
     @export(u'all sentence', 7)
     def fld_allsentence(self):
-	html = self.get_html()
-	m=re.findall(r'(<span class="example">.+?</span example><span class="example_c">.+?</span example_c>)',html)
-	if m:
-		items=0
-		my_str=''
-		for items in range(len(m)):
-			my_str=my_str+m[items]
-		return my_str
-	return ''
-	
+        html = self.get_html()
+        m = re.findall(
+            r'(<span class="example">.+?</span example><span class="example_c">.+?</span example_c>)', html)
+        if m:
+            items = 0
+            my_str = ''
+            for items in range(len(m)):
+                my_str = my_str + m[items]
+            return my_str
+        return ''

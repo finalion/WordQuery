@@ -160,9 +160,9 @@ class Service(object):
         # then have to build then index.
         if isinstance(self, LocalService):
             self.notify(MapDict(type='text', index=self.work_id,
-                                text=u'Building %s...' %
-                                os.path.splitext(os.path.basename(self.dict_path))[0]))
-            self.builder.check_build()
+                                text=u'Building %s...' % self._filename))
+            if isinstance(self, MdxService) or isinstance(self, StardictService):
+                self.builder.check_build()
 
         for each in self.exporters:
             if action_label == each[0]:
@@ -175,7 +175,7 @@ class Service(object):
                                     service_name=self.title,
                                     field_name=action_label,
                                     flag=u'√'))
-                return result if result else QueryResult.default()  # avoid return None
+                return result
         return QueryResult.default()
 
     def set_notifier(self, progress_update, index):
@@ -258,6 +258,14 @@ class LocalService(Service):
     def unique(self):
         return self.dict_path
 
+    @property
+    def title(self):
+        return self.__register_label__
+
+    @property
+    def _filename(self):
+        return os.path.splitext(os.path.basename(self.dict_path))[0]
+
 
 class MdxService(LocalService):
 
@@ -277,7 +285,7 @@ class MdxService(LocalService):
     @property
     def title(self):
         if config.use_filename or not self.builder._title or self.builder._title.startswith('Title'):
-            return os.path.splitext(os.path.basename(self.dict_path))[0]
+            return self._filename
         else:
             return self.builder.meta['title']
 
@@ -391,7 +399,7 @@ class StardictService(LocalService):
     @property
     def title(self):
         if config.use_filename or not self.builder.ifo.bookname:
-            return os.path.splitext(os.path.basename(self.dict_path))[0]
+            return self._filename
         else:
             return self.builder.ifo.bookname.decode('utf-8')
 
@@ -400,10 +408,8 @@ class StardictService(LocalService):
         self.builder.check_build()
         try:
             result = self.builder[self.word]
-            result = result.strip()\
-                .replace('\r\n', '<br />')\
-                .replace('\r', '<br />')\
-                .replace('\n', '<br />')
+            result = result.strip().replace('\r\n', '<br />')\
+                .replace('\r', '<br />').replace('\n', '<br />')
             return QueryResult(result=result)
         except KeyError:
             return QueryResult.default()
@@ -413,8 +419,10 @@ class QueryResult(MapDict):
     """Query Result structure"""
 
     def __init__(self, *args, **kwargs):
-        self['result'] = str()
         super(QueryResult, self).__init__(*args, **kwargs)
+        # avoid return None
+        if self['result'] == None:
+            self['result'] = ""
 
     def set_styles(self, **kwargs):
         for key, value in kwargs.items():

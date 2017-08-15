@@ -2,7 +2,7 @@
 from wquery.lang import _
 
 
-VERSION = '4.2.20170715'
+VERSION = '4.2.20170815'
 
 
 class Endpoint:
