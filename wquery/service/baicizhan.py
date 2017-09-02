@@ -38,12 +38,18 @@ class Baicizhan(WebService):
             word=self.word)
         audio_name = 'bcz_%s.mp3' % self.word
         if bcz_download_mp3:
-            urllib.urlretrieve(url, audio_name)
-            with open(audio_name, 'rb') as f:
-                if f.read().strip() == '{"error":"Document not found"}':
+            if self.download(url, audio_name):
+                # urllib.urlretrieve(url, audio_name)
+                with open(audio_name, 'rb') as f:
+                    if f.read().strip() == '{"error":"Document not found"}':
+                        res = ''
+                    else:
+                        res = self.get_anki_label(audio_name, 'audio')
+                if not res:
                     os.remove(audio_name)
-                    return ''
-            return self.get_anki_label(audio_name, 'audio')
+            else:
+                res = ''
+            return res
         else:
             return url
 
