@@ -71,7 +71,7 @@ class IndexBuilder(object):
                 conn.close()
                 if not self._version:
                     _()
-            except sqlite3.OperationalError:
+            except:
                 _()
         else:
             _()
