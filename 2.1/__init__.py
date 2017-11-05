@@ -17,107 +17,25 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <http://www.gnu.org/licenses/>.
 
-
-import anki
-import aqt
-from aqt import mw
-from aqt.qt import *
-from anki.hooks import addHook, wrap
-from aqt.addcards import AddCards
-from aqt.utils import showInfo, shortcut
-from .ui import show_options
-from .query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
-from .context import config, app_icon
-
+from anki.hooks import addHook
 
 ############## other config here ##################
 # update all fields ignoring the original field content
 update_all = False
 # shortcut
-my_shortcut = 'Ctrl+Q'
+shortcut = 'Ctrl+Q'
 ###################################################
-
-have_setup = False
-
-
-def query_decor(func, obj):
-    def callback():
-        return func(obj)
-    return callback
-
-
-def add_query_button(self):
-    bb = self.form.buttonBox
-    ar = QDialogButtonBox.ActionRole
-    self.queryButton = bb.addButton(_(u"Query"), ar)
-    self.queryButton.clicked.connect(query_decor(
-        query_from_editor_all_fields, self.editor))
-    self.queryButton.setShortcut(QKeySequence(my_shortcut))
-    self.queryButton.setToolTip(
-        shortcut(_(u"Query (shortcut: %s)" % my_shortcut)))
-
-
-def setup_browser_menu():
-
-    def on_setup_menus(browser):
-        menu = QMenu("WordQuery", browser.form.menubar)
-        browser.form.menubar.addMenu(menu)
-        action_queryselected = QAction("Query Selected", browser)
-        action_queryselected.triggered.connect(query_decor(
-            query_from_browser, browser))
-        action_queryselected.setShortcut(QKeySequence(my_shortcut))
-        action_options = QAction("Options", browser)
-        action_options.triggered.connect(show_options)
-        menu.addAction(action_queryselected)
-        menu.addAction(action_options)
-
-    anki.hooks.addHook('browser.setupMenus', on_setup_menus)
-
-
-def setup_context_menu():
-
-    def on_setup_menus(web_view, menu):
-        """
-        add context menu to webview
-        """
-        wqmenu = menu.addMenu('Word Query')
-        action1 = wqmenu.addAction('Query All Fields')
-        action2 = wqmenu.addAction('Query Current Field')
-        action3 = wqmenu.addAction('Options')
-        action1.triggered.connect(query_decor(
-            query_from_editor_all_fields, web_view.editor))
-        action2.triggered.connect(query_decor(
-            query_from_editor_current_field, web_view.editor))
-        action3.triggered.connect(show_options)
-        needs_separator = True
-        # menu.addMenu(submenu)
-    anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
-    # shortcuts = [(my_shortcut, query), ]
-    # anki.hooks.addHook('setupEditorShortcuts', shortcuts)
-
-
-def customize_addcards():
-    AddCards.setupButtons = wrap(
-        AddCards.setupButtons, add_query_button, "before")
-
-
-def setup_options_menu():
-    # add options submenu to Tools menu
-    action = QAction(app_icon, "WordQuery...", mw)
-    action.triggered.connect(show_options)
-    mw.form.menuTools.addAction(action)
-    global have_setup
-    have_setup = True
 
 
 def start_here():
-    config.read()
-    if not have_setup:
-        setup_options_menu()
-        customize_addcards()
-        setup_browser_menu()
-        setup_context_menu()
+    from . import prepare
+    # wquery.config.read()
+    if not prepare.have_setup:
+        prepare.setup_options_menu()
+        prepare.customize_addcards()
+        prepare.setup_browser_menu()
+        prepare.setup_context_menu()
     # wquery.start_services()
-
+    # prepare.set_shortcut(shortcut)
 
 addHook("profileLoaded", start_here)

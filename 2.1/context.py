@@ -37,9 +37,9 @@ app_icon = get_icon(ICON_FILE)
 class Config(object):
 
     def __init__(self, window):
-        self.path = CONFIG_FILENAME
         self.window = window
         self.version = '0'
+        self.path = CONFIG_FILENAME
         self.read()
 
     @property
@@ -55,12 +55,13 @@ class Config(object):
 
     def read(self):
         try:
-            with open(self.path, 'rb') as f:
-                self.data = json.load(f)
-                # self.version = self.data.get('version', '0')
-                # if VERSION != self.version:
-                #     # showInfo(VERSION + self.version)
-                #     self.last_model_id, self.dirs = 0, list()
+            f = open(self.path, 'r')
+            self.data = json.load(f)
+            # showInfo(str(self.data))
+        # self.version = self.data.get('version', '0')
+        # if VERSION != self.version:
+        #     # showInfo(VERSION + self.version)
+        #     self.last_model_id, self.dirs = 0, list()
         except:
             self.data = dict()
 

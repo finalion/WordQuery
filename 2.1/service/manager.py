@@ -109,3 +109,5 @@ class ServiceManager(object):
                         services.add(StardictService(dict_path))
                 # support mdx dictionary and stardict format dictionary
         return services
+
+service_manager = ServiceManager()

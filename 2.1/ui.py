@@ -405,9 +405,9 @@ class OptionsDialog(QDialog):
     def _show_update_result(self, data):
         if data['result'] == 'ok':
             version = data['version']
-            if version > VERSION:
+            if version.decode() > VERSION:
                 showInfo(Template.new_version.format(version=version))
-            elif version == VERSION:
+            elif version.decode() == VERSION:
                 showInfo(Template.latest_version)
             else:
                 showInfo(Template.abnormal_version)
