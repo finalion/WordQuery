@@ -86,7 +86,7 @@ class Youdao(WebService):
             <div id="outer">
                 <audio id="dictVoice" style="display: none"></audio>
             </div>
-            """.format(single_dict, result.decode('utf-8'))
+            """.format('collins' if single_dict == 'collins_eng' else single_dict, result.decode('utf-8'))
 
             if single_dict != "collins_eng":
                 return html
@@ -113,9 +113,11 @@ class Youdao(WebService):
                     if not match or has_title_attr:
                         if has_title_attr:
                             soup.string = soup['title']
+                        if re.match("(\s+)?\d{1,2}\.(\s+)?", soup.string):
+                            p_tag = Tag(name="p")
+                            p_tag.insert(0, Tag(name="br"))
+                            tags.append(p_tag)
                         tags.append(soup)
-                        if soup.name == 'li':
-                            tags.append(BeautifulSoup("<br>"))
                     else:
                         if match:
                             hanzi_pos = soup.string.find(match.group(0))
