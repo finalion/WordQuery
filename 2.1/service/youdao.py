@@ -143,7 +143,7 @@ class Youdao(WebService):
 
     @export(u'英式发音', 2)
     def fld_british_audio(self):
-        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=1'.format(
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=1'.format(
             self.word)
         if youdao_download_mp3:
             filename = u'_youdao_{}_uk.mp3'.format(self.word)
@@ -153,7 +153,7 @@ class Youdao(WebService):
 
     @export(u'美式发音', 3)
     def fld_american_audio(self):
-        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=2'.format(
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=2'.format(
             self.word)
         if youdao_download_mp3:
             filename = u'_youdao_{}_us.mp3'.format(self.word)
