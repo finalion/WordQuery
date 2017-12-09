@@ -113,7 +113,7 @@ class Youdao(WebService):
                     if not match or has_title_attr:
                         if has_title_attr:
                             soup.string = soup['title']
-                        if re.match("(\s+)?\d{1,2}\.(\s+)?", soup.string):
+                        if re.match("(\s+)?\d{1,2}\.(\s+)?", soup.string if soup.string else ""):
                             p_tag = Tag(name="p")
                             p_tag.insert(0, Tag(name="br"))
                             tags.append(p_tag)
@@ -212,3 +212,13 @@ class Youdao(WebService):
     @export(u'专业释义(中)', 16)
     def fld_special(self):
         return self._get_singledict('special')
+
+    @export(u'美式发音', 3)
+    def fld_american_audio(self):
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=2'.format(
+            self.word)
+        if youdao_download_mp3:
+            filename = u'_youdao_{}_us.mp3'.format(self.word)
+            if self.download(audio_url, filename):
+                return self.get_anki_label(filename, 'audio')
+        return audio_url
