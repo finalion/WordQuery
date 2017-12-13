@@ -19,10 +19,8 @@
 
 import json
 import os
-from collections import defaultdict
 
 from aqt import mw
-from aqt.qt import QCheckBox, QComboBox, QRadioButton
 from aqt.utils import shortcut, showInfo, showText
 from .constants import VERSION
 from .lang import _
@@ -55,7 +53,7 @@ class Config(object):
 
     def read(self):
         try:
-            f = open(self.path, 'r')
+            f = open(self.path, 'r',encoding="utf-8")
             self.data = json.load(f)
             # showInfo(str(self.data))
         # self.version = self.data.get('version', '0')

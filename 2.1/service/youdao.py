@@ -1,13 +1,19 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 import re
+
 try:
     import urllib2
 except:
     import urllib.request as urllib2
 import xml.etree.ElementTree
 
-from aqt.utils import showInfo
 from .base import WebService, export, register, with_styles
+
+from bs4 import BeautifulSoup, Tag, NavigableString
+
+from warnings import filterwarnings
+
+filterwarnings("ignore")
 
 js = '''
 var initVoice = function () {
@@ -70,16 +76,74 @@ class Youdao(WebService):
     @with_styles(cssfile='_youdao.css', js=js, need_wrap_css=True, wrap_class='youdao')
     def _get_singledict(self, single_dict, lang='eng'):
         url = u"http://m.youdao.com/singledict?q={0}&dict={1}&le={2}&more=false".format(
-            self.word, single_dict, lang)
+            self.word, 'collins' if single_dict == 'collins_eng' else single_dict, lang)
         try:
             result = urllib2.urlopen(url, timeout=5).read()
-            return u'<div id="{0}_contentWrp" class="content-wrp dict-container"><div id="{0}" class="trans-container {0} ">{1}</div></div><div id="outer"><audio id="dictVoice" style="display: none"></audio></div>'.format(single_dict, result.decode('utf-8'))
+            html = """
+            <div id="{0}_contentWrp" class="content-wrp dict-container">
+                <div id="{0}" class="trans-container {0} ">{1}</div>
+            </div>
+            <div id="outer">
+                <audio id="dictVoice" style="display: none"></audio>
+            </div>
+            """.format('collins' if single_dict == 'collins_eng' else single_dict, result.decode('utf-8'))
+
+            if single_dict != "collins_eng":
+                return html
+
+            # For collins_eng
+            def replace_chinese_tag(soup):
+                tags = []
+                assert isinstance(soup, (Tag, NavigableString))
+                try:
+                    children = list(soup.children)
+                except AttributeError:
+                    children = []
+                if children.__len__() > 1:
+                    for tag in children:
+                        if not isinstance(tag, (Tag, NavigableString)):
+                            continue
+                        tags.extend(replace_chinese_tag(tag))
+                else:
+                    match = re.search("[\u4e00-\u9fa5]", soup.text if isinstance(soup, Tag) else str(soup))
+                    try:
+                        has_title_attr = 'title' in soup.attrs
+                    except AttributeError:
+                        has_title_attr = False
+                    if not match or has_title_attr:
+                        if has_title_attr:
+                            soup.string = soup['title']
+                        if re.match("(\s+)?\d{1,2}\.(\s+)?", soup.string if soup.string else ""):
+                            p_tag = Tag(name="p")
+                            p_tag.insert(0, Tag(name="br"))
+                            tags.append(p_tag)
+                        tags.append(soup)
+                    else:
+                        if match:
+                            hanzi_pos = soup.string.find(match.group(0))
+                            if hanzi_pos >= 5:
+                                soup = soup.string[:hanzi_pos]
+                                tags.append(soup)
+                return tags
+
+            if len(result.decode('utf-8')) <= 40:  # 32
+                return self._get_singledict('ee')['result']
+            bs = BeautifulSoup(html)
+            ul_tag = bs.find("ul")
+            ul_html = BeautifulSoup("".join([str(tag) for tag in replace_chinese_tag(ul_tag)]))
+            bs.ul.replace_with(ul_html)
+            return bs.prettify()
+
         except:
             return ''
 
+    @export(u'柯林斯英英', 17)
+    def fld_collins_eng(self):
+        return self._get_singledict('collins_eng')
+
     @export(u'英式发音', 2)
     def fld_british_audio(self):
-        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=1'.format(
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=1'.format(
             self.word)
         if youdao_download_mp3:
             filename = u'_youdao_{}_uk.mp3'.format(self.word)
@@ -89,7 +153,7 @@ class Youdao(WebService):
 
     @export(u'美式发音', 3)
     def fld_american_audio(self):
-        audio_url = u'http://dict.youdao.com/dictvoice?audio={}&type=2'.format(
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=2'.format(
             self.word)
         if youdao_download_mp3:
             filename = u'_youdao_{}_us.mp3'.format(self.word)
@@ -148,3 +212,13 @@ class Youdao(WebService):
     @export(u'专业释义(中)', 16)
     def fld_special(self):
         return self._get_singledict('special')
+
+    @export(u'美式发音', 3)
+    def fld_american_audio(self):
+        audio_url = u'https://dict.youdao.com/dictvoice?audio={}&type=2'.format(
+            self.word)
+        if youdao_download_mp3:
+            filename = u'_youdao_{}_us.mp3'.format(self.word)
+            if self.download(audio_url, filename):
+                return self.get_anki_label(filename, 'audio')
+        return audio_url
