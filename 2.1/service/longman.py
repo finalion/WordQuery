@@ -30,7 +30,7 @@ class Longman(WebService):
         :return:
         """
 
-        if not self.cache_result(single_dict):
+        if not (self.cached(single_dict) and self.cache_result(single_dict)):
             rsp = rq.get("https://www.ldoceonline.com/dictionary/{}".format(self.word), headers={
                 'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/31.0.1623.0 Safari/537.36'
             })
@@ -42,11 +42,6 @@ class Longman(WebService):
                 body_html = ""
 
                 word_info = {
-                    'phonetic': '',
-                    'hyphenation': '',
-                    'pos': '',
-                    'ee': '',
-                    'img': '',
                 }
                 ee_ = ''
                 for dic_link in dictlinks:
@@ -83,11 +78,21 @@ class Longman(WebService):
                             POS = head_tag.find("span", {'class': 'POS'}).string  # Hyphenation
                         except:
                             POS = ''
+
+                        try:
+                            Inflections = head_tag.find('span', {'class': 'Inflections'})
+                            if Inflections:
+                                Inflections = str(Inflections)
+                            else:
+                                Inflections = ''
+                        except:
+                            Inflections = ''
+
                         word_info = {
                             'phonetic': pron_codes,
                             'hyphenation': hyphenation,
                             'pos': POS,
-
+                            'inflections': Inflections,
                         }
                         self.cache_this(word_info)
                     if head_tag:
@@ -118,20 +123,6 @@ class Longman(WebService):
                         t.decompose()
 
                     body_html += str(dic_link)
-                    ee_ = """
-                    <!DOCTYPE html>
-                    <html lang="en">
-                    <head>
-                        <meta charset="UTF-8">
-                        <link rel="stylesheet" href="./_longman.css">
-                    </head>
-                    <body>
-                        """ \
-                          + body_html + \
-                          """
-                          </body>
-                          </html>
-                          """
                     ee_ = body_html
                 self.cache_this({
                     'ee': ee_
@@ -162,6 +153,11 @@ class Longman(WebService):
     def pic(self):
         url = self._get_singledict('img')
         filename = u'_longman_img_{}'.format(os.path.basename(url))
-        if self.download(url, filename):
+        if url and self.download(url, filename):
             return self.get_anki_label(filename, 'img')
         return ''
+
+    @export(u'变形', 5)
+    @with_styles(cssfile='_longman.css')
+    def inflections(self):
+        return self._get_singledict('inflections')
