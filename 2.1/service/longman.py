@@ -6,6 +6,7 @@
 Project : wq
 Created: 12/20/2017
 """
+import os
 from warnings import filterwarnings
 
 import requests as rq
@@ -22,7 +23,6 @@ class Longman(WebService):
     def __init__(self):
         super(Longman, self).__init__()
 
-    @with_styles(cssfile='_longman.css')
     def _get_singledict(self, single_dict):
         """
 
@@ -46,6 +46,7 @@ class Longman(WebService):
                     'hyphenation': '',
                     'pos': '',
                     'ee': '',
+                    'img': '',
                 }
                 ee_ = ''
                 for dic_link in dictlinks:
@@ -100,18 +101,19 @@ class Longman(WebService):
                     # remove img tag
                     img_tags = dic_link.find_all('img')
                     for t in img_tags:
+                        self.cache_this({'img': 'https://www.ldoceonline.com' + t['src']})
                         t.decompose()
 
                     # remove sound tag
-                    am_s_tag = dic_link.find("span",title = 'Play American pronunciation of {}'.format(self.word))
-                    br_s_tag = dic_link.find("span",title = 'Play British pronunciation of {}'.format(self.word))
+                    am_s_tag = dic_link.find("span", title='Play American pronunciation of {}'.format(self.word))
+                    br_s_tag = dic_link.find("span", title='Play British pronunciation of {}'.format(self.word))
                     if am_s_tag:
                         am_s_tag.decompose()
                     if br_s_tag:
                         br_s_tag.decompose()
 
                     # remove example sound tag
-                    emp_s_tags = dic_link.find_all('span',{'class':'speaker exafile fa fa-volume-up'})
+                    emp_s_tags = dic_link.find_all('span', {'class': 'speaker exafile fa fa-volume-up'})
                     for t in emp_s_tags:
                         t.decompose()
 
@@ -130,6 +132,7 @@ class Longman(WebService):
                           </body>
                           </html>
                           """
+                    ee_ = body_html
                 self.cache_this({
                     'ee': ee_
                 })
@@ -151,5 +154,14 @@ class Longman(WebService):
         return self._get_singledict('pos')
 
     @export(u'英英解释', 0)
+    @with_styles(cssfile='_longman.css')
     def ee(self):
         return self._get_singledict('ee')
+
+    @export('图片', 4)
+    def pic(self):
+        url = self._get_singledict('img')
+        filename = u'_longman_img_{}'.format(os.path.basename(url))
+        if self.download(url, filename):
+            return self.get_anki_label(filename, 'img')
+        return ''
