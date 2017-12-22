@@ -75,14 +75,14 @@ class OxfordLearning(WebService):
 
     def get_sound_bre(self):
         url = self._get_single_dict('s_bre')
-        filename = u'_oxford_{}_uk.mp3'.format(self.word)
+        filename = u'oxford_{}_uk.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
         return ''
 
     def get_sound_ame(self):
         url = self._get_single_dict('s_nam')
-        filename = u'_oxford_{}_us.mp3'.format(self.word)
+        filename = u'oxford_{}_us.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
         return ''

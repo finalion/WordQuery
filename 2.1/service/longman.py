@@ -152,7 +152,7 @@ class Longman(WebService):
     @export('图片', 4)
     def pic(self):
         url = self._get_singledict('img')
-        filename = u'_longman_img_{}'.format(os.path.basename(url))
+        filename = u'longman_img_{}'.format(os.path.basename(url))
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'img')
         return ''
