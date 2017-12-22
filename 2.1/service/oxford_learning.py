@@ -29,9 +29,18 @@ class OxfordLearning(WebService):
         :rtype:  WebWord
         """
         _qry_url = self._base_url + word
-        rsp = self.s.get(_qry_url, )
-        if rsp.status_code == 200:
-            return OxfordLearningDictWord(rsp.content.decode('utf-8'))
+
+        retried = 10
+        while retried:
+            try:
+                rsp = self.s.get(_qry_url, )
+                if rsp.status_code == 200:
+                    return OxfordLearningDictWord(rsp.content.decode('utf-8'))
+                break
+            except:
+                retried -= 1
+                continue
+
 
     def _get_single_dict(self, single_dict):
         if not (self.cached(single_dict) and self.cache_result(single_dict)):
