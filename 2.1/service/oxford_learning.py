@@ -69,8 +69,9 @@ class OxfordLearning(WebService):
     @export(u'释义', 2)
     @with_styles(cssfile='_oxford.css')
     def ee(self):
-        return '<div style="margin-left: 20px">' + self._get_single_dict(
-            'ee') + "</div>" if "<li>" not in self._get_single_dict('ee') else self._get_single_dict('ee')
+        # return '<div style="margin-left: 20px">' + self._get_single_dict(
+        #     'ee') + "</div>" if "<li>" not in self._get_single_dict('ee') else self._get_single_dict('ee')
+        return self._get_single_dict('ee')
 
     def get_sound_bre(self):
         url = self._get_single_dict('s_bre')
@@ -215,12 +216,12 @@ class OxfordLearningDictWord:
             tag_exp = self._clean(self.tag_explain)
             lis = [li for li in tag_exp.find_all('li')]
             if not lis:
-                defs_html.append(str(tag_exp))
+                defs_html.append(str(tag_exp.prettify()))
                 defs.append(tag_exp.text)
 
             else:
                 for li in lis:
-                    defs_html.append(str(tag_exp))
+                    defs_html.append(str(tag_exp.prettify()))
                     defs.append(li.text)
             self._defs = defs
             self._defs_html = defs_html
@@ -248,16 +249,14 @@ class OxfordLearningDictWord:
                 for _tg in _tgs:
                     _tg.decompose()
 
-        rmv_attrs = ['dpsid', 'id']
-        for _attr in rmv_attrs:
-            if tg.attrs and _attr in tg.attrs:
-                try:
-                    tg.attrs = {key: value for key, value in tg.attrs.items()
-                                if key not in rmv_attrs}
-                except ValueError:
-                    pass
-                for child in tg.children:
-                    if not isinstance(child, Tag):
-                        continue
-
+        rmv_attrs = ['dpsid', 'id','psg','reg']
+        try:
+            tg.attrs = {key: value for key, value in tg.attrs.items()
+                        if key not in rmv_attrs}
+        except ValueError:
+            pass
+        for child in tg.children:
+            if not isinstance(child, Tag):
+                continue
+            self._clean(child)
         return tg
