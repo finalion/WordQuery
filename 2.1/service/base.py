@@ -257,14 +257,12 @@ class WebService(Service):
     @classmethod
     def download(cls, url, filename):
         try:
-            return urllib.urlretrieve(url, filename)
-        except AttributeError:
-            try:
-                with open(filename, "wb") as f:
-                    f.write(requests.get(url).content)
-                return True
-            except Exception as e:
-                pass
+            with open(filename, "wb") as f:
+                f.write(requests.get(url, headers={
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 '
+                                  '(KHTML, like Gecko) Chrome/31.0.1623.0 Safari/537.36'
+                }).content)
+            return True
         except Exception as e:
             pass
 
