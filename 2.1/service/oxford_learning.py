@@ -168,10 +168,18 @@ class OxfordLearningDictWord:
 
         :return: pre_fix, phon
         """
-        _tag_phn = self.tag_phon_bre.find('span', self._cls_dic('phon')).contents[3]
+        try:
+            _tag_phn = self.tag_phon_bre.find('span', self._cls_dic('phon')).contents[3]
+            phon = '/{}/'.format(_tag_phn.text if isinstance(_tag_phn, Tag) else _tag_phn)
+        except:
+            phon = ''
+        try:
+            prefix = self.tag_phon_bre.find('span', self._cls_dic('prefix')).string
+        except:
+            prefix = ''
         return "{} {}".format(
-            self.tag_phon_bre.find('span', self._cls_dic('prefix')).string,
-            '/{}/'.format(_tag_phn.text if isinstance(_tag_phn, Tag) else _tag_phn)
+            prefix,
+            phon
         )
 
     @property
@@ -187,10 +195,18 @@ class OxfordLearningDictWord:
 
         :return: pre_fix, phon
         """
-        _tag_phn = self.tag_phon_nam.find('span', self._cls_dic('phon')).contents[3]
+        try:
+            _tag_phn = self.tag_phon_nam.find('span', self._cls_dic('phon')).contents[3]
+            phon = '/{}/'.format(_tag_phn.text if isinstance(_tag_phn, Tag) else _tag_phn)
+        except:
+            phon = ''
+        try:
+            prefix = self.tag_phon_nam.find('span', self._cls_dic('prefix')).string
+        except:
+            prefix = ''
         return "{} {}".format(
-            self.tag_phon_nam.find('span', self._cls_dic('prefix')).string,
-            '/{}/'.format(_tag_phn.text if isinstance(_tag_phn, Tag) else _tag_phn)
+            prefix,
+            phon
         )
 
     @property
@@ -249,7 +265,7 @@ class OxfordLearningDictWord:
                 for _tg in _tgs:
                     _tg.decompose()
 
-        rmv_attrs = ['dpsid', 'id','psg','reg']
+        rmv_attrs = ['dpsid', 'id', 'psg', 'reg']
         try:
             tg.attrs = {key: value for key, value in tg.attrs.items()
                         if key not in rmv_attrs}
