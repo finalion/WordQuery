@@ -237,7 +237,7 @@ class OxfordLearningDictWord:
 
             else:
                 for li in lis:
-                    defs_html.append(str(tag_exp.prettify()))
+                    defs_html.append(str(li.prettify()))
                     defs.append(li.text)
             self._defs = defs
             self._defs_html = defs_html
