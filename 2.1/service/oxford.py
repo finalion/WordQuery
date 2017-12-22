@@ -22,7 +22,6 @@ class Oxford(WebService):
                           '(KHTML, like Gecko) Chrome/31.0.1623.0 Safari/537.36'
         }
         self.s.get(self._base_url)
-        self._web_word = None
 
     def query(self, word):
         """
@@ -33,36 +32,55 @@ class Oxford(WebService):
         _qry_url = self._base_url + word
         rsp = self.s.get(_qry_url, )
         if rsp.status_code == 200:
-            return WebWord(rsp.content.decode('utf-8'))
+            return OxfordLearningDictWord(rsp.content.decode('utf-8'))
 
-    @property
-    def web_word(self):
-        if not self._web_word:
-            self._web_word = self.query(self.word)
-        return self._web_word
+    def _get_single_dict(self, single_dict):
+        if not (self.cached(single_dict) and self.cache_result(single_dict)):
+            web_word = self.query(self.word)
+            if web_word:
+                self.cache_this(
+                    {
+                        'phonetic': '{} {}'.format(web_word.wd_phon_bre, web_word.wd_phon_nam),
+                        'pos': web_word.wd_pos,
+                        'ee': web_word.definitions_html,
+                        's_bre': web_word.wd_sound_url_bre,
+                        's_ame': web_word.wd_sound_url_nam,
+                    }
+                )
+            else:
+                self.cache_this(
+                    {
+                        'phonetic': '',
+                        'pos': '',
+                        'ee': '',
+                        's_bre': '',
+                        's_ame': '',
+                    }
+                )
+        return self.cache_result(single_dict)
 
     @export(u'音标', 0)
     def phonetic(self):
-        return '{} {}'.format(self.web_word.wd_phon_bre, self.web_word.wd_phon_nam)
+        return self._get_single_dict('phonetic')
 
     @export(u'词性', 1)
     def pos(self):
-        return self.web_word.wd_pos
+        return self._get_single_dict('pos')
 
     @export(u'释义', 2)
     @with_styles(cssfile='_oxford.css')
     def ee(self):
-        return '<div style="margin-left: 20px">' + self.web_word.definitions_html +"</div>"
+        return self._get_single_dict('ee')
 
     def get_sound_bre(self):
-        url = self.web_word.wd_sound_url_bre
+        url = self._get_single_dict('s_bre')
         filename = u'_oxford_{}_uk.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
         return ''
 
     def get_sound_ame(self):
-        url = self.web_word.wd_sound_url_nam
+        url = self._get_single_dict('s_nam')
         filename = u'_oxford_{}_us.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
@@ -79,11 +97,10 @@ class Oxford(WebService):
     @export(u'英式发音优先', 5)
     def sound_pri(self):
         bre = self.get_sound_bre()
-
         return bre if bre else self.get_sound_ame()
 
 
-class WebWord:
+class OxfordLearningDictWord:
 
     def __init__(self, markups):
         if not markups:
@@ -182,7 +199,7 @@ class WebWord:
             return self.tag_phon_bre.find('div', self._cls_dic('sound audio_play_button pron-uk icon-audio'))[
                 'data-src-mp3']
         except:
-            pass
+            return ''
 
     @property
     def wd_sound_url_nam(self):
@@ -190,7 +207,7 @@ class WebWord:
             return self.tag_phon_bre.find('div', self._cls_dic('sound audio_play_button pron-us icon-audio'))[
                 'data-src-mp3']
         except:
-            pass
+            return ''
 
     @property
     def definitions(self):
@@ -227,13 +244,6 @@ class WebWord:
     def definitions_html(self):
         _with_html = deepcopy(self.with_html)
         self.with_html = True
-        # def_html = """
-        # <link type="text/css" rel="stylesheet" href="_oxford.css">
-        #
-        # <ol class="v-gs">
-        #     {}
-        # </ol>
-        # """.format(''.join(_de for _de in self.definitions))
         def_html = ''.join(_de for _de in self.definitions)
         self.with_html = _with_html
         return def_html
@@ -256,7 +266,8 @@ class WebWord:
         for _attr in rmv_attrs:
             if tg.attrs and _attr in tg.attrs:
                 try:
-                    tg.attrs.pop(_attr)
+                    tg.attrs = {key: value for key, value in tg.attrs.items()
+                                if key not in rmv_attrs}
                 except ValueError:
                     pass
                 for child in tg.children:
