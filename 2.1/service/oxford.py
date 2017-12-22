@@ -52,27 +52,35 @@ class Oxford(WebService):
     @export(u'释义', 2)
     @with_styles(cssfile='_oxford.css')
     def ee(self):
-        return self.web_word.definitions_html
+        return '<div style="margin-left: 20px">' + self.web_word.definitions_html +"</div>"
 
-    @export(u'英式发音', 3)
-    def sound_bre(self):
+    def get_sound_bre(self):
         url = self.web_word.wd_sound_url_bre
         filename = u'_oxford_{}_uk.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
         return ''
 
-    @export(u'美式发音', 4)
-    def sound_ame(self):
+    def get_sound_ame(self):
         url = self.web_word.wd_sound_url_nam
         filename = u'_oxford_{}_us.mp3'.format(self.word)
         if url and self.download(url, filename):
             return self.get_anki_label(filename, 'audio')
         return ''
 
+    @export(u'英式发音', 3)
+    def sound_bre(self):
+        return self.get_sound_bre()
+
+    @export(u'美式发音', 4)
+    def sound_ame(self):
+        return self.get_sound_ame()
+
     @export(u'英式发音优先', 5)
     def sound_pri(self):
-        return self.sound_bre if self.sound_bre else self.sound_ame
+        bre = self.get_sound_bre()
+
+        return bre if bre else self.get_sound_ame()
 
 
 class WebWord:
@@ -81,7 +89,7 @@ class WebWord:
         if not markups:
             return
         self.markups = markups
-        self.bs = BeautifulSoup(self.markups, 'lxml')
+        self.bs = BeautifulSoup(self.markups)
         self.with_html = False
         self._defs = None
         self._defs_html = None
