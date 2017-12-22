@@ -1,20 +1,49 @@
-from copy import deepcopy
 from warnings import filterwarnings
 
 from bs4 import BeautifulSoup, Tag
 from requests import Session
 
-from .base import WebService, export, register, with_styles
-
 filterwarnings('ignore')
 
+try:
+    import urllib2
+except:
+    import urllib.request as urllib2
+import json
+from .base import WebService, export, register, with_styles
 
-@register(u'牛津学习词典')
+
+@register("Oxford")
 class Oxford(WebService):
-    _base_url = 'https://www.oxfordlearnersdictionaries.com/definition/english/'
 
     def __init__(self):
         super(Oxford, self).__init__()
+
+    def _get_from_api(self, lang="en"):
+        word = self.word
+        baseurl = "https://od-api.oxforddictionaries.com/api/v1"
+        app_id = "45aecf84"
+        app_key = "bb36fd6a1259e5baf8df6110a2f7fc8f"
+        headers = {"app_id": app_id, "app_key": app_key}
+
+        word_id = urllib2.quote(word.lower().replace(" ", "_"))
+        url = baseurl + "/entries/" + lang + "/" + word_id
+        url = urllib2.Request(url, headers=headers)
+        response = json.loads(urllib2.urlopen(url).read())
+
+        return response["results"]
+
+    @export("Lexical Category", 1)
+    def _fld_category(self):
+        return self._get_from_api()[0]["lexicalEntries"][0]["lexicalCategory"]
+
+
+@register(u'牛津学习词典')
+class OxfordLearning(WebService):
+    _base_url = 'https://www.oxfordlearnersdictionaries.com/definition/english/'
+
+    def __init__(self):
+        super(OxfordLearning, self).__init__()
 
         self.s = Session()
         self.s.headers = {
@@ -42,7 +71,7 @@ class Oxford(WebService):
                     {
                         'phonetic': '{} {}'.format(web_word.wd_phon_bre, web_word.wd_phon_nam),
                         'pos': web_word.wd_pos,
-                        'ee': web_word.definitions_html,
+                        'ee': ''.join(web_word.definitions_html),
                         's_bre': web_word.wd_sound_url_bre,
                         's_ame': web_word.wd_sound_url_nam,
                     }
@@ -70,7 +99,8 @@ class Oxford(WebService):
     @export(u'释义', 2)
     @with_styles(cssfile='_oxford.css')
     def ee(self):
-        return self._get_single_dict('ee')
+        return '<div style="margin-left: 20px">' + self._get_single_dict(
+            'ee') + "</div>" if "<li>" not in self._get_single_dict('ee') else self._get_single_dict('ee')
 
     def get_sound_bre(self):
         url = self._get_single_dict('s_bre')
@@ -107,7 +137,6 @@ class OxfordLearningDictWord:
             return
         self.markups = markups
         self.bs = BeautifulSoup(self.markups)
-        self.with_html = False
         self._defs = None
         self._defs_html = None
 
@@ -209,44 +238,31 @@ class OxfordLearningDictWord:
         except:
             return ''
 
-    @property
-    def definitions(self):
-        if self._defs and not self.with_html:
-            return self._defs
-        if self._defs_html and self.with_html:
-            return self._defs_html
-
-        defs = []
-        defs_html = []
-        tag_exp = self._clean(self.tag_explain)
-        lis = [li for li in tag_exp.find_all('li')]
-        if not lis:
-            if self.with_html:
-                defs_html.append(
-                    str(tag_exp)
-                )
-            else:
+    def get_definitions(self):
+        if not self._defs:
+            defs = []
+            defs_html = []
+            tag_exp = self._clean(self.tag_explain)
+            lis = [li for li in tag_exp.find_all('li')]
+            if not lis:
+                defs_html.append(str(tag_exp))
                 defs.append(tag_exp.text)
 
-        else:
-            for li in lis:
-                if self.with_html:
-                    defs_html.append(
-                        str(tag_exp)
-                    )
-                else:
+            else:
+                for li in lis:
+                    defs_html.append(str(tag_exp))
                     defs.append(li.text)
-        self._defs = defs
-        self._defs_html = defs_html
-        return self._defs if not self.with_html else self._defs_html
+            self._defs = defs
+            self._defs_html = defs_html
+        return self._defs, self._defs_html
+
+    @property
+    def definitions(self):
+        return self.get_definitions()[0]
 
     @property
     def definitions_html(self):
-        _with_html = deepcopy(self.with_html)
-        self.with_html = True
-        def_html = ''.join(_de for _de in self.definitions)
-        self.with_html = _with_html
-        return def_html
+        return self.get_definitions()[1]
 
     def _clean(self, tg):
         """
