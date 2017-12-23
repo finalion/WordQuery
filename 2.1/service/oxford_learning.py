@@ -41,7 +41,6 @@ class OxfordLearning(WebService):
                 retried -= 1
                 continue
 
-
     def _get_single_dict(self, single_dict):
         if not (self.cached(single_dict) and self.cache_result(single_dict)):
             web_word = self.query(self.word)
@@ -266,6 +265,8 @@ class OxfordLearningDictWord:
         :type tg:Tag
         :return:
         """
+        if not tg:
+            return tg
         decompose_cls = ['xr-gs', 'sound', 'heading', 'topic', 'collapse', 'oxford3000']
 
         if tg.attrs and 'class' in tg.attrs:
