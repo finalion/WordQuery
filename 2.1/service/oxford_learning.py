@@ -236,20 +236,19 @@ class OxfordLearningDictWord:
     def get_definitions(self):
         defs = []
         defs_html = []
-        if not self._defs:
+        if self.tag_explain and not self._defs:
             tag_exp = self._clean(self.tag_explain)
-            if tag_exp:
-                lis = [li for li in tag_exp.find_all('li')]
-                if not lis:
-                    defs_html.append(str(tag_exp.prettify()))
-                    defs.append(tag_exp.text)
+            lis = [li for li in tag_exp.find_all('li')]
+            if not lis:
+                defs_html.append(str(tag_exp.prettify()))
+                defs.append(tag_exp.text)
 
-                else:
-                    for li in lis:
-                        defs_html.append(str(li.prettify()))
-                        defs.append(li.text)
-                self._defs = defs
-                self._defs_html = defs_html
+            else:
+                for li in lis:
+                    defs_html.append(str(li.prettify()))
+                    defs.append(li.text)
+            self._defs = defs
+            self._defs_html = defs_html
         return self._defs, self._defs_html
 
     @property
