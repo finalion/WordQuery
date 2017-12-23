@@ -116,8 +116,8 @@ class OxfordLearningDictWord:
             return
         self.markups = markups
         self.bs = BeautifulSoup(self.markups)
-        self._defs = None
-        self._defs_html = None
+        self._defs = []
+        self._defs_html = []
 
     @staticmethod
     def _cls_dic(class_nm):
@@ -234,21 +234,22 @@ class OxfordLearningDictWord:
             return ''
 
     def get_definitions(self):
+        defs = []
+        defs_html = []
         if not self._defs:
-            defs = []
-            defs_html = []
             tag_exp = self._clean(self.tag_explain)
-            lis = [li for li in tag_exp.find_all('li')]
-            if not lis:
-                defs_html.append(str(tag_exp.prettify()))
-                defs.append(tag_exp.text)
+            if tag_exp:
+                lis = [li for li in tag_exp.find_all('li')]
+                if not lis:
+                    defs_html.append(str(tag_exp.prettify()))
+                    defs.append(tag_exp.text)
 
-            else:
-                for li in lis:
-                    defs_html.append(str(li.prettify()))
-                    defs.append(li.text)
-            self._defs = defs
-            self._defs_html = defs_html
+                else:
+                    for li in lis:
+                        defs_html.append(str(li.prettify()))
+                        defs.append(li.text)
+                self._defs = defs
+                self._defs_html = defs_html
         return self._defs, self._defs_html
 
     @property
