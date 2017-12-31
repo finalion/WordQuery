@@ -40,6 +40,26 @@ widget_size = namedtuple('WidgetSize', ['dialog_width', 'dialog_height_margin', 
                                         'map_max_height', 'map_fld_width', 'map_dictname_width',
                                         'map_dictfield_width'])(450, 120, 0, 30, 100, 130, 130)
 
+class ParasDialog(QDialog):
+
+    def __init__(self, parent=0):
+        QDialog.__init__(self, parent)
+        self.parent = parent
+        self.setWindowTitle(u"Settings")
+        self.setFixedWidth(400)
+        # self.setFixedHeight(300)
+        
+        self.build()
+
+    def build(self):
+        layout = QVBoxLayout()
+        check_force_update = QCheckBox(_("FORCE_UPDATE"))
+        layout.addWidget(check_force_update)
+        check_force_update.setChecked(config.force_update)
+        check_force_update.clicked.connect(lambda checked: config.update({'force_update':checked}))
+        layout.setAlignment(Qt.AlignTop|Qt.AlignLeft)
+        self.setLayout(layout)
+
 
 class FoldersManageDialog(QDialog):
 
@@ -145,22 +165,26 @@ class OptionsDialog(QDialog):
         self.main_layout.addWidget(scroll_area)
         # add description of radio buttons AND ok button
         bottom_layout = QHBoxLayout()
+        paras_btn = QPushButton(_('SETTINGS'))
+        paras_btn.clicked.connect(self.show_paras)
         about_btn = QPushButton(_('ABOUT'))
-        about_btn.clicked.connect(self.show_about)
+        # about_btn.clicked.connect(self.show_about)
+        about_btn.clicked.connect(self.show_paras)
         chk_update_btn = QPushButton(_('UPDATE'))
         chk_update_btn.clicked.connect(self.check_updates)
         home_label = QLabel(
             '<a href="{url}">User Guide</a>'.format(url=Endpoint.user_guide))
         home_label.setOpenExternalLinks(True)
-        shop_label = QLabel(
-            '<a href="{url}">Service Shop</a>'.format(url=Endpoint.service_shop))
-        shop_label.setOpenExternalLinks(True)
+        # shop_label = QLabel(
+        #     '<a href="{url}">Service Shop</a>'.format(url=Endpoint.service_shop))
+        # shop_label.setOpenExternalLinks(True)
         btnbox = QDialogButtonBox(QDialogButtonBox.Ok, Qt.Horizontal, self)
         btnbox.accepted.connect(self.accept)
-        bottom_layout.addWidget(about_btn)
+        bottom_layout.addWidget(paras_btn)
         bottom_layout.addWidget(chk_update_btn)
+        bottom_layout.addWidget(about_btn)
         bottom_layout.addWidget(home_label)
-        bottom_layout.addWidget(shop_label)
+        # bottom_layout.addWidget(shop_label)
         bottom_layout.addWidget(btnbox)
         self.main_layout.addLayout(bottom_layout)
         self.setLayout(self.main_layout)
@@ -174,6 +198,10 @@ class OptionsDialog(QDialog):
                     u'%s [%s]' % (_('CHOOSE_NOTE_TYPES'),  self.current_model['name']))
                 # build fields -- dicts layout
                 self.build_mappings_layout(self.current_model)
+
+    def show_paras(self):
+        dialog = ParasDialog(self)
+        dialog.exec_()
 
     def show_about(self):
         QMessageBox.about(self, _('ABOUT'), Template.tmpl_about)

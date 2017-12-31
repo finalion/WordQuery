@@ -35,9 +35,9 @@ app_icon = get_icon(ICON_FILE)
 class Config(object):
 
     def __init__(self, window):
+        self.path = CONFIG_FILENAME
         self.window = window
         self.version = '0'
-        self.path = CONFIG_FILENAME
         self.read()
 
     @property
@@ -46,7 +46,7 @@ class Config(object):
 
     def update(self, data):
         data['version'] = VERSION
-        data['%s_last' % self.pmname] = data.get('last_model', 0)
+        data['%s_last' % self.pmname] = data.get('last_model', self.last_model_id)
         self.data.update(data)
         with open(self.path, 'w', encoding='utf-8') as f:
             json.dump(self.data, f, ensure_ascii=False)
@@ -55,11 +55,10 @@ class Config(object):
         try:
             f = open(self.path, 'r',encoding="utf-8")
             self.data = json.load(f)
-            # showInfo(str(self.data))
-        # self.version = self.data.get('version', '0')
-        # if VERSION != self.version:
-        #     # showInfo(VERSION + self.version)
-        #     self.last_model_id, self.dirs = 0, list()
+                # self.version = self.data.get('version', '0')
+                # if VERSION != self.version:
+                #     # showInfo(VERSION + self.version)
+                #     self.last_model_id, self.dirs = 0, list()
         except:
             self.data = dict()
 
@@ -81,6 +80,10 @@ class Config(object):
     @property
     def export_media(self):
         return self.data.get('export_media', False)
+
+    @property
+    def force_update(self):
+        return self.data.get('force_update', False)
 
 
 config = Config(mw)

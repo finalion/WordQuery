@@ -2,7 +2,7 @@
 from .lang import _
 
 
-VERSION = '4.2.20171105'
+VERSION = '4.2.20180101'
 
 
 class Endpoint:

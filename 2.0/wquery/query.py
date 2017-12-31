@@ -145,6 +145,10 @@ def update_note_field(note, fld_index, fld_result):
     result, js, jsfile = fld_result.result, fld_result.js, fld_result.jsfile
     # js process: add to template of the note model
     add_to_tmpl(note, js=js, jsfile=jsfile)
+    # if not result:
+    #     return
+    if not config.force_update and not result:
+        return 
     note.fields[fld_index] = result if result else ''
     note.flush()
 

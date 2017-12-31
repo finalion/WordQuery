@@ -145,6 +145,10 @@ def update_note_field(note, fld_index, fld_result):
     result, js, jsfile = fld_result.result, fld_result.js, fld_result.jsfile
     # js process: add to template of the note model
     add_to_tmpl(note, js=js, jsfile=jsfile)
+    # if not result:
+    #     return
+    if not config.force_update and not result:
+        return 
     note.fields[fld_index] = result if result else ''
     note.flush()
 
@@ -156,9 +160,8 @@ def promot_choose_css():
             showInfo(Template.miss_css.format(
                 dict=local_service.title, css=missed_css))
             filepath = QFileDialog.getOpenFileName(
-                caption=u'Choose css file', filter=u'CSS (*.css)')[0]   # review here, why return a tuple?!
+                caption=u'Choose css file', filter=u'CSS (*.css)')[0]
             if filepath:
-                showInfo(str(filepath))
                 shutil.copy(filepath, u'_' + missed_css)
                 wrap_css(u'_' + missed_css)
                 local_service.missed_css.clear()

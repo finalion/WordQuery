@@ -46,7 +46,9 @@ trans = {
     'ABNORMAL_VERSION': {'zh_CN': u'当前版本异常.', 'en': u'The current version is abnormal.', 'fr': u'La version actuelle est anormale.'},
     'CHECK_FAILURE': {'zh_CN': u'版本检查失败.', 'en': u'Version check failure.', 'fr': u'Erreur de vérifier la version.'},
     'NEW_VERSION': {'zh_CN': u'检查到新版本:', 'en': u'New version:', 'fr': u'Nouvelle version:'},
-    'UPDATE': {'zh_CN': u'更新', 'en': u'Update', 'fr': u'Mise à jour'}
+    'UPDATE': {'zh_CN': u'更新', 'en': u'Update', 'fr': u'Mise à jour'},
+    'FORCE_UPDATE': {'zh_CN': u'强制更新字段', 'en': u'Force update'},
+    'SETTINGS': {'zh_CN': u'参数', 'en': u'Settings'},
 }
 
 

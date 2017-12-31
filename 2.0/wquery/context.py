@@ -48,7 +48,7 @@ class Config(object):
 
     def update(self, data):
         data['version'] = VERSION
-        data['%s_last' % self.pmname] = data.get('last_model', 0)
+        data['%s_last' % self.pmname] = data.get('last_model', self.last_model_id)
         self.data.update(data)
         with open(self.path, 'wb') as f:
             json.dump(self.data, f)
@@ -82,6 +82,10 @@ class Config(object):
     @property
     def export_media(self):
         return self.data.get('export_media', False)
+
+    @property
+    def force_update(self):
+        return self.data.get('force_update', False)
 
 
 config = Config(mw)
