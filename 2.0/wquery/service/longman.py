@@ -15,6 +15,10 @@ from bs4 import BeautifulSoup, Tag
 from .base import WebService, export, register, with_styles
 
 filterwarnings('ignore')
+import sys
+
+reload(sys)
+sys.setdefaultencoding('utf8')
 
 
 @register(u'朗文')
@@ -36,7 +40,7 @@ class Longman(WebService):
             })
 
             if rsp.status_code == 200:
-                bs = BeautifulSoup(rsp.content.decode('utf-8'), 'html.parser')
+                bs = BeautifulSoup(rsp.content.decode('utf-8'), 'html.parser', from_encoding="utf-8")
                 # Top Container
                 dictlinks = bs.find_all('span', {'class': 'dictlink'})
                 body_html = ""
@@ -149,7 +153,7 @@ class Longman(WebService):
     def ee(self):
         return self._get_singledict('ee')
 
-    @export('图片', 4)
+    @export(u'图片', 4)
     def pic(self):
         url = self._get_singledict('img')
         filename = u'longman_img_{}'.format(os.path.basename(url))
