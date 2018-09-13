@@ -103,12 +103,10 @@ class IndexBuilder(object):
         for j, p in enumerate(txt_list[1:]):
             style = self._stylesheet[txt_tag[j][1:-1]]
             if p and p[-1] == '\n':
-                txt_styled = txt_styled + \
-                    style[0].encode('utf-8') + p.rstrip() + \
-                    style[1].encode('utf-8') + '\r\n'
+                txt_styled = txt_styled + style[0] + p.rstrip() + \
+                    style[1] + '\r\n'
             else:
-                txt_styled = txt_styled + \
-                    style[0].encode('utf-8') + p + style[1].encode('utf-8')
+                txt_styled = txt_styled + style[0]+ p + style[1]
         return txt_styled
 
     def _make_mdx_index(self):
@@ -244,10 +242,9 @@ class IndexBuilder(object):
     def get_mdx_by_index(self, fmdx, index):
         data = self.get_data_by_index(fmdx, index)
         record = data.decode(self._encoding, errors='ignore').strip(
-            u'\x00').encode('utf-8')
+            u'\x00') # .encode('utf-8')  #20180914
         if self._stylesheet:
             record = self._replace_stylesheet(record)
-        record = record.decode('utf-8')
         return record
 
     def get_mdd_by_index(self, fmdx, index):

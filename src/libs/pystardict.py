@@ -50,7 +50,7 @@ class _StarDictIfo(object):
 
         ifo_filename = '%s.ifo' % dict_prefix
         try:
-            _file = open(ifo_filename)
+            _file = open(ifo_filename, encoding='utf-8')
         except IOError:
             raise Exception('.ifo file does not exists')
 

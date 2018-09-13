@@ -24,10 +24,15 @@ class Oxford(WebService):
         word_id = urllib2.quote(word.lower().replace(" ", "_"))
         url = baseurl + "/entries/" + lang + "/" + word_id
         url = urllib2.Request(url, headers=headers)
-        response = json.loads(urllib2.urlopen(url).read())
-
-        return response["results"]
+        try:
+            return json.loads(urllib2.urlopen(url).read())
+        except:
+            pass
 
     @export("Lexical Category", 1)
     def _fld_category(self):
-        return self._get_from_api()[0]["lexicalEntries"][0]["lexicalCategory"]
+        result = self._get_from_api()
+        if result:
+            return self._get_from_api()[0]["lexicalEntries"][0]["lexicalCategory"]
+        else:
+            return str()

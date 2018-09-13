@@ -1,7 +1,10 @@
 #-*- coding:utf-8 -*-
 import os
 import re
-import urllib2
+try:
+    import urllib2
+except:
+    import urllib.request as urllib2
 import json
 from collections import defaultdict
 from aqt.utils import showInfo, showText
@@ -26,7 +29,7 @@ class ICIBA(WebService):
             'Accept': 'text/javascript, application/javascript, application/ecmascript, application/x-ecmascript, */*; q=0.01'}
         # try:
         request = urllib2.Request(
-            'http://www.iciba.com/index.php?a=getWordMean&c=search&list=1%2C2%2C3%2C4%2C5%2C8%2C9%2C10%2C12%2C13%2C14%2C18%2C21%2C22%2C3003%2C3005&word=' + self.word.encode('utf-8'), headers=headers)
+            'http://www.iciba.com/index.php?a=getWordMean&c=search&word=' + self.word.encode('utf-8'), headers=headers)
         resp = json.loads(urllib2.urlopen(request).read())
         # self.cache_this(resp['baesInfo']['symbols'][0])
         # self.cache_this(resp['sentence'])

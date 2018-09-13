@@ -132,7 +132,7 @@ def query_from_editor_current_field(editor):
     progress.finish()
     promot_choose_css()
     editor.setNote(editor.note, focusTo=0)
-    editor.saveNow(lambda: None)
+    editor.saveNow()
 
 
 def update_note_fields(note, results):

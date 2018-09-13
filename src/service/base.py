@@ -1,4 +1,4 @@
-#-*- coding:utf-8 -*-
+# -*- coding:utf-8 -*-
 #
 # Copyright © 2016–2017 Liang Feng <finalion@gmail.com>
 #
@@ -27,12 +27,19 @@ import re
 import shutil
 import sqlite3
 import urllib
-import urllib2
+
+try:
+    import urllib2
+except:
+    import urllib.request as urllib2
 import zlib
 from collections import defaultdict
 from functools import wraps
 
-import cookielib
+try:
+    from cookielib import CookieJar
+except:
+    from http.cookiejar import CookieJar
 from aqt import mw
 from aqt.qt import QFileDialog
 from aqt.utils import showInfo, showText
@@ -40,25 +47,31 @@ from ..context import config
 from ..lang import _
 from ..libs import MdxBuilder, StardictBuilder
 from ..utils import MapDict, wrap_css
+import requests
 
 
 def register(label):
     """register the dict service with a label, which will be shown in the dicts list."""
+
     def _deco(cls):
         cls.__register_label__ = label
         return cls
+
     return _deco
 
 
 def export(label, index):
     """export dict field function with a label, which will be shown in the fields list."""
+
     def _with(fld_func):
         @wraps(fld_func)
         def _deco(cls, *args, **kwargs):
             res = fld_func(cls, *args, **kwargs)
             return QueryResult(result=res) if not isinstance(res, QueryResult) else res
+
         _deco.__export_attrs__ = (label, index)
         return _deco
+
     return _with
 
 
@@ -79,16 +92,17 @@ def with_styles(**styles):
     js: js strings
     jsfile: specify the js file in static folder
     """
+
     def _with(fld_func):
         @wraps(fld_func)
         def _deco(cls, *args, **kwargs):
             res = fld_func(cls, *args, **kwargs)
-            cssfile, css, jsfile, js, need_wrap_css, class_wrapper =\
-                styles.get('cssfile', None),\
-                styles.get('css', None),\
-                styles.get('jsfile', None),\
-                styles.get('js', None),\
-                styles.get('need_wrap_css', False),\
+            cssfile, css, jsfile, js, need_wrap_css, class_wrapper = \
+                styles.get('cssfile', None), \
+                styles.get('css', None), \
+                styles.get('jsfile', None), \
+                styles.get('js', None), \
+                styles.get('need_wrap_css', False), \
                 styles.get('wrap_class', '')
 
             def wrap(html, css_obj, is_file=True):
@@ -117,7 +131,9 @@ def with_styles(**styles):
             else:
                 res.set_styles(jsfile=jsfile, js=js)
                 return res
+
         return _deco
+
     return _with
 
 
@@ -199,7 +215,7 @@ class WebService(Service):
     def __init__(self):
         super(WebService, self).__init__()
         self.cache = defaultdict(defaultdict)
-        self._cookie = cookielib.CookieJar()
+        self._cookie = CookieJar()
         self._opener = urllib2.build_opener(
             urllib2.HTTPCookieProcessor(self._cookie))
         self.query_interval = 1
@@ -209,7 +225,7 @@ class WebService(Service):
         return result
 
     def cached(self, key):
-        return (self.word in self.cache) and self.cache[self.word].has_key(key)
+        return (self.word in self.cache) and (key in self.cache[self.word])
 
     def cache_result(self, key):
         return self.cache[self.word].get(key, u'')
@@ -231,10 +247,10 @@ class WebService(Service):
         request = urllib2.Request(url, headers=default_headers)
         try:
             response = self._opener.open(request, data=data, timeout=timeout)
-            data = response.read()
+            data = response.read()    # return bytes
             if response.info().get('Content-Encoding') == 'gzip':
-                data = zlib.decompress(data, 16 + zlib.MAX_WBITS)
-            return data
+                data = zlib.decompress(data, 16 + zlib.MAX_WBITS)   # return bytes
+            return data.decode('utf-8')  # TODO: all data can be decoded by utf-8??
         except:
             return ''
 
@@ -242,6 +258,13 @@ class WebService(Service):
     def download(cls, url, filename):
         try:
             return urllib.urlretrieve(url, filename)
+        except AttributeError:
+            try:
+                with open(filename, "wb") as f:
+                    f.write(requests.get(url).content)
+                return True
+            except Exception as e:
+                pass
         except Exception as e:
             pass
 
@@ -334,7 +357,7 @@ class MdxService(LocalService):
         self.save_media_files(media_files_set)
         for cssfile in mcss:
             cssfile = '_' + \
-                os.path.basename(cssfile.replace('\\', os.path.sep))
+                      os.path.basename(cssfile.replace('\\', os.path.sep))
             # if not exists the css file, the user can place the file to media
             # folder first, and it will also execute the wrap process to generate
             # the desired file.
@@ -373,6 +396,7 @@ class MdxService(LocalService):
             '*' + os.path.basename(each.replace('\\', os.path.sep)) for each in diff]
         try:
             for each in wild:
+                # TODO : refract get_mdd_keys method
                 keys = self.builder.get_mdd_keys(each)
                 if not keys:
                     errors.append(each)
@@ -409,7 +433,7 @@ class StardictService(LocalService):
         self.builder.check_build()
         try:
             result = self.builder[self.word]
-            result = result.strip().replace('\r\n', '<br />')\
+            result = result.strip().replace('\r\n', '<br />') \
                 .replace('\r', '<br />').replace('\n', '<br />')
             return QueryResult(result=result)
         except KeyError:
