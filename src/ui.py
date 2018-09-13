@@ -168,8 +168,8 @@ class OptionsDialog(QDialog):
         paras_btn = QPushButton(_('SETTINGS'))
         paras_btn.clicked.connect(self.show_paras)
         about_btn = QPushButton(_('ABOUT'))
-        # about_btn.clicked.connect(self.show_about)
-        about_btn.clicked.connect(self.show_paras)
+        about_btn.clicked.connect(self.show_about)
+        # about_btn.clicked.connect(self.show_paras)
         chk_update_btn = QPushButton(_('UPDATE'))
         chk_update_btn.clicked.connect(self.check_updates)
         home_label = QLabel(
