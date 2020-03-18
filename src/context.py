@@ -23,7 +23,7 @@ import os
 from aqt import mw
 from aqt.utils import shortcut, showInfo, showText
 from .constants import VERSION
-from .lang import _
+from .gui.lang import _, _sl
 from .utils import get_icon
 
 CONFIG_FILENAME = '_wqcfg.json'

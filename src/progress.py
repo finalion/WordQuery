@@ -6,7 +6,7 @@ import time
 from collections import defaultdict
 
 from aqt.qt import *
-from .lang import _
+from .gui.lang import _, _sl
 
 
 # fixme: if mw->subwindow opens a progress dialog with mw as the parent, mw

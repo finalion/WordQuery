@@ -44,7 +44,6 @@ from aqt import mw
 from aqt.qt import QFileDialog
 from aqt.utils import showInfo, showText
 from ..context import config
-from ..lang import _
 from ..libs import MdxBuilder, StardictBuilder
 from ..utils import MapDict, wrap_css
 import requests

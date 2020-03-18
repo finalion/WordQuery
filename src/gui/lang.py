@@ -53,14 +53,12 @@ trans = {
 
 
 def _(key, lang=currentLang):
-    if lang != 'zh_CN' and lang != 'en' and lang != 'fr':
+    if key not in trans:
+        return key.lower().capitalize()
+    
+    if lang not in trans[key]:
         lang = 'en'  # fallback
 
-    def disp(s):
-        return s.lower().capitalize()
-
-    if key not in trans or lang not in trans[key]:
-        return disp(key)
     return trans[key][lang]
 
 

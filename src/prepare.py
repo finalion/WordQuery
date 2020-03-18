@@ -25,10 +25,9 @@ from aqt.qt import *
 from anki.hooks import addHook, wrap
 from aqt.addcards import AddCards
 from aqt.utils import showInfo, shortcut
-from .ui import show_options
 from .query import query_from_browser, query_from_editor_all_fields, query_from_editor_current_field
 from .context import config, app_icon
-
+from .gui import dialogs
 
 ############## other config here ##################
 # update all fields ignoring the original field content
@@ -38,6 +37,12 @@ my_shortcut = 'Ctrl+Q'
 ###################################################
 
 have_setup = False
+
+def show_options_dlg():
+    dlg = dialogs.OptionsDlg(mw)
+    dlg.exec_()
+    dlg.activateWindow()
+    dlg.raise_()
 
 
 def query_decor(func, obj):
@@ -67,7 +72,7 @@ def setup_browser_menu():
             query_from_browser, browser))
         action_queryselected.setShortcut(QKeySequence(my_shortcut))
         action_options = QAction("Options", browser)
-        action_options.triggered.connect(show_options)
+        action_options.triggered.connect(show_options_dlg)
         menu.addAction(action_queryselected)
         menu.addAction(action_options)
 
@@ -88,7 +93,7 @@ def setup_context_menu():
             query_from_editor_all_fields, web_view.editor))
         action2.triggered.connect(query_decor(
             query_from_editor_current_field, web_view.editor))
-        action3.triggered.connect(show_options)
+        action3.triggered.connect(show_options_dlg)
         needs_separator = True
         # menu.addMenu(submenu)
     anki.hooks.addHook('EditorWebView.contextMenuEvent', on_setup_menus)
@@ -104,7 +109,7 @@ def customize_addcards():
 def setup_options_menu():
     # add options submenu to Tools menu
     action = QAction(app_icon, "WordQuery...", mw)
-    action.triggered.connect(show_options)
+    action.triggered.connect(show_options_dlg)
     mw.form.menuTools.addAction(action)
     global have_setup
     have_setup = True

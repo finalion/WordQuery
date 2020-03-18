@@ -29,7 +29,7 @@ from aqt.qt import QFileDialog, QObject, QThread, pyqtSignal, pyqtSlot
 from aqt.utils import showInfo, showText, tooltip
 from .constants import Endpoint, Template
 from .context import config
-from .lang import _, _sl
+from .gui.lang import _, _sl
 from .progress import ProgressManager
 from .service import service_manager, QueryResult, copy_static_file
 from .utils import Empty, MapDict, Queue, wrap_css

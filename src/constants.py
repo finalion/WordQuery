@@ -1,6 +1,5 @@
 #-*- coding:utf-8 -*-
-from .lang import _
-
+from .gui.lang import _, _sl
 
 VERSION = '4.2.20180101'
 
@@ -16,9 +15,9 @@ class Endpoint:
 
 
 class Template:
-    tmpl_about = u'<b>{t0}</b><br />{version}<br /><b>{t1}</b><br /><a href="{url}">{url}</a><br /><b>{t2}</b><br /><a href="{feedback0}">{feedback0}</a><br /><a href="mailto:{feedback1}">{feedback1}</a>'.format(
+    tmpl_about = u'<b>{t0}</b><br />{version}<br /><b>{t1}</b><br /><a href="{url}">{url}</a><br /><b>{t2}</b><br /><a href="{feedback0}">{feedback0}</a><br /></a>'.format(
         t0=_('VERSION'), version=VERSION, t1=_('REPOSITORY'), url=Endpoint.repository,
-        t2=_('FEEDBACK'), feedback0=Endpoint.feedback_issue, feedback1=Endpoint.feedback_mail)
+        t2=_('FEEDBACK'), feedback0=Endpoint.feedback_issue)
     new_version = u'{info} <a href="{url}">V{version}</a>'.format(
         info=_('NEW_VERSION'), url=Endpoint.new_version, version='{version}')
     latest_version = _('LATEST_VERSION')
